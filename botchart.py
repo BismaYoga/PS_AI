@@ -13,11 +13,11 @@ from telegram.ext import Application, CommandHandler, ContextTypes
 # CONFIG
 # =========================================================
 
-TOKEN = "8773021457:AAHYScIfprNraSI64SYWCtCweS8H_hau-Gc"
+
 
 # Target Grup dan Topik Telegram spesifik
-TARGET_CHAT_ID = -1001364042873
-TARGET_THREAD_ID = 316950
+TARGET_CHAT_ID
+TARGET_THREAD_ID
 
 COLOR_UP = "#26A69A"
 COLOR_DOWN = "#EF5350"
