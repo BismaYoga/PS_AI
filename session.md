@@ -249,6 +249,23 @@ Sistem ini menggunakan arsitektur **terpisah (decoupled)**:
 
 ---
 
+### Sesi 15: Pembaruan Logo Resmi Putih & Tema Navigasi Biru
+- **Kebutuhan**: Mengganti logo placeholder SVG dengan file logo resmi [`logo-putih.png`](logo-putih.png) dan menyesuaikan warna latar bilah navigasi utama menjadi biru elegan agar kontras dan terbaca dengan jelas.
+- **Langkah & Implementasi**:
+  1. **Integrasi Logo Resmi**:
+     - Mengganti elemen brand SVG lama di [`PintarSaham_Dashboard_Interaktif.html`](PintarSaham_Dashboard_Interaktif.html) dengan tag `<img>` yang merujuk ke [`logo-putih.png`](logo-putih.png).
+     - Menetapkan styling dimensi proporsional (`height: 38px`, `max-width: 190px`, `object-fit: contain`) pada layar desktop, serta `height: 30px` pada layar mobile (viewport ≤ 600px).
+  2. **Tema Navigasi Biru Korporat**:
+     - Mengubah styling `.app-header` menjadi gradien biru gelap premium (`linear-gradient(135deg, #092347 0%, #0e3465 55%, #13437f 100%)`) dengan border halus transparan dan soft shadow.
+     - Menyesuaikan teks menu navigasi (`.nav a`) menjadi putih semi-transparan (`rgba(255,255,255,0.72)`), aktif putih pekat dengan garis aksen biru muda (`#60a5fa`).
+     - Menyesuaikan bilah pencarian (`.search-bar`) dengan efek frosted glass (`rgba(255,255,255,0.12)`), teks putih, placeholder halus, kbd shortcut kontras, dan fokus highlight cerah.
+     - Menyesuaikan tombol avatar (`.avatar`) dengan latar semi-transparan putih dan border lembut.
+  3. **Verifikasi Visual Playwright**:
+     - Dilakukan pengujian render pada Chromium untuk Desktop (1366x768) dan Mobile (375x667).
+     - Hasil: Logo putih tampil sangat tajam dan kontras di atas bilah navigasi biru gelap, navigasi responsif tanpa overflow, 0 console error, dan 0 page error.
+
+---
+
 ## 📋 Catatan Teknis untuk Menjalankan Dashboard
 1. **Cara 1: Local HTTP Server (Sangat Disarankan)**
    - Cukup double-click file [`jalankan_dashboard.bat`](../pintarsaham_dashboard/jalankan_dashboard.bat) (untuk dashboard emiten) atau [`jalankan_dashboard_ihsg.bat`](jalankan_dashboard_ihsg.bat) (untuk dashboard IHSG & multi-saham).

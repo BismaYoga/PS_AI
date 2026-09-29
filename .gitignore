@@ -1,5 +1,17 @@
+# Environment & Secrets (SANGAT PENTING: Jangan push ke GitHub)
+.env
+*.env
+.env.*
+!.env.example
+
+# Python Cache & Artifacts
 __pycache__/
 *.py[cod]
 *$py.class
+*.log
+
+# IDE & OS files
 .vscode/
 .idea/
+Thumbs.db
+Desktop.ini
