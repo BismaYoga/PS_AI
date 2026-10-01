@@ -1,167 +1,218 @@
-import React, { useState, useEffect } from 'react';
-import { Search, ShieldAlert } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { StockItem, Route } from '../types';
+import { Icon } from './Icon';
+import { StockLogo } from './StockLogo';
+import { rp, pct } from '../utils';
 
 interface HeaderProps {
-  activeTab: string;
-  setActiveTab: (tab: string) => void;
-  onSearchSelect: (ticker: string) => void;
-  tickers: string[];
+  route: Route;
+  watchlistCount: number;
+  onNavigate: (route: Route, ticker?: string) => void;
+  stocks: StockItem[];
+  onOpenDrawer: (type: string, payload?: any) => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
-  activeTab,
-  setActiveTab,
-  onSearchSelect,
-  tickers
+  route,
+  watchlistCount,
+  onNavigate,
+  stocks,
+  onOpenDrawer,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [clock, setClock] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const searchWrapRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  // Clock in WIB (UTC+7)
-  useEffect(() => {
-    const updateTime = () => {
-      const now = new Date();
-      const wib = new Date(now.getTime() + (7 * 60 + now.getTimezoneOffset()) * 60000);
-      const hours = String(wib.getHours()).padStart(2, '0');
-      const mins = String(wib.getMinutes()).padStart(2, '0');
-      const secs = String(wib.getSeconds()).padStart(2, '0');
-      setClock(`${hours}:${mins}:${secs} WIB`);
-    };
-    updateTime();
-    const interval = setInterval(updateTime, 1000);
-    return () => clearInterval(interval);
-  }, []);
+  const cleanQuery = searchQuery.trim().toLowerCase();
+  const searchMatches = stocks.filter((s) => {
+    if (!cleanQuery) return true;
+    return `${s.ticker} ${s.name} ${s.short}`.toLowerCase().includes(cleanQuery);
+  });
 
-  // Keyboard shortcut '/'
+  // Global '/' keyboard shortcut to focus search input
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === '/' && (e.target as HTMLElement).tagName !== 'INPUT') {
+      const activeTag = (document.activeElement as HTMLElement)?.tagName;
+      if (e.key === '/' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(activeTag)) {
         e.preventDefault();
-        document.getElementById('header-search-input')?.focus();
+        inputRef.current?.focus();
+        setIsOpen(true);
+      }
+      if (e.key === 'Escape') {
+        setIsOpen(false);
+        inputRef.current?.blur();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const handleSearchChange = (val: string) => {
-    setSearchQuery(val);
-    if (!val.trim()) {
-      setSuggestions([]);
-      return;
+  // Close search dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchWrapRef.current && !searchWrapRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
+
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (!isOpen) setIsOpen(true);
+      if (searchMatches.length > 0) {
+        setSelectedIndex((prev) => (prev + 1) % searchMatches.length);
+      }
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (!isOpen) setIsOpen(true);
+      if (searchMatches.length > 0) {
+        setSelectedIndex((prev) => (prev - 1 + searchMatches.length) % searchMatches.length);
+      }
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (searchMatches[selectedIndex]) {
+        const selected = searchMatches[selectedIndex];
+        onNavigate('stock', selected.ticker);
+        setIsOpen(false);
+        setSearchQuery('');
+        inputRef.current?.blur();
+      }
+    } else if (e.key === 'Escape') {
+      setIsOpen(false);
+      inputRef.current?.blur();
     }
-    const filtered = tickers.filter(t => t.toLowerCase().includes(val.toLowerCase())).slice(0, 6);
-    setSuggestions(filtered);
   };
 
-  const handleSelectTicker = (ticker: string) => {
-    onSearchSelect(ticker);
+  const handleSelectStock = (ticker: string) => {
+    onNavigate('stock', ticker);
+    setIsOpen(false);
     setSearchQuery('');
-    setSuggestions([]);
+    inputRef.current?.blur();
   };
 
   return (
     <header className="app-header">
-      <div className="header-container">
-        <div className="brand-section">
-          <img
-            src="/logo-putih.png"
-            alt="PintarSaham AI"
-            className="brand-logo"
-            onError={(e) => {
-              (e.currentTarget as HTMLImageElement).src = '/logo-putih.png';
-            }}
-          />
-          <span className="brand-badge">2.0 AI PRO</span>
-        </div>
+      <div className="header-inner">
+        <a
+          className="brand"
+          href="#home"
+          aria-label="PintarSaham, kembali ke beranda"
+          onClick={(e) => {
+            e.preventDefault();
+            onNavigate('home');
+          }}
+        >
+          <img src="/logo-putih.png" alt="PintarSaham" className="brand-logo-img" />
+        </a>
 
-        <nav className="nav-links">
-          <button
-            className={`nav-btn ${activeTab === 'dashboard' ? 'active' : ''}`}
-            onClick={() => setActiveTab('dashboard')}
-          >
-            Dashboard
-          </button>
-          <button
-            className={`nav-btn ${activeTab === 'fundamental' ? 'active' : ''}`}
-            onClick={() => setActiveTab('fundamental')}
-          >
-            Fundamental & MOS
-          </button>
-          <button
-            className={`nav-btn ${activeTab === 'events' ? 'active' : ''}`}
-            onClick={() => setActiveTab('events')}
-          >
-            Aksi Korporasi
-          </button>
+        <nav className="nav" aria-label="Navigasi utama">
           <a
-            href="/admin.html"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="nav-btn"
-            title="Buka Admin Console"
+            href="#home"
+            id="nav-home"
+            className={route === 'home' ? 'active' : ''}
+            onClick={(e) => {
+              e.preventDefault();
+              onNavigate('home');
+            }}
           >
-            <ShieldAlert size={15} />
-            Admin Console
+            Beranda
+          </a>
+          <a
+            href="#watchlist"
+            id="nav-watchlist"
+            className={route === 'watchlist' ? 'active' : ''}
+            onClick={(e) => {
+              e.preventDefault();
+              onNavigate('watchlist');
+            }}
+          >
+            Watchlist <span className="nav-count" id="watch-count">{watchlistCount}</span>
           </a>
         </nav>
 
-        <div className="header-right">
-          <div className="header-search">
-            <Search size={15} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.6)' }} />
+        <div className="search-wrap" id="search-wrap" ref={searchWrapRef}>
+          <div className="search-bar">
+            <span id="search-icon">
+              <Icon name="search" cls="sm" />
+            </span>
+            <label className="sr-only" htmlFor="stock-search">
+              Cari nama atau kode emiten
+            </label>
             <input
-              id="header-search-input"
-              type="text"
-              placeholder="Cari emiten (cth: BBCA)..."
+              ref={inputRef}
+              id="stock-search"
+              type="search"
+              autoComplete="off"
+              placeholder="Cari nama atau kode emiten..."
+              role="combobox"
+              aria-autocomplete="list"
+              aria-controls="search-results"
+              aria-expanded={isOpen}
               value={searchQuery}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              className="search-input"
-              style={{ paddingLeft: 32 }}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setSelectedIndex(0);
+                setIsOpen(true);
+              }}
+              onFocus={() => setIsOpen(true)}
+              onKeyDown={handleInputKeyDown}
             />
-            <span className="kbd-shortcut">/</span>
+            <kbd className="shortcut">/</kbd>
+          </div>
 
-            {suggestions.length > 0 && (
-              <div style={{
-                position: 'absolute',
-                top: '100%',
-                left: 0,
-                right: 0,
-                marginTop: 6,
-                background: '#ffffff',
-                border: '1px solid #cbd5e1',
-                borderRadius: 8,
-                boxShadow: '0 8px 20px rgba(0,0,0,0.15)',
-                zIndex: 60,
-                overflow: 'hidden'
-              }}>
-                {suggestions.map((t) => (
-                  <div
-                    key={t}
-                    onClick={() => handleSelectTicker(t)}
-                    style={{
-                      padding: '8px 14px',
-                      cursor: 'pointer',
-                      fontSize: 13,
-                      fontWeight: 600,
-                      color: '#1e293b',
-                      borderBottom: '1px solid #f1f5f9'
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = '#f8fafc')}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = '#ffffff')}
-                  >
-                    {t}
+          <div
+            className={`search-results ${isOpen ? 'open' : ''}`}
+            id="search-results"
+            role="listbox"
+            aria-label="Hasil pencarian emiten"
+          >
+            <div className="search-label">
+              {cleanQuery ? 'HASIL PENCARIAN' : 'EMITEN CONTOH'} · DATA PASAR
+            </div>
+            {searchMatches.length ? (
+              searchMatches.slice(0, 15).map((s, i) => (
+                <div
+                  key={s.ticker}
+                  className={`search-result ${i === selectedIndex ? 'selected' : ''}`}
+                  role="option"
+                  aria-selected={i === selectedIndex}
+                  id={`result-${i}`}
+                  onClick={() => handleSelectStock(s.ticker)}
+                  onMouseEnter={() => setSelectedIndex(i)}
+                >
+                  <StockLogo ticker={s.ticker} mark={s.mark} color={s.color} />
+                  <div>
+                    <strong>{s.ticker}</strong>
+                    <span className="result-name">{s.short}</span>
                   </div>
-                ))}
+                  <div className="quote">
+                    {rp(s.price)}
+                    <div className={`tiny ${s.change >= 0 ? 'positive' : 'negative'}`}>
+                      {pct(s.change, 2)}
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="search-empty">
+                Emiten tidak ditemukan. Coba BBCA, BBRI, BMRI, TLKM, ASII, ICBP, atau MIKA.
               </div>
             )}
           </div>
-
-          <div className="market-clock">
-            <div className="live-dot" />
-            <span>{clock}</span>
-          </div>
         </div>
+
+        <button
+          className="avatar"
+          onClick={() => onOpenDrawer('about')}
+          aria-label="Tentang preview ini"
+        >
+          PS
+        </button>
       </div>
     </header>
   );

@@ -1,42 +1,11 @@
-export interface OHLCBar {
-  time: string;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-  volume: number;
-}
-
-export interface InstrumentData {
-  ticker: string;
-  name: string;
-  sector: string | null;
-  subsector: string | null;
-  price: number;
-  previousClose: number;
-  change: number;
-  changePct: number;
-  date: string;
-  rawDate?: string;
-  volume: number;
-  turnover: number;
-  gainers?: number;
-  losers?: number;
-  totalBars?: number;
-  source?: string;
-  isStock?: boolean;
-  ohlc: OHLCBar[];
-  eps?: number;
-  bvps?: number;
-  pe?: number;
-  pb?: number;
-  targetPe?: number;
-  fairValue?: number;
-  mos?: number;
-  roe?: number;
-  dividendYield?: number;
-  marketCap?: number;
-  summary?: string;
+export interface PresetStock {
+  color: string;
+  mark: string;
+  shares: number;
+  margin: number;
+  equityRatio: number;
+  rev: [string, number][];
+  description: string;
 }
 
 export interface EmitenItem {
@@ -55,38 +24,122 @@ export interface CorporateEvent {
   sub: string;
   amount: string;
   note: string;
-  diffDays?: number;
-  badge?: string;
 }
 
 export interface NewsItem {
+  category: string;
+  icon: string;
   title: string;
-  link: string;
-  publisher: string;
-  time: string;
-  ago: string;
-  sentiment: 'positive' | 'negative' | 'neutral' | string;
-  snippet: string;
+  desc: string;
+  impact: string;
+  bias: string;
+  body: string;
+  watch: string;
+  date?: string;
+  source?: string;
+  url?: string;
+  ticker?: string;
+  error?: string;
 }
 
-export interface AIAnalysis {
+export interface OHLCPoint {
+  date: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+export interface StockItem {
   ticker: string;
-  timestamp: string;
-  stance: 'BULLISH' | 'BEARISH' | 'NETRAL' | string;
-  technical: {
-    rsi: string;
-    ma_status: string;
-    support: string;
-    resistance: string;
+  name: string;
+  short: string;
+  sector: string;
+  subsector: string;
+  color: string;
+  mark: string;
+  price: number;
+  change: number;
+  eps: number | null;
+  bvps: number | null;
+  pe: number;
+  pb: number;
+  roe?: number | null;
+  dividendYield?: number | null;
+  marketCap?: number | null;
+  volume: string | number;
+  turnover: string | number;
+  date: string | null;
+  isLive: boolean;
+  shares: number;
+  margin: number;
+  equityRatio: number;
+  rev: [string, number][];
+  description: string;
+  targetPe?: number;
+  ohlc?: OHLCPoint[];
+}
+
+export interface IndexItem {
+  ticker: string;
+  name: string;
+  price: number;
+  previousClose: number;
+  change: number;
+  changeAbs: number;
+  date: string;
+  turnover: string;
+  volume: string;
+  gainers: number;
+  losers: number;
+  isLive: boolean;
+}
+
+export interface FinancialYearData {
+  year: number;
+  revenue: number;
+  net: number;
+  pretax: number;
+  margin: number;
+  eps: number;
+  assets: number;
+  equity: number;
+  liabilities: number;
+  cash: number;
+  bvps: number;
+  cfo: number;
+  cfi: number;
+  cff: number;
+  netCash: number;
+  begin: number;
+  end: number;
+  conversion: number;
+  [key: string]: number;
+}
+
+export interface ValuationState {
+  pe: number;
+  pb: number;
+}
+
+export interface AIAnalysisResult {
+  executive_summary: string;
+  sentiment_bias?: string;
+  sentiment?: string;
+  technical_insight?: string;
+  catalyst_insight?: string;
+  actionable_plan?: string;
+  key_levels?: {
+    support?: string;
+    resistance?: string;
+    rsi?: string;
+    ma_status?: string;
   };
-  news_catalyst: string;
-  summary: string;
-  key_factors?: string[];
-  recommendation?: string;
-  source?: string;
-  cached?: boolean;
+  timestamp?: string;
   error?: string;
 }
 
 export type Timeframe = '1M' | '3M' | '6M' | '1Y';
-export type ChartType = 'candlestick' | 'line';
+export type ChartType = 'line' | 'candle';
+export type Route = 'home' | 'watchlist' | 'stock';
