@@ -285,17 +285,44 @@ Sistem ini menggunakan arsitektur **terpisah (decoupled)**:
      - Mengonfigurasi layanan latar belakang Linux (`systemd`: `ps_ai.service`) sehingga server berjalan otomatis dan persisten di port `8080`.
      - Dashboard aktif dan dapat dibuka langsung via browser pada: `http://202.10.47.34:8080/` (atau `http://localhost:8080/`).
 
+### Sesi 17: Rekonstruksi Struktur Direktori Proyek & Migrasi Penuh ke React 19
+- **Kebutuhan**:
+  1. Membersihkan struktur file monolitik flat menjadi arsitektur modular yang rapi (`frontend/`, `backend/`, `data/`, `legacy/`).
+  2. Membangun ulang seluruh antarmuka dashboard menggunakan versi terbaru **React 19** + TypeScript + Vite + Lucide Icons.
+  3. Memperbaiki modul Telegram bot [`backend/botchart.py`](backend/botchart.py) agar membaca konfigurasi `.env` secara aman.
+  4. Memastikan single-port serving tetap berjalan di port `8080` dan lulus verifikasi browser otomatis tanpa error.
+- **Langkah & Implementasi**:
+  1. **Rekonstruksi Direktori Proyek**:
+     - `backend/`: Menampung seluruh skrip Python, API server, pipeline data yfinance, integrasi Google Search, dan Gemini AI analyst.
+     - `data/`: Menampung dataset JSON persisten (`market_data.json`, `corporate_events.json`, `emitens.json`, `ihsg_data.json`).
+     - `legacy/`: Mengarsipkan file single-page HTML sebelumnya ([`PintarSaham_Dashboard_Interaktif.html`](legacy/PintarSaham_Dashboard_Interaktif.html) dan [`admin.html`](legacy/admin.html)).
+     - `frontend/`: Aplikasi web modern berbasis **React 19.3.0** + TypeScript + Vite.
+  2. **Pengembangan Frontend React 19**:
+     - [`frontend/src/components/Header.tsx`](frontend/src/components/Header.tsx): Bilah navigasi navy dengan pencarian cepat shortcut `/`, navigasi tab, dan jam live market WIB.
+     - [`frontend/src/components/InstrumentHero.tsx`](frontend/src/components/InstrumentHero.tsx): Kartu ringkasan harga real-time, quick pills untuk saham likuid, dropdown 69 emiten, logo resmi SVG, dan metrik pergerakan harian.
+     - [`frontend/src/components/InteractiveChart.tsx`](frontend/src/components/InteractiveChart.tsx): Mesin chart SVG interaktif dengan timeframe (1M, 3M, 6M, 1Y), mode Candlestick/Line, MA20/MA50, sub-chart volume, dan indikator teknikal (RSI 14, Support/Resistance).
+     - [`frontend/src/components/AIAnalystSection.tsx`](frontend/src/components/AIAnalystSection.tsx): Kartu integrasi berita terkini Google Search dan ringkasan AI Analyst Gemini lengkap dengan stance badge (`BULLISH` / `NETRAL` / `BEARISH`).
+     - [`frontend/src/components/FundamentalTable.tsx`](frontend/src/components/FundamentalTable.tsx): Tabel fundamental & Margin of Safety 69 emiten dengan pencarian, filter 12 sektor, filter klasifikasi MOS, pengurutan cerdas, dan paginasi (10 per halaman).
+     - [`frontend/src/components/CorporateEventsTable.tsx`](frontend/src/components/CorporateEventsTable.tsx): Kalender 153 aksi korporasi riil (Earnings & Dividen) dengan status countdown interaktif dan paginasi cerdas.
+     - [`frontend/src/components/StockDetailModal.tsx`](frontend/src/components/StockDetailModal.tsx) & [`MethodologyModal.tsx`](frontend/src/components/MethodologyModal.tsx): Modal drawer profil perusahaan dan panduan rumus valuasi Benjamin Graham.
+  3. **Penyempurnaan Backend Server ([`backend/server.py`](backend/server.py))**:
+     - Melayani bundle produksi React 19 (`frontend/dist/`), mendukung routing SPA, menyediakan endpoint `/api/market-data`, `/api/stock`, `/api/news`, `/api/ai-analysis`, dan tetap melayani `/admin.html`.
+     - Memperbarui systemd service `ps_ai.service` untuk menjalankan server backend secara persisten.
+  4. **Verifikasi Browser Playwright Chromium**:
+     - Hasil uji otomatis: Dashboard React 19 berhasil me-render seluruh komponen (Header, Hero, Chart, Fundamental Table, Events Table) dengan status **0 console error dan 0 page error**. Tangkapan layar tersimpan pada [`react19_verified.png`](react19_verified.png).
+
 ---
 
 ## 📋 Catatan Teknis untuk Menjalankan Dashboard
 1. **Cara 1: Akses Langsung Web Browser (Server Aktif)**
    - Dashboard saat ini telah berjalan persisten melalui service `ps_ai.service` di port `8080`.
-   - **URL Dashboard Utama**: [http://202.10.47.34:8080/](http://202.10.47.34:8080/) (atau [http://202.10.47.34:8080/PintarSaham_Dashboard_Interaktif.html](http://202.10.47.34:8080/PintarSaham_Dashboard_Interaktif.html))
+   - **URL Dashboard Utama (React 19)**: [http://202.10.47.34:8080/](http://202.10.47.34:8080/)
    - **URL Admin Console**: [http://202.10.47.34:8080/admin.html](http://202.10.47.34:8080/admin.html)
+   - **URL Versi Legacy**: [http://202.10.47.34:8080/legacy/PintarSaham_Dashboard_Interaktif.html](http://202.10.47.34:8080/legacy/PintarSaham_Dashboard_Interaktif.html)
    - Status service dapat dicek kapan saja dengan: `systemctl status ps_ai`
-2. **Cara 2: Local HTTP Server (Desktop / Manual)**
-   - Cukup double-click file [`jalankan_dashboard_ihsg.bat`](jalankan_dashboard_ihsg.bat) atau jalankan `python3 server.py`.
-3. **Cara 3: Buka Langsung File HTML Offline**
-   - Double-click [`PintarSaham_Dashboard_Interaktif.html`](PintarSaham_Dashboard_Interaktif.html).
-   - Data pasar IHSG & saham fundamental teratas sudah ter-bundle di [`market_data.js`](market_data.js) sehingga tetap tampil lengkap, akurat, dan interaktif meski dibuka secara offline / file lokal langsung.
+2. **Cara 2: Mode Development Frontend (Vite)**
+   - Masuk ke direktori frontend dan jalankan: `cd frontend && npm run dev`
+3. **Cara 3: Build Ulang Frontend Production**
+   - Jalankan: `cd frontend && npm run build`
+
 

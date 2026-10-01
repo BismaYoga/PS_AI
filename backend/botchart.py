@@ -15,9 +15,15 @@ from telegram.ext import Application, CommandHandler, ContextTypes
 
 
 
-# Target Grup dan Topik Telegram spesifik
-TARGET_CHAT_ID
-TARGET_THREAD_ID
+from dotenv import load_dotenv
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+load_dotenv(os.path.join(BASE_DIR, '.env'))
+
+# Target Grup dan Topik Telegram spesifik dari environment .env
+TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
+TARGET_CHAT_ID = int(os.getenv("TELEGRAM_CHAT_ID", "0")) if os.getenv("TELEGRAM_CHAT_ID") else None
+TARGET_THREAD_ID = int(os.getenv("TELEGRAM_THREAD_ID", "0")) if os.getenv("TELEGRAM_THREAD_ID") else None
 
 COLOR_UP = "#26A69A"
 COLOR_DOWN = "#EF5350"
@@ -890,6 +896,9 @@ async def chart(
 # =========================================================
 
 if __name__ == "__main__":
+    if not TOKEN:
+        print("PERINGATAN: Variabel TELEGRAM_BOT_TOKEN belum diset di .env. Bot Telegram tidak aktif.")
+        exit(0)
 
     print("Bot Chart Saham sedang berjalan...")
 

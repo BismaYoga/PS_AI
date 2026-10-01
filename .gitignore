@@ -10,6 +10,13 @@ __pycache__/
 *$py.class
 *.log
 
+# Node & Frontend
+node_modules/
+frontend/node_modules/
+.tmp/
+*.tsbuildinfo
+*.png
+
 # IDE & OS files
 .vscode/
 .idea/

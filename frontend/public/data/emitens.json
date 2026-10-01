@@ -1,0 +1,416 @@
+[
+  {
+    "ticker": "AADI",
+    "name": "PT Adaro Andalan Indonesia Tbk",
+    "sector": "Energi",
+    "subsector": "Pertambangan Batubara Termal"
+  },
+  {
+    "ticker": "ACES",
+    "name": "PT Aspirasi Hidup Indonesia Tbk",
+    "sector": "Konsumer Siklikal",
+    "subsector": "Ritel Perbaikan Rumah & Gaya Hidup"
+  },
+  {
+    "ticker": "ADMR",
+    "name": "PT Adaro Minerals Indonesia Tbk",
+    "sector": "Energi",
+    "subsector": "Pertambangan Batubara Metalurgi"
+  },
+  {
+    "ticker": "ADRO",
+    "name": "PT Alamtri Resources Indonesia Tbk",
+    "sector": "Energi",
+    "subsector": "Investasi & Hilirisasi Energi Hijau"
+  },
+  {
+    "ticker": "AKRA",
+    "name": "PT AKR Corporindo Tbk",
+    "sector": "Energi",
+    "subsector": "Distribusi BBM, Logistik & Kawasan Industri"
+  },
+  {
+    "ticker": "AMMN",
+    "name": "PT Amman Mineral Internasional Tbk",
+    "sector": "Bahan Baku",
+    "subsector": "Pertambangan Tembaga & Emas"
+  },
+  {
+    "ticker": "AMRT",
+    "name": "PT Sumber Alfaria Trijaya Tbk",
+    "sector": "Konsumer Non-Siklikal",
+    "subsector": "Ritel Minimarket (Alfamart)"
+  },
+  {
+    "ticker": "ANTM",
+    "name": "PT Aneka Tambang Tbk",
+    "sector": "Bahan Baku",
+    "subsector": "Pertambangan Emas, Nikel & Bauksit"
+  },
+  {
+    "ticker": "ASII",
+    "name": "PT Astra International Tbk",
+    "sector": "Perindustrian",
+    "subsector": "Konglomerasi Otomotif, Alat Berat & Keuangan"
+  },
+  {
+    "ticker": "AVIA",
+    "name": "PT Avia Avian Tbk",
+    "sector": "Bahan Baku",
+    "subsector": "Manufaktur Cat & Bahan Bangunan"
+  },
+  {
+    "ticker": "BBCA",
+    "name": "PT Bank Central Asia Tbk",
+    "sector": "Keuangan",
+    "subsector": "Bank Konvensional"
+  },
+  {
+    "ticker": "BBNI",
+    "name": "PT Bank Negara Indonesia (Persero) Tbk",
+    "sector": "Keuangan",
+    "subsector": "Bank Konvensional"
+  },
+  {
+    "ticker": "BBRI",
+    "name": "PT Bank Rakyat Indonesia (Persero) Tbk",
+    "sector": "Keuangan",
+    "subsector": "Bank Konvensional & Finansial Mikro"
+  },
+  {
+    "ticker": "BBTN",
+    "name": "PT Bank Tabungan Negara (Persero) Tbk",
+    "sector": "Keuangan",
+    "subsector": "Bank Pembiayaan Perumahan (KPR)"
+  },
+  {
+    "ticker": "BMRI",
+    "name": "PT Bank Mandiri (Persero) Tbk",
+    "sector": "Keuangan",
+    "subsector": "Bank Konvensional"
+  },
+  {
+    "ticker": "BRPT",
+    "name": "PT Barito Pacific Tbk",
+    "sector": "Bahan Baku",
+    "subsector": "Petrokimia & Energi Terbarukan"
+  },
+  {
+    "ticker": "BSDE",
+    "name": "PT Bumi Serpong Damai Tbk",
+    "sector": "Properti & Real Estat",
+    "subsector": "Pengembangan Kota Mandiri"
+  },
+  {
+    "ticker": "BTPS",
+    "name": "PT Bank BTPN Syariah Tbk",
+    "sector": "Keuangan",
+    "subsector": "Bank Syariah Finansial Mikro"
+  },
+  {
+    "ticker": "BUKA",
+    "name": "PT Bukalapak.com Tbk",
+    "sector": "Teknologi",
+    "subsector": "E-Commerce & Layanan O2O (Mitra)"
+  },
+  {
+    "ticker": "CMRY",
+    "name": "PT Cisarua Mountain Dairy Tbk",
+    "sector": "Konsumer Non-Siklikal",
+    "subsector": "Olahan Susu & Daging Premium"
+  },
+  {
+    "ticker": "CPIN",
+    "name": "PT Charoen Pokphand Indonesia Tbk",
+    "sector": "Konsumer Non-Siklikal",
+    "subsector": "Pakan Ternak & Perunggasan Terintegrasi"
+  },
+  {
+    "ticker": "CTRA",
+    "name": "PT Ciputra Development Tbk",
+    "sector": "Properti & Real Estat",
+    "subsector": "Pengembangan Residensial & Kota Mandiri"
+  },
+  {
+    "ticker": "CUAN",
+    "name": "PT Petrindo Jaya Kreasi Tbk",
+    "sector": "Energi",
+    "subsector": "Holding Tambang Mineral & Batubara"
+  },
+  {
+    "ticker": "DSNG",
+    "name": "PT Dharma Satya Nusantara Tbk",
+    "sector": "Konsumer Non-Siklikal",
+    "subsector": "Perkebunan Kelapa Sawit & Kayu Olahan"
+  },
+  {
+    "ticker": "DSSA",
+    "name": "PT Dian Swastatika Sentosa Tbk",
+    "sector": "Energi",
+    "subsector": "Pertambangan Batubara, Pembangkit & Teknologi"
+  },
+  {
+    "ticker": "ELSA",
+    "name": "PT Elnusa Tbk",
+    "sector": "Energi",
+    "subsector": "Jasa Penunjang Hulu Migas & Distribusi BBM"
+  },
+  {
+    "ticker": "EMTK",
+    "name": "PT Elang Mahkota Teknologi Tbk",
+    "sector": "Teknologi",
+    "subsector": "Media, Telekomunikasi & Investasi Digital"
+  },
+  {
+    "ticker": "ENRG",
+    "name": "PT Energi Mega Persada Tbk",
+    "sector": "Energi",
+    "subsector": "Eksplorasi & Produksi Minyak dan Gas Bumi"
+  },
+  {
+    "ticker": "ERAA",
+    "name": "PT Erajaya Swasembada Tbk",
+    "sector": "Konsumer Siklikal",
+    "subsector": "Distributor & Ritel Gadget / Elektronik"
+  },
+  {
+    "ticker": "ESSA",
+    "name": "PT ESSA Industries Indonesia Tbk",
+    "sector": "Bahan Baku",
+    "subsector": "Pengolahan Amonia & Kilang LPG"
+  },
+  {
+    "ticker": "HEAL",
+    "name": "PT Medikaloka Hermina Tbk",
+    "sector": "Kesehatan",
+    "subsector": "Layanan Rumah Sakit (Hermina)"
+  },
+  {
+    "ticker": "HMSP",
+    "name": "PT H.M. Sampoerna Tbk",
+    "sector": "Konsumer Non-Siklikal",
+    "subsector": "Manufaktur Rokok & Tembakau"
+  },
+  {
+    "ticker": "HRTA",
+    "name": "PT Hartadinata Abadi Tbk",
+    "sector": "Konsumer Siklikal",
+    "subsector": "Manufaktur & Ritel Perhiasan Emas"
+  },
+  {
+    "ticker": "HRUM",
+    "name": "PT Harum Energy Tbk",
+    "sector": "Energi",
+    "subsector": "Tambang Batubara & Hilirisasi Nikel"
+  },
+  {
+    "ticker": "ICBP",
+    "name": "PT Indofood CBP Sukses Makmur Tbk",
+    "sector": "Konsumer Non-Siklikal",
+    "subsector": "Produsen Makanan Olahan (Indomie)"
+  },
+  {
+    "ticker": "INCO",
+    "name": "PT Vale Indonesia Tbk",
+    "sector": "Bahan Baku",
+    "subsector": "Pertambangan & Pengolahan Nikel Matte"
+  },
+  {
+    "ticker": "INDF",
+    "name": "PT Indofood Sukses Makmur Tbk",
+    "sector": "Konsumer Non-Siklikal",
+    "subsector": "Holding Pangan & Agribisnis Terintegrasi"
+  },
+  {
+    "ticker": "INKP",
+    "name": "PT Indah Kiat Pulp & Paper Tbk",
+    "sector": "Bahan Baku",
+    "subsector": "Manufaktur Bubur Kertas & Kertas Industri"
+  },
+  {
+    "ticker": "INTP",
+    "name": "PT Indocement Tunggal Prakarsa Tbk",
+    "sector": "Bahan Baku",
+    "subsector": "Manufaktur Semen (Tiga Roda)"
+  },
+  {
+    "ticker": "ISAT",
+    "name": "PT Indosat Tbk",
+    "sector": "Komunikasi",
+    "subsector": "Operator Telekomunikasi Seluler"
+  },
+  {
+    "ticker": "ITMG",
+    "name": "PT Indo Tambangraya Megah Tbk",
+    "sector": "Energi",
+    "subsector": "Pertambangan Batubara & Perdagangan Energi"
+  },
+  {
+    "ticker": "JPFA",
+    "name": "PT Japfa Comfeed Indonesia Tbk",
+    "sector": "Konsumer Non-Siklikal",
+    "subsector": "Agri-Food & Peternakan Terintegrasi"
+  },
+  {
+    "ticker": "JSMR",
+    "name": "PT Jasa Marga (Persero) Tbk",
+    "sector": "Infrastruktur",
+    "subsector": "Operator Jalan Tol"
+  },
+  {
+    "ticker": "KIJA",
+    "name": "PT Kawasan Industri Jababeka Tbk",
+    "sector": "Properti & Real Estat",
+    "subsector": "Pengembangan Kawasan Industri Terpadu"
+  },
+  {
+    "ticker": "KLBF",
+    "name": "PT Kalbe Farma Tbk",
+    "sector": "Kesehatan",
+    "subsector": "Farmasi, Nutrisi & Layanan Kesehatan"
+  },
+  {
+    "ticker": "KPIG",
+    "name": "PT MNC Land Tbk",
+    "sector": "Properti & Real Estat",
+    "subsector": "Pengembangan Properti & Hospitality"
+  },
+  {
+    "ticker": "MAPA",
+    "name": "PT MAP Aktif Adiperkasa Tbk",
+    "sector": "Konsumer Siklikal",
+    "subsector": "Ritel Olahraga, Sepatu & Anak (Planet Sports)"
+  },
+  {
+    "ticker": "MAPI",
+    "name": "PT Mitra Adiperkasa Tbk",
+    "sector": "Konsumer Siklikal",
+    "subsector": "Ritel Gaya Hidup, Departemen Store & F&B"
+  },
+  {
+    "ticker": "MEDC",
+    "name": "PT Medco Energi Internasional Tbk",
+    "sector": "Energi",
+    "subsector": "Eksplorasi Migas, Tembaga & Pembangkit Listrik"
+  },
+  {
+    "ticker": "MIKA",
+    "name": "PT Mitra Keluarga Karyasehat Tbk",
+    "sector": "Kesehatan",
+    "subsector": "Layanan Rumah Sakit Swasta"
+  },
+  {
+    "ticker": "MTEL",
+    "name": "PT Dayamitra Telekomunikasi Tbk",
+    "sector": "Infrastruktur",
+    "subsector": "Penyedia Menara Telekomunikasi (Mitratel)"
+  },
+  {
+    "ticker": "MYOR",
+    "name": "PT Mayora Indah Tbk",
+    "sector": "Konsumer Non-Siklikal",
+    "subsector": "Makanan & Minuman Olahan (Kopiko, Torabika)"
+  },
+  {
+    "ticker": "PGAS",
+    "name": "PT Perusahaan Gas Negara Tbk",
+    "sector": "Energi",
+    "subsector": "Transmisi & Distribusi Gas Bumi"
+  },
+  {
+    "ticker": "PGEO",
+    "name": "PT Pertamina Geothermal Energy Tbk",
+    "sector": "Energi",
+    "subsector": "Pembangkit Listrik Panas Bumi (Geotermal)"
+  },
+  {
+    "ticker": "PNLF",
+    "name": "PT Panin Financial Tbk",
+    "sector": "Keuangan",
+    "subsector": "Jasa Asuransi Jiwa & Investasi Keuangan"
+  },
+  {
+    "ticker": "POWR",
+    "name": "PT Cikarang Listrindo Tbk",
+    "sector": "Utilitas",
+    "subsector": "Penyedia Listrik Kawasan Industri (IPP)"
+  },
+  {
+    "ticker": "PTBA",
+    "name": "PT Bukit Asam Tbk",
+    "sector": "Energi",
+    "subsector": "Pertambangan Batubara BUMN"
+  },
+  {
+    "ticker": "PWON",
+    "name": "PT Pakuwon Jati Tbk",
+    "sector": "Properti & Real Estat",
+    "subsector": "Pengembangan Properti Superblok & Mal"
+  },
+  {
+    "ticker": "RAJA",
+    "name": "PT Rukun Raharja Tbk",
+    "sector": "Energi",
+    "subsector": "Infrastruktur & Perdagangan Gas Bumi"
+  },
+  {
+    "ticker": "SCMA",
+    "name": "PT Surya Citra Media Tbk",
+    "sector": "Komunikasi",
+    "subsector": "Media Penyiaran & Platform Streaming"
+  },
+  {
+    "ticker": "SIDO",
+    "name": "PT Industri Jamu dan Farmasi Sido Muncul Tbk",
+    "sector": "Kesehatan",
+    "subsector": "Jamu Herbal & Suplemen Kesehatan"
+  },
+  {
+    "ticker": "SMRA",
+    "name": "PT Summarecon Agung Tbk",
+    "sector": "Properti & Real Estat",
+    "subsector": "Pengembangan Kota Mandiri & Mal Ritel"
+  },
+  {
+    "ticker": "SSMS",
+    "name": "PT Sawit Sumbermas Sarana Tbk",
+    "sector": "Konsumer Non-Siklikal",
+    "subsector": "Perkebunan & Pengolahan Kelapa Sawit"
+  },
+  {
+    "ticker": "TAPG",
+    "name": "PT Triputra Agro Persada Tbk",
+    "sector": "Konsumer Non-Siklikal",
+    "subsector": "Perkebunan Kelapa Sawit & Karet"
+  },
+  {
+    "ticker": "TLKM",
+    "name": "PT Telkom Indonesia (Persero) Tbk",
+    "sector": "Komunikasi",
+    "subsector": "Telekomunikasi Digital & Jaringan Terintegrasi"
+  },
+  {
+    "ticker": "TOWR",
+    "name": "PT Sarana Menara Nusantara Tbk",
+    "sector": "Infrastruktur",
+    "subsector": "Menara Telekomunikasi & Jaringan Fiber Optik"
+  },
+  {
+    "ticker": "UNTR",
+    "name": "PT United Tractors Tbk",
+    "sector": "Perindustrian",
+    "subsector": "Alat Berat, Kontraktor Tambang & Mineral"
+  },
+  {
+    "ticker": "UNVR",
+    "name": "PT Unilever Indonesia Tbk",
+    "sector": "Konsumer Non-Siklikal",
+    "subsector": "Barang Konsumen Cepat Habis (FMCG)"
+  },
+  {
+    "ticker": "WIFI",
+    "name": "PT Solusi Sinergi Digital Tbk",
+    "sector": "Teknologi",
+    "subsector": "Konektivitas Internet & Ekosistem Digital (Surge)"
+  }
+]

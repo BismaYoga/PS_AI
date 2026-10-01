@@ -4,7 +4,10 @@ import os
 from datetime import datetime
 import concurrent.futures
 
-DIRECTORY = os.path.dirname(os.path.abspath(__file__))
+BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.dirname(BACKEND_DIR)
+DATA_DIR = os.path.join(BASE_DIR, 'data')
+DIRECTORY = DATA_DIR if os.path.exists(DATA_DIR) else BACKEND_DIR
 
 # Load 69 emitens catalog
 EMITENS_CATALOG = []

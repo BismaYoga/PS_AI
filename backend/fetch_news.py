@@ -17,21 +17,21 @@ from dotenv import load_dotenv
 LOCAL_ENV = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
 PARENT_ENV = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env')
 
-if os.path.exists(LOCAL_ENV):
-    load_dotenv(LOCAL_ENV)
+for p_env in (PARENT_ENV, LOCAL_ENV):
+    if os.path.exists(p_env):
+        load_dotenv(p_env)
 
 def get_gemini_api_key():
     """Ambil API key dari GEMINI_API atau API_AI dengan fallback cerdas."""
+    for p_env in (PARENT_ENV, LOCAL_ENV):
+        if os.path.exists(p_env):
+            load_dotenv(p_env, override=False)
     k = os.getenv("GEMINI_API", "").strip().strip('"').strip("'")
-    if k and not k.startswith("AQ.Ab8RN6Ln"):  # Hindari key suspended jika ada
+    if not k:
+        k = os.getenv("API_AI", "").strip().strip('"').strip("'")
+    if k and not k.startswith("AQ.Ab8RN6Ln"):
         return k
-    # Coba parent .env
-    if os.path.exists(PARENT_ENV):
-        load_dotenv(PARENT_ENV, override=True)
-        k2 = os.getenv("API_AI", "").strip().strip('"').strip("'")
-        if k2:
-            return k2
-    return k
+    return ""
 
 EMITEN_NAMES = {
     "AADI":"Adaro Andalan Indonesia","ACES":"Aspirasi Hidup Indonesia (ACE Hardware)",

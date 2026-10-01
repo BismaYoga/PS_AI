@@ -4,12 +4,12 @@ window.MARKET_DATA = {
     "name": "Indeks Harga Saham Gabungan",
     "sector": null,
     "subsector": null,
-    "price": 6127.12,
-    "previousClose": 6147.86,
-    "change": -20.74,
-    "changePct": -0.34,
-    "date": "29 Sep 2026",
-    "rawDate": "2026-09-29",
+    "price": 6018.71,
+    "previousClose": 6071.14,
+    "change": -52.43,
+    "changePct": -0.86,
+    "date": "01 Oct 2026",
+    "rawDate": "2026-10-01",
     "volume": "0",
     "turnover": "Rp0.00 M",
     "gainers": 285,
@@ -18,22 +18,6 @@ window.MARKET_DATA = {
     "source": "Yahoo Finance (^JKSE)",
     "isStock": false,
     "ohlc": [
-      {
-        "date": "2025-09-29",
-        "open": 8139.58,
-        "high": 8157.33,
-        "low": 8100.02,
-        "close": 8123.25,
-        "volume": 439450000
-      },
-      {
-        "date": "2025-09-30",
-        "open": 8137.63,
-        "high": 8150.34,
-        "low": 8042.82,
-        "close": 8061.06,
-        "volume": 461651600
-      },
       {
         "date": "2025-10-01",
         "open": 8069.94,
@@ -1935,7 +1919,23 @@ window.MARKET_DATA = {
         "open": 6118.81,
         "high": 6150.55,
         "low": 6013.08,
-        "close": 6127.12,
+        "close": 6121.7,
+        "volume": 340052700
+      },
+      {
+        "date": "2026-09-30",
+        "open": 6118.05,
+        "high": 6187.05,
+        "low": 6071.14,
+        "close": 6071.14,
+        "volume": 267762500
+      },
+      {
+        "date": "2026-10-01",
+        "open": 6062.89,
+        "high": 6095.23,
+        "low": 6009.84,
+        "close": 6018.71,
         "volume": 0
       }
     ]
