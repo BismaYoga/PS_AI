@@ -266,12 +266,36 @@ Sistem ini menggunakan arsitektur **terpisah (decoupled)**:
 
 ---
 
+### Sesi 16: Integrasi Berita Google Search Real-Time, Gemini AI Analyst, Admin Console & Akses Browser
+- **Kebutuhan**:
+  1. Menambahkan agregasi berita pasar riil dan ringkasan analisis AI menggunakan Google Gemini.
+  2. Menyediakan halaman Admin Console terdedikasi untuk pengelolaan data & pemantauan sistem.
+  3. Memastikan dashboard dapat diakses langsung melalui browser di server/VPS.
+- **Langkah & Implementasi**:
+  1. **Modul Berita Google Search & Gemini ([`fetch_news.py`](fetch_news.py))**:
+     - Mengintegrasikan pencarian berita terkini melalui Google Search grounding via Gemini API.
+     - Menyediakan endpoint `/api/news?ticker=XXXX` untuk menyajikan ringkasan sentimen dan headline terkini.
+  2. **Mesin Analisis Pasar AI ([`ai_analyst.py`](ai_analyst.py))**:
+     - Mengembangkan analisis pasar multi-modal memadukan indikator teknikal (RSI, MA20/50, Support/Resistance) dan sentimen berita.
+     - Menyediakan endpoint `/api/ai-analysis` (mendukung GET & POST).
+  3. **Admin Console ([`admin.html`](admin.html))**:
+     - Antarmuka khusus admin untuk monitoring kesehatan sistem, status cache data pasar, log aktivitas, dan konfigurasi API key.
+  4. **Konfigurasi Web Server & Akses Browser**:
+     - Menambahkan symlink `index.html` mengarah ke [`PintarSaham_Dashboard_Interaktif.html`](PintarSaham_Dashboard_Interaktif.html).
+     - Mengonfigurasi layanan latar belakang Linux (`systemd`: `ps_ai.service`) sehingga server berjalan otomatis dan persisten di port `8080`.
+     - Dashboard aktif dan dapat dibuka langsung via browser pada: `http://202.10.47.34:8080/` (atau `http://localhost:8080/`).
+
+---
+
 ## 📋 Catatan Teknis untuk Menjalankan Dashboard
-1. **Cara 1: Local HTTP Server (Sangat Disarankan)**
-   - Cukup double-click file [`jalankan_dashboard.bat`](../pintarsaham_dashboard/jalankan_dashboard.bat) (untuk dashboard emiten) atau [`jalankan_dashboard_ihsg.bat`](jalankan_dashboard_ihsg.bat) (untuk dashboard IHSG & multi-saham).
-   - Bebas dari segala batasan keamanan `file:///` browser dan mendukung auto-refresh ticker on-demand.
-2. **Cara 2: Buka Langsung File HTML**
-   - Double-click [`dashboard.html`](../pintarsaham_dashboard/dashboard.html) atau [`PintarSaham_Dashboard_Interaktif.html`](PintarSaham_Dashboard_Interaktif.html).
+1. **Cara 1: Akses Langsung Web Browser (Server Aktif)**
+   - Dashboard saat ini telah berjalan persisten melalui service `ps_ai.service` di port `8080`.
+   - **URL Dashboard Utama**: [http://202.10.47.34:8080/](http://202.10.47.34:8080/) (atau [http://202.10.47.34:8080/PintarSaham_Dashboard_Interaktif.html](http://202.10.47.34:8080/PintarSaham_Dashboard_Interaktif.html))
+   - **URL Admin Console**: [http://202.10.47.34:8080/admin.html](http://202.10.47.34:8080/admin.html)
+   - Status service dapat dicek kapan saja dengan: `systemctl status ps_ai`
+2. **Cara 2: Local HTTP Server (Desktop / Manual)**
+   - Cukup double-click file [`jalankan_dashboard_ihsg.bat`](jalankan_dashboard_ihsg.bat) atau jalankan `python3 server.py`.
+3. **Cara 3: Buka Langsung File HTML Offline**
+   - Double-click [`PintarSaham_Dashboard_Interaktif.html`](PintarSaham_Dashboard_Interaktif.html).
    - Data pasar IHSG & saham fundamental teratas sudah ter-bundle di [`market_data.js`](market_data.js) sehingga tetap tampil lengkap, akurat, dan interaktif meski dibuka secara offline / file lokal langsung.
-3. **Konfigurasi URL API**:
-   - Jika URL deployment Apps Script diperbarui, klik tombol **⚙️ API** di pojok kanan atas dashboard untuk memasukkan URL baru.
+
