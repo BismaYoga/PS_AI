@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { getStockLogoUrl } from '../utils';
+import { TV_LOGOS } from '../constants';
 
 interface StockLogoProps {
   ticker: string;
@@ -16,19 +17,37 @@ export const StockLogo: React.FC<StockLogoProps> = ({
 }) => {
   const cleanTicker = (ticker || '').toUpperCase().trim();
   const displayMark = mark || cleanTicker.slice(0, 3);
-  const [imgSrc, setImgSrc] = useState<string | null>(getStockLogoUrl(cleanTicker));
+  const [imgSrc, setImgSrc] = useState<string | null>(() => getStockLogoUrl(cleanTicker));
   const [fallbackStep, setFallbackStep] = useState<number>(0);
   const [loaded, setLoaded] = useState<boolean>(false);
 
+  useEffect(() => {
+    setImgSrc(getStockLogoUrl(cleanTicker));
+    setFallbackStep(0);
+    setLoaded(false);
+  }, [cleanTicker]);
+
   const handleError = () => {
     if (fallbackStep === 0) {
+      // Step 1: Coba logo SVG lokal (/logo-emiten/)
       setFallbackStep(1);
       setImgSrc(`/logo-emiten/${cleanTicker}.svg`);
     } else if (fallbackStep === 1) {
+      // Step 2: Coba TradingView jika ada pemetaan
       setFallbackStep(2);
+      const tvId = TV_LOGOS[cleanTicker];
+      if (tvId) {
+        setImgSrc(`https://s3-symbol-logo.tradingview.com/${tvId}--big.svg`);
+      } else {
+        setImgSrc(`https://assets.stockbit.com/logos/companies/${cleanTicker}.png`);
+      }
+    } else if (fallbackStep === 2) {
+      // Step 3: Coba Stockbit CDN
+      setFallbackStep(3);
       setImgSrc(`https://assets.stockbit.com/logos/companies/${cleanTicker}.png`);
     } else {
-      setImgSrc(null); // remove img and reveal monogram text
+      // Fallback terakhir: Sembunyikan gambar dan tampilkan teks monogram
+      setImgSrc(null);
     }
   };
 

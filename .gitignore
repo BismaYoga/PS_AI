@@ -9,6 +9,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.log
+/market_data.json
 
 # Node & Frontend
 node_modules/

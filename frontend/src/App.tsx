@@ -53,6 +53,7 @@ export default function App() {
   // Market & Events data
   const [marketBundle, setMarketBundle] = useState<Record<string, any>>({});
   const [corporateEvents, setCorporateEvents] = useState<CorporateEvent[]>(INITIAL_EVENTS);
+  const [allEmitens, setAllEmitens] = useState<any[]>(INITIAL_EMITENS);
 
   // Toast notification helper
   const notify = useCallback((msg: string) => {
@@ -67,7 +68,7 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [toastMessage]);
 
-  // Fetch live market data bundle
+  // Fetch live market data bundle & complete 976 emitens catalog
   useEffect(() => {
     const loadMarketBundle = async () => {
       try {
@@ -76,6 +77,7 @@ export default function App() {
           const bundle = await res.json();
           if (bundle.market) setMarketBundle(bundle.market);
           if (bundle.events && bundle.events.length) setCorporateEvents(bundle.events);
+          if (bundle.emitens && bundle.emitens.length) setAllEmitens(bundle.emitens);
           return;
         }
       } catch (err) {
@@ -89,13 +91,44 @@ export default function App() {
           const bundle2 = await res2.json();
           if (bundle2.market) setMarketBundle(bundle2.market);
           if (bundle2.events && bundle2.events.length) setCorporateEvents(bundle2.events);
+          if (bundle2.emitens && bundle2.emitens.length) setAllEmitens(bundle2.emitens);
         }
       } catch (err2) {
         console.warn('Static data load failed:', err2);
       }
+
+      // Also ensure full emitens catalog is loaded
+      try {
+        const resE = await fetch('/data/emitens.json');
+        if (resE.ok) {
+          const emitensData = await resE.json();
+          if (Array.isArray(emitensData) && emitensData.length > 0) {
+            setAllEmitens(emitensData);
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to load /data/emitens.json:', e);
+      }
     };
     loadMarketBundle();
   }, []);
+
+  // On-demand live fetch via Invezgo API when user selects any stock
+  useEffect(() => {
+    if (selectedStockTicker && selectedStockTicker !== 'IHSG') {
+      const existing = marketBundle[selectedStockTicker];
+      if (!existing || !existing.ohlc) {
+        fetch(`/api/stock?ticker=${encodeURIComponent(selectedStockTicker)}`)
+          .then((r) => (r.ok ? r.json() : null))
+          .then((data) => {
+            if (data && !data.error) {
+              setMarketBundle((prev) => ({ ...prev, [selectedStockTicker]: data }));
+            }
+          })
+          .catch((err) => console.warn('On-demand stock fetch failed:', err));
+      }
+    }
+  }, [selectedStockTicker, marketBundle]);
 
   // Listen to hashchange
   useEffect(() => {
@@ -124,19 +157,19 @@ export default function App() {
     }
   }, [route, selectedStockTicker]);
 
-  // Construct StockItems from initial emitens and live market bundle
+  // Construct StockItems from complete emitens catalog and live market bundle
   const stocks: StockItem[] = useMemo(() => {
-    return INITIAL_EMITENS.map((e) => {
+    return allEmitens.map((e) => {
       const p = PRESET_STOCKS[e.ticker] || {};
       const m = marketBundle[e.ticker] || null;
-      const shortName = e.name.replace(/^PT\s+/i, '').replace(/\s+Tbk$/i, '');
+      const shortName = (e.name || e.ticker).replace(/^PT\s+/i, '').replace(/\s+Tbk$/i, '');
 
       return {
         ticker: e.ticker,
-        name: e.name,
+        name: e.name || e.ticker,
         short: shortName,
-        sector: e.sector,
-        subsector: e.subsector,
+        sector: e.sector || 'Lainnya',
+        subsector: e.subsector || e.sector || 'Umum',
         color: p.color || '#1a62bf',
         mark: p.mark || e.ticker.slice(0, 3),
         price: m ? m.price : 1000,
@@ -164,7 +197,7 @@ export default function App() {
           `Profil emiten ${e.name} yang beroperasi di sektor ${e.sector}.`,
       };
     });
-  }, [marketBundle]);
+  }, [allEmitens, marketBundle]);
 
   // Construct IndexItem (IHSG)
   const indexData: IndexItem = useMemo(() => {

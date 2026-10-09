@@ -129,7 +129,7 @@ export const DrawerModal: React.FC<DrawerModalProps> = ({
               </button>
             </div>
             <div id="drawer-content">
-              <h2>Data fundamental riil dari Yahoo Finance (yfinance)</h2>
+              <h2>Data fundamental riil dari Invezgo API</h2>
               <p>
                 Metodologi penentuan harga wajar (fair value) dan Margin of Safety
                 (MOS) dihitung langsung dari data keuangan riil audited emiten
@@ -271,7 +271,7 @@ export const DrawerModal: React.FC<DrawerModalProps> = ({
               </div>
               <div className="detail-pair">
                 <span>Harga Pasar</span>
-                <b>{rp(s.price)} · yfinance</b>
+                <b>{rp(s.price)} · Invezgo</b>
               </div>
               <div className="detail-pair">
                 <span>Laporan historis</span>
@@ -391,7 +391,7 @@ export const DrawerModal: React.FC<DrawerModalProps> = ({
         return (
           <>
             <div className="drawer-top">
-              <span className="drawer-eyebrow">AGENDA PASAR RIIL (YFINANCE)</span>
+              <span className="drawer-eyebrow">AGENDA PASAR RIIL (BEI / INVEZGO)</span>
               <button
                 className="icon-btn"
                 id="drawer-close"
@@ -415,7 +415,7 @@ export const DrawerModal: React.FC<DrawerModalProps> = ({
                 </span>
               </div>
               <div className="notice">
-                <strong>Data Peristiwa Riil dari Yahoo Finance ({e.ticker}.JK):</strong>
+                <strong>Data Peristiwa Riil dari Invezgo / IDX ({e.ticker}):</strong>
                 <br />
                 {isEarn
                   ? 'Perkiraan tanggal rilis laporan keuangan resmi kuartal berjalan emiten di Bursa Efek Indonesia.'
@@ -431,7 +431,7 @@ export const DrawerModal: React.FC<DrawerModalProps> = ({
               </div>
               <div className="detail-pair">
                 <span>Sumber verifikasi</span>
-                <b>Yahoo Finance Official Feed ({e.ticker}.JK)</b>
+                <b>Invezgo &amp; IDX Official Feed ({e.ticker})</b>
               </div>
               <h3>Ringkasan peristiwa</h3>
               <p>{e.note}</p>

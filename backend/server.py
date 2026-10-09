@@ -121,6 +121,22 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(payload)
             return
 
+        # 1b. API: /api/emitens, /api/stocks
+        if path in ('/api/emitens', '/api/stocks'):
+            emitens_json_path = get_data_file('emitens.json')
+            if os.path.exists(emitens_json_path):
+                with open(emitens_json_path, 'rb') as ef:
+                    payload = ef.read()
+            else:
+                payload = json.dumps([]).encode('utf-8')
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json; charset=utf-8')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.send_header('Content-Length', str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
+            return
+
         # 2. API: /api/ihsg, /api/stock, /api/chart
         if path in ('/api/ihsg', '/api/stock', '/api/chart'):
             ticker = 'IHSG'
@@ -305,11 +321,11 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
         self.send_response(404)
         self.end_headers()
 
-if __name__ == '__main__':
+def main():
     os.chdir(BACKEND_DIR)
     js_path = get_data_file('market_data.js')
     if not os.path.exists(js_path):
-        print("Bundle data awal belum ada, mengunduh dari yfinance...")
+        print("Bundle data awal belum ada, mengunduh dari Invezgo API...")
         try:
             fetch_all_initial()
         except Exception as err:
@@ -327,3 +343,6 @@ if __name__ == '__main__':
             httpd.serve_forever()
     except Exception as e:
         print(f"Server error: {e}")
+
+if __name__ == '__main__':
+    main()

@@ -209,7 +209,7 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
         <div className="valuation-controls">
           <div className="assumption">
             <label>
-              {isPe ? 'EPS riil (TTM)' : 'BVPS riil'} · yfinance
+              {isPe ? 'EPS riil (TTM)' : 'BVPS riil'} · Invezgo API
             </label>
             <strong>{base ? `${rp(base)} / saham` : '—'}</strong>
           </div>
@@ -433,8 +433,7 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
           </div>
 
           <div className="profile-note">
-            Data pasar, valuasi, dan EPS/BVPS riil dari Yahoo Finance. Profil dan
-            segmen adalah contoh demonstrasi.
+            Data pasar, valuasi, dan EPS/BVPS riil dari Invezgo API (BEI Official).
           </div>
         </aside>
 
@@ -449,9 +448,30 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
                 Pergerakan harga {stock.ticker} <span className="pill outline">IDR</span>{' '}
                 {stock.isLive && (
                   <span className="pill green" style={{ fontSize: '9px' }}>
-                    LIVE yfinance ({stock.ticker}.JK)
+                    LIVE Invezgo ({stock.ticker})
                   </span>
                 )}
+                <button
+                  onClick={async () => {
+                    onNotify(`Memperbarui data ${stock.ticker} dari Invezgo API...`);
+                    try {
+                      const res = await fetch(`/api/stock?ticker=${encodeURIComponent(stock.ticker)}`);
+                      if (res.ok) {
+                        onNotify(`Data ${stock.ticker} berhasil diperbarui dari Invezgo!`);
+                        window.location.reload();
+                      } else {
+                        onNotify(`Gagal memperbarui ${stock.ticker}`);
+                      }
+                    } catch {
+                      onNotify(`Koneksi server gagal saat memperbarui ${stock.ticker}`);
+                    }
+                  }}
+                  className="btn small-btn"
+                  style={{ padding: '2px 8px', fontSize: '10px', marginLeft: '6px' }}
+                  title="Perbarui data saham dari Invezgo API"
+                >
+                  <Icon name="refresh" cls="sm" /> Perbarui
+                </button>
                 <a
                   href="#home"
                   onClick={(e) => {
@@ -479,8 +499,7 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
                 </span>
               </div>
               <div className="quote-caption">
-                Penutupan bursa · {stock.date || '01 Okt 2026'} · Sumber: Yahoo
-                Finance ({stock.ticker}.JK)
+                Penutupan bursa · {stock.date || '09 Okt 2026'} · Sumber: Invezgo (BEI Official)
               </div>
             </div>
             <button
@@ -567,7 +586,7 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
                 <i className="legend-line ma"></i> MA 20
               </span>
             </div>
-            <span className="chart-source">Sumber: yfinance · Data pasar IDX</span>
+            <span className="chart-source">Sumber: Invezgo · Data resmi BEI</span>
           </div>
 
           {showFib && (

@@ -1,6 +1,12 @@
-import yfinance as yf
-import json
+"""
+fetch_market_data.py — Modul Penarikan Data Pasar Modal BEI / IDX
+Sumber Utama: Invezgo API (Katalog Lengkap 976 Emiten + IHSG)
+Fallback: Yahoo Finance jika Invezgo offline / kuota habis.
+"""
+
 import os
+import json
+import sys
 from datetime import datetime
 import concurrent.futures
 
@@ -9,7 +15,23 @@ BASE_DIR = os.path.dirname(BACKEND_DIR)
 DATA_DIR = os.path.join(BASE_DIR, 'data')
 DIRECTORY = DATA_DIR if os.path.exists(DATA_DIR) else BACKEND_DIR
 
-# Load 69 emitens catalog
+try:
+    from invezgo_client import (
+        fetch_stock_invezgo,
+        fetch_ihsg_invezgo,
+        get_invezgo_api_key,
+        get_target_pe
+    )
+except ImportError:
+    sys.path.insert(0, BACKEND_DIR)
+    from invezgo_client import (
+        fetch_stock_invezgo,
+        fetch_ihsg_invezgo,
+        get_invezgo_api_key,
+        get_target_pe
+    )
+
+# Load full catalog (976 emitens)
 EMITENS_CATALOG = []
 EMITEN_MAP = {}
 emitens_path = os.path.join(DIRECTORY, 'emitens.json')
@@ -21,56 +43,24 @@ if os.path.exists(emitens_path):
     except Exception as e:
         print(f"Warning loading emitens.json: {e}")
 
-TICKER_TARGET_PE = {
-    'BBCA': 15.0, 'BBRI': 12.0, 'BMRI': 12.0, 'BBNI': 12.0, 'BBTN': 9.0, 'BTPS': 10.0, 'PNLF': 8.0,
-    'ICBP': 15.0, 'INDF': 12.0, 'MYOR': 15.0, 'UNVR': 18.0, 'AMRT': 18.0, 'CMRY': 18.0, 'CPIN': 14.0, 'JPFA': 12.0, 'SIDO': 15.0,
-    'TLKM': 14.0, 'ISAT': 14.0, 'MTEL': 16.0, 'TOWR': 14.0, 'JSMR': 10.0, 'POWR': 10.0,
-    'ASII': 9.0, 'UNTR': 8.5,
-    'MIKA': 25.0, 'HEAL': 24.0, 'KLBF': 20.0,
-    'ADRO': 7.0, 'PTBA': 7.0, 'ITMG': 7.0, 'AADI': 6.5, 'ADMR': 8.0, 'AKRA': 11.0, 'MEDC': 7.5, 'PGAS': 8.0, 'PGEO': 12.0,
-    'ANTM': 12.0, 'INCO': 13.0, 'AMMN': 18.0, 'BRPT': 14.0, 'INKP': 7.0, 'INTP': 13.0,
-    'ACES': 13.0, 'MAPI': 12.0, 'MAPA': 13.0, 'ERAA': 10.0,
-    'BSDE': 8.5, 'CTRA': 8.5, 'PWON': 8.5, 'SMRA': 8.5, 'KIJA': 8.0,
-    'GOTO': 25.0, 'BUKA': 18.0, 'EMTK': 16.0, 'WIFI': 14.0
-}
+# Core liquid stocks prioritized for offline bundle pre-cache
+CORE_PRECACHE_TICKERS = [
+    'BBCA', 'BBRI', 'BMRI', 'BBNI', 'TLKM', 'ASII', 'ICBP', 'INDF', 'AMRT', 'MYOR',
+    'UNVR', 'KLBF', 'MIKA', 'HEAL', 'ADRO', 'PTBA', 'ITMG', 'AADI', 'ADMR', 'AKRA',
+    'MEDC', 'PGAS', 'PGEO', 'ANTM', 'INCO', 'AMMN', 'BRPT', 'INKP', 'INTP', 'ACES',
+    'MAPI', 'MAPA', 'ERAA', 'BSDE', 'CTRA', 'PWON', 'SMRA', 'KIJA', 'GOTO', 'BUKA',
+    'EMTK', 'WIFI', 'CUAN', 'CMRY', 'CPIN', 'JPFA', 'SIDO', 'MTEL', 'TOWR', 'JSMR'
+]
 
-SECTOR_TARGET_PE = {
-    'Keuangan': 11.5,
-    'Konsumer Non-Siklikal': 15.0,
-    'Konsumer Primer': 15.0,
-    'Konsumer Siklikal': 12.5,
-    'Kesehatan': 22.0,
-    'Infrastruktur': 13.5,
-    'Komunikasi': 14.0,
-    'Energi': 7.5,
-    'Bahan Baku': 12.0,
-    'Perindustrian': 9.0,
-    'Properti & Real Estat': 8.5,
-    'Teknologi': 18.0,
-    'Utilitas': 10.0
-}
-
-def get_target_pe(ticker, sector=None):
-    if ticker in TICKER_TARGET_PE:
-        return TICKER_TARGET_PE[ticker]
-    if not sector and ticker in EMITEN_MAP:
-        sector = EMITEN_MAP[ticker].get('sector')
-    if sector and sector in SECTOR_TARGET_PE:
-        return SECTOR_TARGET_PE[sector]
-    return 12.0
-
-def fetch_single(ticker_symbol):
-    """
-    Fetch 1 year daily OHLC for either IHSG (^JKSE) or an Indonesian stock (<TICKER>.JK).
-    """
+def fetch_single_yfinance_fallback(ticker_symbol: str) -> dict:
+    import yfinance as yf
     clean_sym = ticker_symbol.upper().strip()
     yf_symbol = '^JKSE' if clean_sym == 'IHSG' else f"{clean_sym}.JK"
     
     t = yf.Ticker(yf_symbol)
     df = t.history(period='1y', interval='1d')
-    
     if df.empty:
-        raise Exception(f"Tidak ada data ditemukan untuk {yf_symbol}")
+        raise Exception(f"Tidak ada data ditemukan untuk {yf_symbol} via yfinance")
     
     df = df.dropna(subset=['Close'])
     if len(df) < 2:
@@ -109,24 +99,16 @@ def fetch_single(ticker_symbol):
     if clean_sym != 'IHSG':
         try:
             info = t.info or {}
-            trailing_eps = info.get('trailingEps')
-            forward_eps = info.get('forwardEps')
+            trailing_eps = info.get('trailingEps') or info.get('forwardEps')
             book_value = info.get('bookValue')
             trailing_pe = info.get('trailingPE')
             price_to_book = info.get('priceToBook')
-            dividend_yield = info.get('dividendYield')
             roe = info.get('returnOnEquity')
             market_cap = info.get('marketCap')
 
-            eps_val = None
-            if trailing_eps is not None and trailing_eps > 0:
-                eps_val = float(trailing_eps)
-            elif forward_eps is not None and forward_eps > 0:
-                eps_val = float(forward_eps)
-
-            target_pe = get_target_pe(clean_sym, sector_name)
-
+            eps_val = float(trailing_eps) if (trailing_eps is not None and trailing_eps > 0) else None
             bvps_val = float(book_value) if (book_value is not None and book_value > 0) else None
+            target_pe = get_target_pe(clean_sym, sector_name)
 
             fair_value_per = round(eps_val * target_pe, 0) if eps_val else None
             mos_per = round((1 - (last['close'] / fair_value_per)) * 100, 1) if (fair_value_per and fair_value_per > 0) else None
@@ -140,12 +122,11 @@ def fetch_single(ticker_symbol):
                 'fairValue': fair_value_per,
                 'mos': mos_per,
                 'roe': round(float(roe) * 100, 1) if roe is not None else None,
-                'dividendYield': round(float(dividend_yield) * 100, 2) if dividend_yield is not None else None,
                 'marketCap': market_cap,
                 'summary': info.get('longBusinessSummary')
             }
-        except Exception as e_info:
-            print(f"Warning fetching fundamental info for {clean_sym}: {e_info}")
+        except Exception:
+            pass
 
     res = {
         'ticker': clean_sym,
@@ -163,7 +144,7 @@ def fetch_single(ticker_symbol):
         'gainers': 285 if clean_sym == 'IHSG' else None,
         'losers': 264 if clean_sym == 'IHSG' else None,
         'totalBars': len(ohlc),
-        'source': f'Yahoo Finance ({yf_symbol})',
+        'source': f'Yahoo Finance ({yf_symbol}) [Fallback]',
         'isStock': clean_sym != 'IHSG',
         'ohlc': ohlc
     }
@@ -171,64 +152,75 @@ def fetch_single(ticker_symbol):
         res.update(fundamentals)
     return res
 
-def fetch_all_initial():
+def fetch_single(ticker_symbol: str) -> dict:
     """
-    Fetch IHSG and ALL 69 emitens in parallel to populate the complete offline market data bundle.
+    Fetch 1-year OHLC and fundamentals for IHSG or ANY Indonesian stock (976+ emitens) via Invezgo API.
+    """
+    clean_sym = ticker_symbol.upper().strip()
+    
+    if clean_sym == 'IHSG':
+        if get_invezgo_api_key():
+            try:
+                return fetch_ihsg_invezgo()
+            except Exception as e:
+                print(f"[fetch_single] IHSG Invezgo error ({e}), mencoba fallback yfinance...")
+                return fetch_single_yfinance_fallback('IHSG')
+        return fetch_single_yfinance_fallback('IHSG')
+
+    # Emiten Saham
+    emiten_info = EMITEN_MAP.get(clean_sym)
+    if get_invezgo_api_key():
+        try:
+            return fetch_stock_invezgo(clean_sym, days=365, emiten_info=emiten_info)
+        except Exception as e:
+            print(f"[fetch_single] Invezgo error for {clean_sym} ({e}), mencoba fallback yfinance...")
+            return fetch_single_yfinance_fallback(clean_sym)
+    else:
+        return fetch_single_yfinance_fallback(clean_sym)
+
+def fetch_all_initial(limit_tickers: list = None) -> dict:
+    """
+    Fetch IHSG and core emitens in parallel from Invezgo to populate the initial market cache bundle.
     """
     tickers = ['IHSG']
-    if EMITENS_CATALOG:
-        tickers += [e['ticker'] for e in EMITENS_CATALOG if e.get('ticker') not in tickers]
-    else:
-        tickers += ['BBCA', 'BBRI', 'TLKM', 'ASII', 'ICBP', 'MIKA', 'BMRI', 'BBNI', 'ADRO', 'GOTO']
-
-    bundle = {}
-    print(f"Mengunduh data pasar real-time untuk {len(tickers)} instrumen secara paralel...")
+    selected = limit_tickers or CORE_PRECACHE_TICKERS
+    for t in selected:
+        if t not in tickers:
+            tickers.append(t)
     
-    def worker(sym):
-        try:
-            data = fetch_single(sym)
-            return sym, data, None
-        except Exception as e:
-            return sym, None, str(e)
-
-    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
-        futures = {executor.submit(worker, sym): sym for sym in tickers}
-        for future in concurrent.futures.as_completed(futures):
-            sym, data, err = future.result()
-            if data:
-                bundle[sym] = data
-                mos_str = f"MOS: {data.get('mos')}%" if data.get('mos') is not None else "No MOS"
-                print(f"[OK] {sym:5s} -> Close: {data['price']:>7} ({data['changePct']:>+6.2f}%) | {mos_str}")
-            else:
-                print(f"[FAIL] {sym:5s} -> {err}")
-
-    # Write to market_data.json & market_data.js
-    json_path = os.path.join(DIRECTORY, 'market_data.json')
-    js_path = os.path.join(DIRECTORY, 'market_data.js')
+    print(f"[fetch_all_initial] Mengunduh {len(tickers)} instrumen pasar dari Invezgo API...")
+    market_data = {}
     
-    # Load corporate events
-    corporate_events = []
-    events_json_path = os.path.join(DIRECTORY, 'corporate_events.json')
-    if os.path.exists(events_json_path):
+    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
+        future_to_ticker = {executor.submit(fetch_single, t): t for t in tickers}
+        for future in concurrent.futures.as_completed(future_to_ticker):
+            t = future_to_ticker[future]
+            try:
+                data = future.result()
+                market_data[t] = data
+                print(f"  ✓ {t} ({data.get('price')}) via {data.get('source')}")
+            except Exception as exc:
+                print(f"  ✗ {t} error: {exc}")
+
+    return market_data
+
+if __name__ == '__main__':
+    data = fetch_all_initial()
+    out_file = os.path.join(DIRECTORY, 'market_data.json')
+    
+    existing_bundle = {}
+    if os.path.exists(out_file):
         try:
-            with open(events_json_path, 'r', encoding='utf-8') as evf:
-                corporate_events = json.load(evf)
+            with open(out_file, 'r', encoding='utf-8') as f:
+                existing_bundle = json.load(f)
         except Exception:
             pass
 
-    with open(json_path, 'w', encoding='utf-8') as f:
-        json.dump({'market': bundle, 'emitens': EMITENS_CATALOG, 'events': corporate_events}, f, indent=2)
-        
-    with open(js_path, 'w', encoding='utf-8') as f:
-        f.write("window.MARKET_DATA = " + json.dumps(bundle, indent=2) + ";\n")
-        f.write("window.EMITEN_LIST = " + json.dumps(EMITENS_CATALOG, indent=2) + ";\n")
-        if corporate_events:
-            f.write("window.CORPORATE_EVENTS = " + json.dumps(corporate_events, indent=2) + ";\n")
-        if 'IHSG' in bundle:
-            f.write("window.IHSG_LIVE_DATA = window.MARKET_DATA['IHSG'];\n")
-            
-    print(f"\nBundle berhasil disimpan: {len(bundle)} instrumen & {len(corporate_events)} agenda pasar di market_data.json dan market_data.js")
-    return bundle
+    existing_bundle['market'] = data
+    if EMITENS_CATALOG:
+        existing_bundle['emitens'] = EMITENS_CATALOG
 
-if __name__ == '__main__':
-    fetch_all_initial()
+    with open(out_file, 'w', encoding='utf-8') as f:
+        json.dump(existing_bundle, f, indent=2, ensure_ascii=False)
+        
+    print(f"Sukses menyimpan market bundle Invezgo ke {out_file}")

@@ -371,7 +371,7 @@ export const FundamentalSection: React.FC<FundamentalSectionProps> = ({
           <div className="table-note">
             <span>
               {list.length} emiten · Harga wajar: EPS riil × Target PER · MOS = (1
-              − harga / harga wajar) × 100% · Sumber: yfinance
+              − harga / harga wajar) × 100% · Sumber: Invezgo (BEI Official)
             </span>
             <span>
               Halaman {currentPage} dari {totalPages}

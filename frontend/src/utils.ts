@@ -37,9 +37,11 @@ export const periodLabel = (p: Timeframe): string => {
 
 export const getStockLogoUrl = (ticker: string): string => {
   const clean = String(ticker || '').toUpperCase().trim();
-  const tvId = TV_LOGOS[clean];
-  if (tvId) return `https://s3-symbol-logo.tradingview.com/${tvId}--big.svg`;
-  return `/logo-emiten/${clean}.svg`;
+  if (!clean) return '';
+  if (clean === 'IHSG' || clean === '^JKSE' || clean === 'COMPOSITE') {
+    return '/logo-emiten/IHSG.svg';
+  }
+  return `https://storage.invezgo.com/icon/${clean}.png`;
 };
 
 // Deterministic Pseudo-Random Number Generator for smooth simulated OHLC

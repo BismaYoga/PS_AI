@@ -299,7 +299,7 @@ export const CorporateEventsSection: React.FC<CorporateEventsSectionProps> = ({
           <div className="table-note">
             <span>
               {events.length} agenda aksi korporasi riil emiten IDX · Sumber:
-              Yahoo Finance Feed (Corporate Calendar & Dividends)
+              Invezgo &amp; IDX Feed (Corporate Calendar &amp; Dividends)
             </span>
             <span>
               Halaman {currentPage} dari {totalPages}

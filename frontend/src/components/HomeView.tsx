@@ -98,8 +98,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
           {curDate}
           {isLive ? (
             <span className="pill green" style={{ marginTop: '6px' }}>
-              <i className="dot"></i> Data Live yfinance (
-              {isIHSG ? '^JKSE' : `${activeInstrument}.JK`})
+              <i className="dot"></i> Data Live Invezgo (
+              {isIHSG ? 'COMPOSITE' : `${activeInstrument}`})
             </span>
           ) : (
             <span className="demo-session">
@@ -220,7 +220,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 {pct(curChange, 2)} ({isIHSG ? fmt(chgAbs, 2) : rp(chgAbs)})
               </div>
               <span className="quote-caption">
-                {isLive ? 'Data live yfinance' : 'Sesi contoh 22 Sep 2026'}
+                {isLive ? 'Data live Invezgo API' : 'Sesi contoh 22 Sep 2026'}
               </span>
             </div>
           </div>
@@ -309,7 +309,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             </span>
           </div>
           <span className="chart-source">
-            Sumber: yfinance · Data pasar historis IDX
+            Sumber: Invezgo · Data pasar historis IDX
           </span>
         </div>
 

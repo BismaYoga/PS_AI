@@ -325,4 +325,24 @@ Sistem ini menggunakan arsitektur **terpisah (decoupled)**:
 3. **Cara 3: Build Ulang Frontend Production**
    - Jalankan: `cd frontend && npm run build`
 
+---
+
+### Sesi 18: Integrasi Resmi Invezgo API, Katalog 976 Emiten, Pemetaan CDN Logo Resmi & Dokumentasi Endpoint
+- **Kebutuhan**:
+  1. Mengintegrasikan Invezgo API v1.2 sebagai penyedia data pasar utama (katalog 976 emiten, chart candlestick, fundamental keystat, calendar, news, dan disclosure).
+  2. Memanfaatkan CDN logo resmi Invezgo (`https://storage.invezgo.com/icon/{TICKER}.png`) pada seluruh level aplikasi (Frontend React, dataset emiten, dan backend).
+  3. Menyusun katalog dokumentasi lengkap 93 endpoint Invezgo API dalam format Markdown ([`DOKUMENTASI_INVEZGO_API.md`](DOKUMENTASI_INVEZGO_API.md)).
+  4. Memperbaiki launcher batch script ([`jalankan_dashboard_ihsg.bat`](jalankan_dashboard_ihsg.bat)) agar membuka antarmuka React 19 di `http://localhost:8080/`.
+- **Langkah & Implementasi**:
+  1. **Dokumentasi Lengkap Invezgo API**:
+     - Membuat dokumen komprehensif [`DOKUMENTASI_INVEZGO_API.md`](DOKUMENTASI_INVEZGO_API.md) yang memetakan seluruh 93 endpoint Invezgo API v1.2 ke dalam 8 kategori fitur.
+  2. **Integrasi CDN Logo Resmi**:
+     - Memperbarui [`frontend/src/utils.ts`](frontend/src/utils.ts) fungsi `getStockLogoUrl` untuk memprioritaskan `https://storage.invezgo.com/icon/{TICKER}.png`.
+     - Menyempurnakan komponen [`frontend/src/components/StockLogo.tsx`](frontend/src/components/StockLogo.tsx) dengan `useEffect` reaktif saat ticker berganti dan sistem fallback bertingkat (Invezgo CDN -> SVG Lokal -> TradingView S3 -> Stockbit CDN -> Monogram Teks).
+     - Memperbarui dataset [`data/emitens.json`](data/emitens.json), [`frontend/public/data/emitens.json`](frontend/public/data/emitens.json), dan [`data/market_data.json`](data/market_data.json) untuk 976 emiten terdaftar di BEI.
+  3. **Build Frontend & Validasi Server**:
+     - Kompilasi ulang frontend Vite/TypeScript (`npm run build`) sukses tanpa error.
+     - Launcher [`jalankan_dashboard_ihsg.bat`](jalankan_dashboard_ihsg.bat) diperbarui.
+
+
 
