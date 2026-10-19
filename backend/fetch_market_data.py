@@ -19,6 +19,8 @@ try:
     from invezgo_client import (
         fetch_stock_invezgo,
         fetch_ihsg_invezgo,
+        fetch_intraday_invezgo,
+        fetch_all_screener_invezgo,
         get_invezgo_api_key,
         get_target_pe
     )
@@ -27,6 +29,8 @@ except ImportError:
     from invezgo_client import (
         fetch_stock_invezgo,
         fetch_ihsg_invezgo,
+        fetch_intraday_invezgo,
+        fetch_all_screener_invezgo,
         get_invezgo_api_key,
         get_target_pe
     )
@@ -45,11 +49,14 @@ if os.path.exists(emitens_path):
 
 # Core liquid stocks prioritized for offline bundle pre-cache
 CORE_PRECACHE_TICKERS = [
-    'BBCA', 'BBRI', 'BMRI', 'BBNI', 'TLKM', 'ASII', 'ICBP', 'INDF', 'AMRT', 'MYOR',
-    'UNVR', 'KLBF', 'MIKA', 'HEAL', 'ADRO', 'PTBA', 'ITMG', 'AADI', 'ADMR', 'AKRA',
-    'MEDC', 'PGAS', 'PGEO', 'ANTM', 'INCO', 'AMMN', 'BRPT', 'INKP', 'INTP', 'ACES',
-    'MAPI', 'MAPA', 'ERAA', 'BSDE', 'CTRA', 'PWON', 'SMRA', 'KIJA', 'GOTO', 'BUKA',
-    'EMTK', 'WIFI', 'CUAN', 'CMRY', 'CPIN', 'JPFA', 'SIDO', 'MTEL', 'TOWR', 'JSMR'
+    'AADI', 'ACES', 'ADMR', 'ADRO', 'AKRA', 'AMMN', 'AMRT', 'ANTM', 'ASII', 'AVIA',
+    'BBCA', 'BBNI', 'BBRI', 'BBTN', 'BMRI', 'BRPT', 'BSDE', 'BTPS', 'BUKA', 'CCSI',
+    'CMRY', 'CPIN', 'CTRA', 'CUAN', 'DSNG', 'DSSA', 'ELSA', 'EMTK', 'ENRG', 'ERAA',
+    'ESSA', 'GOTO', 'HEAL', 'HMSP', 'HRTA', 'HRUM', 'ICBP', 'INCO', 'INDF', 'INKP',
+    'INTP', 'ISAT', 'ITMG', 'JPFA', 'JSMR', 'KIJA', 'KLBF', 'KPIG', 'MAPA', 'MAPI',
+    'MEDC', 'MIKA', 'MTEL', 'MYOR', 'PGAS', 'PGEO', 'PNLF', 'POWR', 'PTBA', 'PWON',
+    'RAJA', 'SCMA', 'SIDO', 'SMRA', 'SSMS', 'TAPG', 'TLKM', 'TOWR', 'UNTR', 'UNVR',
+    'WIFI'
 ]
 
 def fetch_single_yfinance_fallback(ticker_symbol: str) -> dict:
@@ -152,7 +159,14 @@ def fetch_single_yfinance_fallback(ticker_symbol: str) -> dict:
         res.update(fundamentals)
     return res
 
-def fetch_single(ticker_symbol: str) -> dict:
+def fetch_intraday(ticker_symbol: str) -> list:
+    """
+    Fetch intraday 1D OHLCV (menit demi menit) dari Invezgo API dalam 1 request.
+    """
+    clean_sym = ticker_symbol.upper().strip()
+    return fetch_intraday_invezgo(clean_sym)
+
+def fetch_single(ticker_symbol: str, existing_data: dict = None) -> dict:
     """
     Fetch 1-year OHLC and fundamentals for IHSG or ANY Indonesian stock (976+ emitens) via Invezgo API.
     """
@@ -171,7 +185,7 @@ def fetch_single(ticker_symbol: str) -> dict:
     emiten_info = EMITEN_MAP.get(clean_sym)
     if get_invezgo_api_key():
         try:
-            return fetch_stock_invezgo(clean_sym, days=365, emiten_info=emiten_info)
+            return fetch_stock_invezgo(clean_sym, days=365, emiten_info=emiten_info, existing_data=existing_data)
         except Exception as e:
             print(f"[fetch_single] Invezgo error for {clean_sym} ({e}), mencoba fallback yfinance...")
             return fetch_single_yfinance_fallback(clean_sym)
@@ -180,16 +194,26 @@ def fetch_single(ticker_symbol: str) -> dict:
 
 def fetch_all_initial(limit_tickers: list = None) -> dict:
     """
-    Fetch IHSG and core emitens in parallel from Invezgo to populate the initial market cache bundle.
+    Fetch all 900+ BEI emitens via Invezgo screener API + full 1-year OHLC for IHSG and core emitens.
     """
+    market_data = {}
+    if get_invezgo_api_key():
+        try:
+            print("[fetch_all_initial] Mengunduh screener fundamental seluruh emiten BEI dari Invezgo API...")
+            screener_map = fetch_all_screener_invezgo(EMITEN_MAP)
+            if screener_map:
+                market_data.update(screener_map)
+                print(f"[fetch_all_initial] Berhasil memuat {len(screener_map)} emiten aktif dari Invezgo Screener.")
+        except Exception as e:
+            print(f"[fetch_all_initial] Invezgo screener warning: {e}")
+
     tickers = ['IHSG']
     selected = limit_tickers or CORE_PRECACHE_TICKERS
     for t in selected:
         if t not in tickers:
             tickers.append(t)
     
-    print(f"[fetch_all_initial] Mengunduh {len(tickers)} instrumen pasar dari Invezgo API...")
-    market_data = {}
+    print(f"[fetch_all_initial] Mengunduh histori 1 tahun untuk {len(tickers)} instrumen utama dari Invezgo API...")
     
     with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
         future_to_ticker = {executor.submit(fetch_single, t): t for t in tickers}
@@ -198,9 +222,9 @@ def fetch_all_initial(limit_tickers: list = None) -> dict:
             try:
                 data = future.result()
                 market_data[t] = data
-                print(f"  ✓ {t} ({data.get('price')}) via {data.get('source')}")
+                print(f"  [OK] {t} ({data.get('price')}) via {data.get('source')}")
             except Exception as exc:
-                print(f"  ✗ {t} error: {exc}")
+                print(f"  [ERR] {t} error: {exc}")
 
     return market_data
 

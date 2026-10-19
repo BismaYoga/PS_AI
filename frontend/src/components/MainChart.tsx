@@ -1,6 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Timeframe, ChartType, OHLCPoint } from '../types';
-import { chartData, ChartCalculatedData, fmt, fmtDate, movingAverage } from '../utils';
+import {
+  chartData,
+  ChartCalculatedData,
+  fmt,
+  fmtDate,
+  movingAverage,
+  getIntradayCache,
+  setIntradayCache,
+} from '../utils';
 
 interface MainChartProps {
   ticker: string;
@@ -13,6 +21,8 @@ interface MainChartProps {
   marketCache?: Record<string, any>;
   onChartCalculated?: (c: ChartCalculatedData) => void;
 }
+
+const fetchedIntradayAttempted = new Set<string>();
 
 export const MainChart: React.FC<MainChartProps> = ({
   ticker,
@@ -28,6 +38,7 @@ export const MainChart: React.FC<MainChartProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 291 });
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
+  const [intraTick, setIntraTick] = useState<number>(0);
 
   // Resize observer
   useEffect(() => {
@@ -43,13 +54,37 @@ export const MainChart: React.FC<MainChartProps> = ({
     return () => window.removeEventListener('resize', updateSize);
   }, []);
 
+  // Lazy on-demand fetch for 1D Intraday chart (Hemat Request: hanya dipanggil saat tab 1D dipilih & belum ada di cache)
+  useEffect(() => {
+    if (period !== '1D') return;
+    const clean = ticker.toUpperCase().trim();
+    if (getIntradayCache(clean) || marketCache?.[clean]?.intraday?.length) {
+      return;
+    }
+    if (fetchedIntradayAttempted.has(clean)) return;
+    fetchedIntradayAttempted.add(clean);
+
+    fetch(`/api/intraday?ticker=${encodeURIComponent(clean)}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((payload) => {
+        if (payload && Array.isArray(payload.intraday) && payload.intraday.length >= 2) {
+          setIntradayCache(clean, payload.intraday);
+          setIntraTick((v) => v + 1);
+        }
+      })
+      .catch((err) => {
+        console.warn(`[MainChart] Intraday fetch failed for ${clean}:`, err);
+      });
+  }, [period, ticker, marketCache]);
+
   const c = chartData(ticker, price, change, period, marketCache);
+  const lastBarDate = c.data[c.data.length - 1]?.date;
 
   useEffect(() => {
     if (onChartCalculated) {
       onChartCalculated(c);
     }
-  }, [ticker, price, change, period]);
+  }, [ticker, price, change, period, lastBarDate, intraTick]);
 
   const { width: w, height: h } = dimensions;
   const small = w < 550;
@@ -60,13 +95,13 @@ export const MainChart: React.FC<MainChartProps> = ({
 
   let ymin = Math.min(...c.data.map((d) => d.low));
   let ymax = Math.max(...c.data.map((d) => d.high));
-  const span = ymax - ymin;
+  const span = ymax - ymin || 1;
   ymin -= span * 0.09;
   ymax += span * 0.1;
 
-  const x = (i: number) => pad.l + (i / (c.data.length - 1)) * plotW;
-  const y = (v: number) => pad.t + ((ymax - v) / (ymax - ymin)) * plotH;
-  const volumeMax = Math.max(...c.data.map((d) => d.volume));
+  const x = (i: number) => pad.l + (i / (c.data.length - 1 || 1)) * plotW;
+  const y = (v: number) => pad.t + ((ymax - v) / (ymax - ymin || 1)) * plotH;
+  const volumeMax = Math.max(...c.data.map((d) => d.volume), 1);
 
   // Grid lines
   const gridLines = [];
@@ -95,12 +130,20 @@ export const MainChart: React.FC<MainChartProps> = ({
     );
   }
 
-  // Date labels
+  // Date / Time labels
   const dateLabels = [];
   const ticks = small ? 3 : 5;
   for (let i = 0; i < ticks; i++) {
     const ix = Math.round((i / (ticks - 1)) * (c.data.length - 1));
     const anchor = i === 0 ? 'start' : i === ticks - 1 ? 'end' : 'middle';
+    const rawDateStr = c.data[ix]?.date || '';
+    const labelText =
+      rawDateStr.includes('T') && rawDateStr.length >= 16
+        ? `${rawDateStr.slice(11, 16)} WIB`
+        : new Date(rawDateStr + 'T12:00:00').toLocaleDateString('id-ID', {
+            day: 'numeric',
+            month: 'short',
+          });
     dateLabels.push(
       <text
         key={`date-${i}`}
@@ -110,10 +153,7 @@ export const MainChart: React.FC<MainChartProps> = ({
         fontSize={small ? 9 : 10}
         fill="#8a97a5"
       >
-        {new Date(c.data[ix].date + 'T12:00:00').toLocaleDateString('id-ID', {
-          day: 'numeric',
-          month: 'short',
-        })}
+        {labelText}
       </text>
     );
   }

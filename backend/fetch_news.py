@@ -13,24 +13,24 @@ from email.utils import parsedate_to_datetime
 from datetime import datetime, timezone, timedelta
 from dotenv import load_dotenv
 
-# Load env dari lokal pintarsaham/.env, lalu fallback ke parent .env jika diperlukan
+# Load env dari lokal backend/.env, pintarsaham/.env, dan root .env
 LOCAL_ENV = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
 PARENT_ENV = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env')
+ROOT_ENV = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), '.env')
 
-for p_env in (PARENT_ENV, LOCAL_ENV):
+for p_env in (ROOT_ENV, PARENT_ENV, LOCAL_ENV):
     if os.path.exists(p_env):
-        load_dotenv(p_env)
+        load_dotenv(p_env, override=True)
 
 def get_gemini_api_key():
     """Ambil API key dari GEMINI_API atau API_AI dengan fallback cerdas."""
-    for p_env in (PARENT_ENV, LOCAL_ENV):
+    for p_env in (ROOT_ENV, PARENT_ENV, LOCAL_ENV):
         if os.path.exists(p_env):
             load_dotenv(p_env, override=False)
-    k = os.getenv("GEMINI_API", "").strip().strip('"').strip("'")
-    if not k:
-        k = os.getenv("API_AI", "").strip().strip('"').strip("'")
-    if k and not k.startswith("AQ.Ab8RN6Ln"):
-        return k
+    for var_name in ("API_AI", "GEMINI_API"):
+        k = os.getenv(var_name, "").strip().strip('"').strip("'")
+        if k and not k.startswith("AQ.Ab8RN6Ln"):
+            return k
     return ""
 
 EMITEN_NAMES = {
@@ -272,12 +272,248 @@ PENTING:
 
     return []
 
-# Cache berita di memori dengan kedaluwarsa 5 menit (agar berita segar cepat diperbarui)
+def _parse_invezgo_date(date_str: str) -> str:
+    if not date_str:
+        return "Hari ini"
+    try:
+        wib = timezone(timedelta(hours=7))
+        clean = str(date_str).strip().replace("Z", "")
+        dt = datetime.fromisoformat(clean[:19]).replace(tzinfo=wib)
+        return format_relative_date(dt)
+    except Exception:
+        return str(date_str)[:10]
+
+def _detect_sentiment_and_catalyst(title: str, content: str, cat: str, ticker: str) -> tuple[str, str, str]:
+    txt = f"{title} {content}".lower()
+    pos_words = (
+        "melonjak", "menguat", "naik", "laba", "tumbuh", "dividen", "ekspansi",
+        "akumulasi", "buyback", "rekor", "optimis", "surplus", "positif", "untung",
+        "meroket", "peningkatan", "inflow", "upgrade", "sehat", "terpercaya"
+    )
+    neg_words = (
+        "anjlok", "melemah", "turun", "rugi", "aksi jual", "koreksi", "tekanan",
+        "beban", "penurunan", "amblas", "ambles", "loyo", "defisit", "negatif",
+        "merugi", "suspensi", "longsor", "outflow", "downgrade", "sanksi", "manipulasi", "terancam"
+    )
+    pos_score = sum(1 for w in pos_words if w in txt)
+    neg_score = sum(1 for w in neg_words if w in txt)
+
+    if pos_score > neg_score:
+        bias = "positif"
+        impact = f"Katalis Positif · Sentimen {cat}"
+        watch = f"Pantau kelanjutan momentum beli dan area resistance terdekat pada {ticker}."
+    elif neg_score > pos_score:
+        bias = "negatif"
+        impact = f"Tekanan Pasar · Risiko {cat}"
+        watch = f"Cermati pertahanan level support terdekat dan potensi meredanya tekanan jual pada {ticker}."
+    else:
+        bias = "netral"
+        impact = f"Update Pasar · Sektor {cat}"
+        watch = f"Pantau respons pelaku pasar serta dinamika volume perdagangan pada {ticker}."
+
+    return bias, impact, watch
+
+def _is_relevant_market_news(title: str, content: str, is_ihsg: bool = True) -> bool:
+    """Filter artikel dari Invezgo agar hanya berita pasar modal Indonesia, IHSG, BEI, OJK, dan emiten yang tampil."""
+    txt_title = title.lower()
+    txt_full = f"{title} {content[:400]}".lower()
+
+    # Blacklist artikel clickbait / kripto / luar negeri yang tidak relevan dengan saham BEI
+    blacklist = (
+        "tuyul", "petani", "sawah", "anak pejabat", "melarat",
+        "roadster", "tesla", "bitget", "stablecoin", "kripto",
+        "bitcoin", "tentara didakwa", "celah fraud bi-fast"
+    )
+    if any(b in txt_title for b in blacklist):
+        return False
+
+    if not is_ihsg:
+        return True
+
+    # Cek apakah ada kode saham 4 huruf di dalam kurung pada judul, misal (BMRI), (CUAN), (SMAR)
+    if re.search(r"\([A-Z]{4}\)", title):
+        return True
+
+    market_keywords = (
+        "ihsg", "bei", "bursa efek", "pasar modal", "ojk", "msci",
+        "saham", "emiten", "ipo", "dividen", "buyback", "trading halt",
+        "asing borong", "investor asing", "rupiah", "laba", "rugi",
+        "marketing sales", "akuisisi", "obligasi", "perpetual bond",
+        "prajogo pangestu", "haji isam", "bca", "bbca", "bmri", "bbri",
+        "tlkm", "goto", "danantara", "keterbukaan informasi"
+    )
+    return any(k in txt_full for k in market_keywords)
+
+def _score_market_relevance(item: dict, key: str) -> int:
+    """Berikan skor prioritas agar berita paling krusial untuk IHSG/Emiten tampil di urutan teratas."""
+    t = item.get("title", "").lower()
+    score = 0
+    if key == "IHSG":
+        if any(w in t for w in ("ihsg", "pasar modal", "bei", "msci", "ojk", "ipo", "trading halt")):
+            score += 30
+        if re.search(r"\([A-Z]{4}\)", item.get("title", "")):
+            score += 20
+        if any(w in t for w in ("saham", "emiten", "asing", "rupiah", "dividen", "laba")):
+            score += 15
+    else:
+        if key.lower() in t:
+            score += 40
+        if item.get("category") != "Keterbukaan BEI":
+            score += 10
+    return score
+
+def fetch_invezgo_news(ticker: str, limit: int = 50) -> list[dict]:
+    """
+    Mengambil berita real-time pasar & emiten langsung dari Invezgo API dalam 1 kali request maksimal (limit=100).
+    Hanya memanggil endpoint kedua jika hasil request pertama kosong (0 berita).
+    """
+    import requests
+    try:
+        from invezgo_client import get_auth_headers, INVEZGO_BASE_URL, get_invezgo_api_key
+    except ImportError:
+        import sys
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        from invezgo_client import get_auth_headers, INVEZGO_BASE_URL, get_invezgo_api_key
+
+    if not get_invezgo_api_key():
+        return []
+
+    key = ticker.upper().strip()
+    cat = CATEGORY_MAP.get(key, "Pasar Modal")
+    headers = get_auth_headers()
+    results = []
+    seen_titles = set()
+
+    def _add_news_row(row: dict, is_disclosure: bool = False):
+        raw_title = str(row.get("title") or "").replace("\ufffd", "-").strip()
+        if not raw_title or raw_title.lower() in seen_titles:
+            return
+
+        raw_content = str(row.get("content") or "").replace("\ufffd", "-").strip()
+        if not is_disclosure and not _is_relevant_market_news(raw_title, raw_content, is_ihsg=(key == "IHSG")):
+            return
+
+        seen_titles.add(raw_title.lower())
+        date_rel = _parse_invezgo_date(row.get("date", ""))
+
+        if is_disclosure:
+            doc_code = row.get("code") or key
+            doc_list = row.get("list") or []
+            pdf_url = doc_list[0].get("url", "") if doc_list and isinstance(doc_list[0], dict) else ""
+            doc_name = doc_list[0].get("name", "") if doc_list and isinstance(doc_list[0], dict) else raw_title
+            desc_text = f"Keterbukaan Informasi Resmi BEI ({doc_code}): {raw_title}."
+            body_text = f"Dokumen pengumuman bursa resmi untuk emiten {doc_code} ({doc_name}) yang diterbitkan melalui Keterbukaan Informasi IDX / Invezgo."
+            bias, impact, watch = _detect_sentiment_and_catalyst(raw_title, body_text, cat, doc_code)
+            results.append({
+                "title": f"[{doc_code}] {raw_title}"[:90] if key == "IHSG" else raw_title[:90],
+                "desc": desc_text[:170],
+                "body": body_text,
+                "category": "Keterbukaan BEI",
+                "icon": "file",
+                "impact": impact,
+                "bias": bias,
+                "watch": watch,
+                "source": "Invezgo · Keterbukaan BEI",
+                "url": pdf_url,
+                "date": date_rel,
+                "ticker": doc_code,
+                "live": True
+            })
+            return
+
+        paragraphs = [p.strip() for p in re.split(r"\n\s*\n|\r\n\s*\r\n", raw_content) if p.strip()]
+        if len(paragraphs) > 1 and len(paragraphs[0]) < 85 and (" - " in paragraphs[0] or "Bloomberg" in paragraphs[0] or "Bisnis" in paragraphs[0]):
+            byline = paragraphs[0]
+            main_paras = paragraphs[1:]
+        else:
+            byline = ""
+            main_paras = paragraphs
+
+        first_para = main_paras[0] if main_paras else raw_title
+        first_para_clean = re.sub(r"^(Bloomberg,\s*|Bisnis\.com,\s*[A-Za-z\s]+\s*[-–—]\s*)", "", first_para).strip()
+        desc_text = first_para_clean[:165] + ("..." if len(first_para_clean) > 165 else "")
+        body_text = "\n\n".join(main_paras[:4]) if main_paras else desc_text
+
+        source_label = "Invezgo Market Feed"
+        if "bloomberg" in (byline + raw_content[:120]).lower():
+            source_label = "Invezgo · Bloomberg"
+        elif "bisnis" in (byline + raw_content[:120]).lower():
+            source_label = "Invezgo · Bisnis"
+        elif "kontan" in (byline + raw_content[:120]).lower():
+            source_label = "Invezgo · Kontan"
+        elif "cnbc" in (byline + raw_content[:120]).lower():
+            source_label = "Invezgo · CNBC"
+
+        detected_code = key
+        m_code = re.search(r"\(([A-Z]{4})\)", raw_title)
+        if key == "IHSG" and m_code:
+            detected_code = m_code.group(1)
+        row_cat = CATEGORY_MAP.get(detected_code, cat)
+
+        bias, impact, watch = _detect_sentiment_and_catalyst(raw_title, raw_content, row_cat, detected_code)
+        icon_name = "building" if detected_code != "IHSG" else ("globe" if "msci" in raw_title.lower() or "rupiah" in raw_title.lower() else "chart")
+
+        results.append({
+            "title": raw_title[:90],
+            "desc": desc_text,
+            "body": body_text,
+            "category": row_cat,
+            "icon": icon_name,
+            "impact": impact,
+            "bias": bias,
+            "watch": watch,
+            "source": source_label,
+            "url": str(row.get("url") or ""),
+            "date": date_rel,
+            "ticker": detected_code,
+            "live": True
+        })
+
+    # 1 KALI REQUEST UTAMA dengan limit=100 (tetap dihitung 1 hit API)
+    try:
+        if key == "IHSG":
+            url = f"{INVEZGO_BASE_URL}/analysis/news?page=1&limit=100"
+        else:
+            url = f"{INVEZGO_BASE_URL}/analysis/news?code={urllib.parse.quote(key)}&page=1&limit=100"
+
+        res = requests.get(url, headers=headers, timeout=12)
+        if res.status_code == 200:
+            payload = res.json()
+            rows = payload.get("data", []) if isinstance(payload, dict) else (payload if isinstance(payload, list) else [])
+            for r in rows:
+                _add_news_row(r, is_disclosure=False)
+                if len(results) >= limit:
+                    break
+    except Exception as e:
+        print(f"[fetch_invezgo_news] Error news {key}: {e}")
+
+    # HANYA jika saham spesifik tidak punya berita sama sekali di /analysis/news (0 hasil), baru cek Keterbukaan Informasi BEI
+    if len(results) == 0 and key != "IHSG":
+        try:
+            url_disc = f"{INVEZGO_BASE_URL}/analysis/disclosure?code={urllib.parse.quote(key)}&page=1&limit=30"
+            res_d = requests.get(url_disc, headers=headers, timeout=10)
+            if res_d.status_code == 200:
+                payload_d = res_d.json()
+                rows_d = payload_d.get("data", []) if isinstance(payload_d, dict) else []
+                for r in rows_d:
+                    _add_news_row(r, is_disclosure=True)
+                    if len(results) >= limit:
+                        break
+        except Exception as e_d:
+            print(f"[fetch_invezgo_news] Error disclosure {key}: {e_d}")
+
+    # Urutkan agar berita paling krusial untuk IHSG/Emiten berada di Top 3 teratas, namun seluruh berita tetap disimpan untuk input Analisis AI
+    if key == "IHSG" and len(results) > 3:
+        results.sort(key=lambda x: _score_market_relevance(x, key), reverse=True)
+
+    return results[:limit]
+
+# Cache berita di memori dengan kedaluwarsa 10 menit (agar hemat request API & bisa langsung dipakai oleh Analisis AI)
 _news_cache: dict[str, tuple[float, list]] = {}
-CACHE_TTL = 5 * 60  # 5 menit
+CACHE_TTL = 10 * 60  # 10 menit
 
 def get_news(ticker: str, force_refresh: bool = False) -> list[dict]:
-    """Mengambil 3 berita PALING TERBARU untuk ticker/IHSG."""
+    """Mengambil seluruh berita relevan dalam 1 request untuk ticker/IHSG dari Invezgo API."""
     import time
     key = ticker.upper().strip()
     now = time.time()
@@ -285,10 +521,16 @@ def get_news(ticker: str, force_refresh: bool = False) -> list[dict]:
     if not force_refresh and key in _news_cache:
         ts, cached_data = _news_cache[key]
         if (now - ts) < CACHE_TTL:
-            print(f"[get_news] Menggunakan cache 5m untuk {key}")
+            print(f"[get_news] Menggunakan cache 10m untuk {key} ({len(cached_data)} berita)")
             return cached_data
 
-    print(f"[get_news] Mengambil 3 berita PALING TERBARU Google Search + Gemini untuk {key}...")
+    print(f"[get_news] Mengambil paket berita maksimal (1 request limit=100) dari Invezgo API untuk {key}...")
+    invezgo_items = fetch_invezgo_news(key, limit=50)
+    if invezgo_items:
+        _news_cache[key] = (now, invezgo_items)
+        return invezgo_items
+
+    print(f"[get_news] Fallback Google Search + Gemini untuk {key}...")
     name = EMITEN_NAMES.get(key, key)
 
     if key == "IHSG":
@@ -346,7 +588,7 @@ def get_news(ticker: str, force_refresh: bool = False) -> list[dict]:
             "impact": "Pemantauan Pasar Harian",
             "bias": "netral",
             "watch": "Perhatikan level support/resistance dan volume perdagangan.",
-            "source": "IDX & Yahoo Finance",
+            "source": "Invezgo & IDX",
             "url": "",
             "date": "Hari ini",
             "ticker": key,

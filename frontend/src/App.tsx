@@ -68,7 +68,56 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [toastMessage]);
 
+  // Keep window.MARKET_DATA synced with React state for chart utilities
+  useEffect(() => {
+    if (typeof window !== 'undefined' && Object.keys(marketBundle).length > 0) {
+      (window as any).MARKET_DATA = marketBundle;
+      if (marketBundle['IHSG']) {
+        (window as any).IHSG_LIVE_DATA = marketBundle['IHSG'];
+      }
+    }
+  }, [marketBundle]);
+
+  const refreshSingleInstrument = useCallback(async (ticker: string, force: boolean = false) => {
+    const clean = ticker.toUpperCase().trim();
+    try {
+      const res = await fetch(
+        `/api/stock?ticker=${encodeURIComponent(clean)}${force ? '&force=1' : ''}`
+      );
+      if (res.ok) {
+        const data = await res.json();
+        if (data && !data.error) {
+          setMarketBundle((prev) => ({ ...prev, [clean]: data }));
+          return true;
+        }
+      }
+    } catch (err) {
+      console.warn(`Live fetch failed for ${clean}:`, err);
+    }
+    return false;
+  }, []);
+
+  const refreshAllMarket = useCallback(async () => {
+    notify('Memperbarui data fundamental & MOS seluruh emiten dari Invezgo API...');
+    try {
+      const res = await fetch('/api/market-data?refresh=1');
+      if (res.ok) {
+        const bundle = await res.json();
+        if (bundle.market) setMarketBundle(bundle.market);
+        if (bundle.events && bundle.events.length) setCorporateEvents(bundle.events);
+        if (bundle.emitens && bundle.emitens.length) setAllEmitens(bundle.emitens);
+        notify('Data fundamental & MOS berhasil diperbarui dari Invezgo API!');
+        return;
+      }
+    } catch (err) {
+      console.warn('Refresh all market data failed:', err);
+    }
+    notify('Gagal memperbarui bundle pasar dari Invezgo API');
+  }, [notify]);
+
   // Fetch live market data bundle & complete 976 emitens catalog
+  const [bundleLoaded, setBundleLoaded] = useState<boolean>(false);
+
   useEffect(() => {
     const loadMarketBundle = async () => {
       try {
@@ -78,6 +127,7 @@ export default function App() {
           if (bundle.market) setMarketBundle(bundle.market);
           if (bundle.events && bundle.events.length) setCorporateEvents(bundle.events);
           if (bundle.emitens && bundle.emitens.length) setAllEmitens(bundle.emitens);
+          setBundleLoaded(true);
           return;
         }
       } catch (err) {
@@ -109,26 +159,22 @@ export default function App() {
       } catch (e) {
         console.warn('Failed to load /data/emitens.json:', e);
       }
+      setBundleLoaded(true);
     };
     loadMarketBundle();
   }, []);
 
-  // On-demand live fetch via Invezgo API when user selects any stock
+  // On-demand live fetch via Invezgo API when user selects a stock that doesn't have full 1-year OHLC yet
   useEffect(() => {
-    if (selectedStockTicker && selectedStockTicker !== 'IHSG') {
-      const existing = marketBundle[selectedStockTicker];
-      if (!existing || !existing.ohlc) {
-        fetch(`/api/stock?ticker=${encodeURIComponent(selectedStockTicker)}`)
-          .then((r) => (r.ok ? r.json() : null))
-          .then((data) => {
-            if (data && !data.error) {
-              setMarketBundle((prev) => ({ ...prev, [selectedStockTicker]: data }));
-            }
-          })
-          .catch((err) => console.warn('On-demand stock fetch failed:', err));
-      }
+    if (!bundleLoaded) return;
+    const targetTicker = route === 'stock' ? selectedStockTicker : activeInstrument;
+    if (!targetTicker) return;
+    const existing = marketBundle[targetTicker];
+    if (!existing || !existing.ohlc || existing.ohlc.length < 2) {
+      refreshSingleInstrument(targetTicker);
     }
-  }, [selectedStockTicker, marketBundle]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bundleLoaded, route, selectedStockTicker, activeInstrument]);
 
   // Listen to hashchange
   useEffect(() => {
@@ -176,7 +222,8 @@ export default function App() {
         change: m ? m.changePct : 0,
         eps: m && m.eps != null ? m.eps : null,
         bvps: m && m.bvps != null ? m.bvps : null,
-        pe: m && m.targetPe != null ? m.targetPe : 12,
+        pe: m && m.pe != null ? m.pe : (m && m.targetPe != null ? m.targetPe : 12),
+        targetPe: m && m.targetPe != null ? m.targetPe : 12,
         pb: m && m.pb != null ? m.pb : 1.5,
         roe: m && m.roe != null ? m.roe : null,
         dividendYield: m && m.dividendYield != null ? m.dividendYield : null,
@@ -184,7 +231,7 @@ export default function App() {
         volume: m ? m.volume : '—',
         turnover: m ? m.turnover : '—',
         date: m ? m.date : null,
-        isLive: !!(m && m.ohlc),
+        isLive: !!(m && (m.ohlc || (m.source && String(m.source).includes('Invezgo')))),
         shares: p.shares || 10.0,
         margin: p.margin || 0.15,
         equityRatio: p.equityRatio || 0.5,
@@ -308,6 +355,9 @@ export default function App() {
             events={corporateEvents}
             favorites={favorites}
             activeInstrument={activeInstrument}
+            marketCache={marketBundle}
+            onRefreshInstrument={(t) => refreshSingleInstrument(t, true)}
+            onRefreshAll={refreshAllMarket}
             onSelectInstrument={(sym) => setActiveInstrument(sym)}
             onSelectStockDetail={(sym) => handleNavigate('stock', sym)}
             onToggleFavorite={handleToggleFavorite}
@@ -336,8 +386,11 @@ export default function App() {
           <StockDetailView
             stock={currentStock}
             favorites={favorites}
+            marketCache={marketBundle}
+            onRefreshInstrument={(t) => refreshSingleInstrument(t, true)}
             onToggleFavorite={handleToggleFavorite}
             onOpenDrawer={(type, payload) => setDrawerPayload({ type, ...payload })}
+            onOpenNewsDrawer={(newsItem) => setDrawerPayload({ type: 'news', newsItem })}
             onOpenMethod={() => setDrawerPayload({ type: 'method' })}
             onOpenAbout={() => setDrawerPayload({ type: 'about' })}
             onNavigateHome={() => handleNavigate('home')}

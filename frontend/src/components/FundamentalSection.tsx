@@ -10,6 +10,7 @@ interface FundamentalSectionProps {
   onToggleFavorite: (ticker: string) => void;
   onSelectStock: (ticker: string) => void;
   onOpenMethod: () => void;
+  onRefreshAll?: () => Promise<void>;
   onlySaved?: boolean;
 }
 
@@ -19,28 +20,46 @@ export const FundamentalSection: React.FC<FundamentalSectionProps> = ({
   onToggleFavorite,
   onSelectStock,
   onOpenMethod,
+  onRefreshAll,
   onlySaved = false,
 }) => {
   const [sector, setSector] = useState<string>('all');
   const [minMos, setMinMos] = useState<number>(0);
   const [sortBy, setSortBy] = useState<string>('mos');
   const [page, setPage] = useState<number>(1);
+  const [refreshing, setRefreshing] = useState<boolean>(false);
   const pageSize = 10;
 
+  const hasLiveStocks = stocks.some((s) => s.isLive && s.eps != null && s.eps > 0);
+  const baseStocks = stocks;
+
   // Filter list
-  let list = stocks.filter(
+  let list = baseStocks.filter(
     (s) =>
       (!onlySaved || favorites.has(s.ticker)) &&
       (sector === 'all' || s.sector === sector) &&
       (minMos === 0 || (mos(s) !== null && (mos(s) as number) >= minMos))
   );
 
-  // Sort list
-  list.sort((a, b) =>
-    sortBy === 'ticker'
-      ? a.ticker.localeCompare(b.ticker)
-      : (mos(b) || -999) - (mos(a) || -999)
-  );
+  // Sort list (prioritize healthy fundamental stocks with positive equity, price >= Rp50, and realistic MOS <= 85%)
+  const getMosSortScore = (s: StockItem) => {
+    const m = mos(s);
+    if (m === null) return -9999;
+    const pe = s.eps && s.eps > 0 ? s.price / s.eps : null;
+    const isOutlier =
+      m > 85 ||
+      s.price < 50 ||
+      (s.bvps !== null && s.bvps <= 0) ||
+      (pe !== null && pe < 1.8);
+    return isOutlier ? -500 + m * 0.01 : m;
+  };
+
+  list.sort((a, b) => {
+    if (sortBy === 'ticker') {
+      return a.ticker.localeCompare(b.ticker);
+    }
+    return getMosSortScore(b) - getMosSortScore(a);
+  });
 
   // Pagination calculation
   const totalPages = Math.max(1, Math.ceil(list.length / pageSize));
@@ -82,15 +101,22 @@ export const FundamentalSection: React.FC<FundamentalSectionProps> = ({
     >
       <div className="section-head">
         <div>
-          <h2>
-            {onlySaved
-              ? 'Emiten dalam pantauan'
-              : 'Saham fundamental dengan MOS menarik'}
-          </h2>
+          <div className="flex gap-8 align-center">
+            <h2>
+              {onlySaved
+                ? 'Emiten dalam pantauan'
+                : 'Saham fundamental dengan MOS menarik'}
+            </h2>
+            {!onlySaved && hasLiveStocks && (
+              <span className="pill green">
+                <i className="dot"></i> Live Invezgo API ({stocks.length} Emiten)
+              </span>
+            )}
+          </div>
           <p>
             {onlySaved
               ? 'Saham tersimpan di browser ini. Klik emiten untuk membuka analisis.'
-              : 'Bandingkan harga sekarang dengan estimasi harga wajar.'}
+              : 'Valuasi harga wajar (EPS TTM riil × Target PER) & Margin of Safety real-time seluruh emiten BEI dari Invezgo API.'}
           </p>
         </div>
         <div className="filter-row">
@@ -104,8 +130,8 @@ export const FundamentalSection: React.FC<FundamentalSectionProps> = ({
               setPage(1);
             }}
           >
-            <option value="all">Semua sektor ({stocks.length} Saham)</option>
-            {[...new Set(stocks.map((s) => s.sector))].map((t) => (
+            <option value="all">Semua sektor ({baseStocks.length} Saham)</option>
+            {[...new Set(baseStocks.map((s) => s.sector))].map((t) => (
               <option key={t} value={t}>
                 {t}
               </option>
@@ -140,6 +166,26 @@ export const FundamentalSection: React.FC<FundamentalSectionProps> = ({
             <option value="mos">MOS tertinggi</option>
             <option value="ticker">Kode A–Z</option>
           </select>
+
+          {!onlySaved && onRefreshAll && (
+            <button
+              className="btn small-btn"
+              disabled={refreshing}
+              onClick={async () => {
+                setRefreshing(true);
+                try {
+                  await onRefreshAll();
+                } finally {
+                  setRefreshing(false);
+                }
+              }}
+              style={{ padding: '6px 10px', fontSize: '11px' }}
+              title="Perbarui seluruh data fundamental & MOS dari Invezgo API"
+            >
+              <Icon name="refresh" cls="sm" />{' '}
+              {refreshing ? 'Memperbarui...' : 'Perbarui MOS'}
+            </button>
+          )}
         </div>
       </div>
 

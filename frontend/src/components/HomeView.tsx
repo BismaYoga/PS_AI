@@ -15,6 +15,9 @@ interface HomeViewProps {
   events: CorporateEvent[];
   favorites: Set<string>;
   activeInstrument: string;
+  marketCache?: Record<string, any>;
+  onRefreshInstrument?: (ticker: string) => Promise<boolean>;
+  onRefreshAll?: () => Promise<void>;
   onSelectInstrument: (ticker: string) => void;
   onSelectStockDetail: (ticker: string) => void;
   onToggleFavorite: (ticker: string) => void;
@@ -32,6 +35,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
   events,
   favorites,
   activeInstrument,
+  marketCache,
+  onRefreshInstrument,
+  onRefreshAll,
   onSelectInstrument,
   onSelectStockDetail,
   onToggleFavorite,
@@ -66,7 +72,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
       activeInstrument,
       curPrice,
       curChange,
-      period
+      period,
+      marketCache
     )
   );
 
@@ -207,6 +214,24 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 </a>
               )}
               <span className="pill outline">{isIHSG ? 'Indeks' : 'IDX'}</span>
+              {onRefreshInstrument && (
+                <button
+                  onClick={async () => {
+                    onNotify(`Memperbarui data ${activeInstrument} dari Invezgo API...`);
+                    const ok = await onRefreshInstrument(activeInstrument);
+                    onNotify(
+                      ok
+                        ? `Data ${activeInstrument} berhasil diperbarui dari Invezgo!`
+                        : `Gagal memperbarui ${activeInstrument}`
+                    );
+                  }}
+                  className="btn small-btn"
+                  style={{ padding: '2px 8px', fontSize: '10px', marginLeft: '6px' }}
+                  title={`Perbarui data ${activeInstrument} dari Invezgo API`}
+                >
+                  <Icon name="refresh" cls="sm" /> Perbarui
+                </button>
+              )}
             </div>
             <div className="quote-line">
               <span className="price-main mono">
@@ -253,14 +278,16 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
         <div className="chart-toolbar">
           <div className="segmented" aria-label="Periode grafik">
-            {(['1M', '3M', '6M', '1Y'] as Timeframe[]).map((p) => (
+            {(['1D', '1M', '3M', '6M', '1Y'] as Timeframe[]).map((p) => (
               <button
                 key={p}
                 className={period === p ? 'active' : ''}
                 onClick={() => setPeriod(p)}
                 aria-pressed={period === p}
               >
-                {p === '1M'
+                {p === '1D'
+                  ? '1 hari'
+                  : p === '1M'
                   ? '1 bulan'
                   : p === '3M'
                   ? '3 bulan'
@@ -296,6 +323,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           isStock={!isIHSG}
           period={period}
           chartType={chartType}
+          marketCache={marketCache}
           onChartCalculated={(c) => setChartCalc(c)}
         />
 
@@ -336,6 +364,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
         onToggleFavorite={onToggleFavorite}
         onSelectStock={onSelectStockDetail}
         onOpenMethod={onOpenMethod}
+        onRefreshAll={onRefreshAll}
         onlySaved={false}
       />
 

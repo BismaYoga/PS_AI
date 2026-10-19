@@ -97,7 +97,7 @@ export interface IndexItem {
 }
 
 export interface FinancialYearData {
-  year: number;
+  year: number | string;
   revenue: number;
   net: number;
   pretax: number;
@@ -115,7 +115,7 @@ export interface FinancialYearData {
   begin: number;
   end: number;
   conversion: number;
-  [key: string]: number;
+  [key: string]: any;
 }
 
 export interface ValuationState {
@@ -140,6 +140,7 @@ export interface AIAnalysisResult {
   error?: string;
 }
 
-export type Timeframe = '1M' | '3M' | '6M' | '1Y';
+export type Timeframe = '1D' | '1M' | '3M' | '6M' | '1Y';
 export type ChartType = 'line' | 'candle';
-export type Route = 'home' | 'watchlist' | 'stock';
+export type Route = 'home' | 'watchlist' | 'stock' | 'network';
+

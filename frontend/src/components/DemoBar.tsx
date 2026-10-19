@@ -10,9 +10,11 @@ export const DemoBar: React.FC<DemoBarProps> = ({ onOpenAbout }) => {
     <div className="demo-bar">
       <div className="demo-inner">
         <span className="demo-tag">
-          <i className="dot"></i> PREVIEW INTERAKTIF
+          <i className="dot" style={{ background: '#0e6945' }}></i> LIVE INVEZGO API + SQLITE DB
         </span>
-        <span>Seluruh angka, profil, berita, dan agenda adalah simulasi.</span>
+        <span>
+          Data pasar 909 emiten BEI, laporan keuangan kuartalan, pemegang saham KSEI, berita &amp; keterbukaan informasi tersimpan di DB lokal untuk hemat request API.
+        </span>
         <button className="link-btn" onClick={onOpenAbout}>
           Tentang data <Icon name="arrow-up-right" cls="sm" />
         </button>
@@ -20,3 +22,4 @@ export const DemoBar: React.FC<DemoBarProps> = ({ onOpenAbout }) => {
     </div>
   );
 };
+

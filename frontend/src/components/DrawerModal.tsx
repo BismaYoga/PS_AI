@@ -7,6 +7,7 @@ import { fmt, fmtDate, rp, periodLabel } from '../utils';
 export interface DrawerPayload {
   type: 'about' | 'method' | 'technical' | 'sources' | 'news' | 'event' | 'doc' | string;
   stock?: StockItem;
+  companyDetail?: any;
   ticker?: string;
   chartCalc?: any;
   newsItem?: NewsItem;
@@ -50,7 +51,7 @@ export const DrawerModal: React.FC<DrawerModalProps> = ({
         return (
           <>
             <div className="drawer-top">
-              <span className="drawer-eyebrow">TENTANG PREVIEW</span>
+              <span className="drawer-eyebrow">TENTANG DATA &amp; ARSITEKTUR</span>
               <button
                 className="icon-btn"
                 id="drawer-close"
@@ -61,42 +62,47 @@ export const DrawerModal: React.FC<DrawerModalProps> = ({
               </button>
             </div>
             <div id="drawer-content">
-              <h2>Riset lebih terstruktur. Tampilan lebih sederhana.</h2>
+              <h2>Riset saham terstruktur dengan data riil BEI &amp; AI.</h2>
               <p>
-                Prototipe PintarSaham Intelligence ini dibuat untuk mencoba alur
-                dari kondisi pasar menuju analisis sebuah emiten.
+                PintarSaham Intelligence menghubungkan data pasar real-time Bursa
+                Efek Indonesia (BEI / IDX) melalui <strong>Invezgo API</strong>,
+                penyimpanan lokal <strong>SQLite Database</strong> yang hemat
+                kuota request, serta analisis cerdas <strong>Gemini AI</strong>.
               </p>
               <div className="notice">
-                <strong>Bukan data pasar aktual.</strong>
+                <strong>Terhubung Penuh ke Data Resmi BEI (Invezgo API).</strong>
                 <br />
-                Nama dan ticker dipakai sebagai label navigasi. Harga, laporan
-                keuangan, komposisi pendapatan, berita, serta agenda sepenuhnya
-                simulasi. Logo perusahaan adalah monogram placeholder.
+                Seluruh 909 emiten aktif BEI, grafik harian &amp; intraday 1 hari,
+                rasio valuasi (EPS, BVPS, PER, PBV, ROE, MOS), laporan keuangan 5
+                kuartal terakhir, komposisi pemegang saham KSEI, berita pasar, dan
+                dokumen PDF Keterbukaan Informasi BEI menggunakan data riil.
               </div>
-              <h3>Yang bisa dicoba</h3>
+              <h3>Arsitektur Hemat Request (SQLite DB Lokal)</h3>
               <p>
-                Cari BBCA, BBRI, TLKM, ASII, ICBP, atau MIKA. Ganti periode dan
-                jenis grafik, tampilkan Fibonacci, buka tab laporan keuangan,
-                geser asumsi PER/PBV, simpan watchlist, dan buka ringkasan
-                dokumen.
+                Untuk menghemat kuota request Invezgo API yang berbayar per
+                request, seluruh data yang bersifat periodik disimpan otomatis di{' '}
+                <code>data/pintarsaham.db</code>:
+                <br />• <strong>Laporan Keuangan Kuartalan, Profil, &amp; KSEI</strong>:
+                Disimpan selama 90 hari (1 kuartal) — kunjungan berikutnya memakai{' '}
+                <strong>0 request API</strong>.
+                <br />• <strong>Keterbukaan Informasi BEI (PDF)</strong>: Disimpan
+                selama 7 hari per emiten.
+                <br />• <strong>Berita Pasar &amp; Emiten</strong>: Ditarik 1 kali
+                request (50 berita terkurasi) saat tombol ditekan, menampilkan Top
+                3 di layar dan mengirimkan seluruh 50 berita ke Gemini AI.
               </p>
-              <h3>Belum terhubung</h3>
+              <h3>Penyimpanan Watchlist &amp; Privasi</h3>
               <p>
-                Belum ada API harga saham, berita, data BEI, dokumen emiten, login
-                pengguna, atau model AI. Ringkasan AI adalah narasi contoh dari
-                aturan lokal, bukan analisis oleh model bahasa.
+                Watchlist Anda disimpan secara lokal di browser
+                (<code>localStorage</code>) sedangkan cache fundamental dan
+                dokumen BEI tersimpan di database SQLite lokal pada perangkat server
+                Anda.
               </p>
-              <h3>Privasi &amp; penyimpanan</h3>
+              <h3>Pintasan Navigasi</h3>
               <p>
-                Tidak ada data yang dikirim ke server. Watchlist disimpan di
-                browser ini. Pada beberapa browser, penyimpanan dapat terbatas saat
-                file dibuka langsung atau dalam mode privat.
-              </p>
-              <h3>Cara navigasi</h3>
-              <p>
-                Ketik kode atau nama di pencarian, lalu tekan Enter. Tombol /
-                memfokuskan pencarian; Esc menutup hasil pencarian atau panel.
-                Klik logo PintarSaham untuk kembali ke beranda.
+                Ketik kode atau nama dari 909 emiten BEI di kolom pencarian atas,
+                lalu tekan Enter. Tombol <code>/</code> memfokuskan pencarian;{' '}
+                <code>Esc</code> menutup panel samping.
               </p>
               {onOpenWatchlist && (
                 <button
@@ -132,8 +138,8 @@ export const DrawerModal: React.FC<DrawerModalProps> = ({
               <h2>Data fundamental riil dari Invezgo API</h2>
               <p>
                 Metodologi penentuan harga wajar (fair value) dan Margin of Safety
-                (MOS) dihitung langsung dari data keuangan riil audited emiten
-                Bursa Efek Indonesia.
+                (MOS) dihitung langsung dari data keuangan riil emiten Bursa Efek
+                Indonesia.
               </p>
               <div className="notice">
                 <strong>
@@ -184,7 +190,7 @@ export const DrawerModal: React.FC<DrawerModalProps> = ({
         return (
           <>
             <div className="drawer-top">
-              <span className="drawer-eyebrow">DASAR ANALISIS</span>
+              <span className="drawer-eyebrow">DASAR ANALISIS TEKNIKAL</span>
               <button
                 className="icon-btn"
                 id="drawer-close"
@@ -195,10 +201,11 @@ export const DrawerModal: React.FC<DrawerModalProps> = ({
               </button>
             </div>
             <div id="drawer-content">
-              <h2>Indikator yang dapat ditelusuri.</h2>
+              <h2>Indikator teknikal dari data pasar riil BEI.</h2>
               <div className="notice">
-                Data OHLC adalah data historis/simulasi. Ringkasan menggunakan
-                indikator teknikal matematis untuk panduan momentum.
+                Data candlestick harian (OHLC) dan pergerakan intraday 1 hari
+                ditarik langsung dari <strong>Invezgo API (BEI Official)</strong>{' '}
+                dan disimpan di cache SQLite lokal untuk efisiensi request.
               </div>
               <div className="detail-pair">
                 <span>Instrumen / periode</span>
@@ -250,11 +257,20 @@ export const DrawerModal: React.FC<DrawerModalProps> = ({
 
       case 'sources': {
         const s = payload.stock;
+        const cd = payload.companyDetail;
         if (!s) return null;
+        const finList = Array.isArray(cd?.financials) ? cd.financials : [];
+        const shList = Array.isArray(cd?.shareholders) ? cd.shareholders : [];
+        const prof = cd?.profile;
+        const periodSpan =
+          finList.length >= 2
+            ? `${finList[0].year} – ${finList[finList.length - 1].year} (Resmi BEI)`
+            : 'Kuartalan Resmi BEI (Invezgo)';
+
         return (
           <>
             <div className="drawer-top">
-              <span className="drawer-eyebrow">SUMBER &amp; ASUMSI</span>
+              <span className="drawer-eyebrow">SUMBER DATA &amp; PROFIL RESMI</span>
               <button
                 className="icon-btn"
                 id="drawer-close"
@@ -265,26 +281,76 @@ export const DrawerModal: React.FC<DrawerModalProps> = ({
               </button>
             </div>
             <div id="drawer-content">
-              <h2>{s.ticker}: status data preview</h2>
+              <h2>{s.ticker}: sumber data &amp; penyimpanan DB</h2>
               <div className="notice">
-                Data ditarik dari feed publik bursa efek dan kalkulasi lokal.
+                Seluruh data fundamental, kepemilikan saham KSEI, dan keterbukaan
+                informasi ditarik dari <strong>Invezgo API (BEI Official)</strong>{' '}
+                dan disimpan di database lokal <code>data/pintarsaham.db</code>.
               </div>
               <div className="detail-pair">
                 <span>Harga Pasar</span>
-                <b>{rp(s.price)} · Invezgo</b>
+                <b>{rp(s.price)} · Invezgo (BEI)</b>
               </div>
               <div className="detail-pair">
-                <span>Laporan historis</span>
-                <b>Sintetis FY2021–FY2025</b>
+                <span>Laporan Keuangan Historis</span>
+                <b>{periodSpan}</b>
               </div>
               <div className="detail-pair">
-                <span>Kontribusi pendapatan</span>
-                <b>Simulasi FY2025</b>
+                <span>Komposisi Pemegang Saham</span>
+                <b>
+                  {shList.length > 0
+                    ? `Data Resmi KSEI (${shList.length} pihak tercatat)`
+                    : 'Data Resmi KSEI · Invezgo'}
+                </b>
               </div>
               <div className="detail-pair">
-                <span>EPS &amp; BVPS valuasi</span>
-                <b>{s.eps ? `EPS: ${rp(s.eps)} · BVPS: ${rp(s.bvps || 0)}` : 'Estimasi wajar'}</b>
+                <span>EPS &amp; BVPS Riil</span>
+                <b>
+                  {s.eps
+                    ? `EPS: ${rp(s.eps)} · BVPS: ${rp(s.bvps || 0)}`
+                    : 'Dihitung dari laporan kuartal terbaru'}
+                </b>
               </div>
+              <div className="detail-pair">
+                <span>Status Cache Database</span>
+                <b>
+                  {cd?.cachedDb
+                    ? 'Tersimpan di SQLite DB (0 Request API)'
+                    : 'Disinkronkan ke SQLite DB (TTL 90 Hari)'}
+                </b>
+              </div>
+
+              {prof?.address && (
+                <>
+                  <h3>Alamat Kantor Pusat</h3>
+                  <p style={{ fontSize: '12.5px' }}>{prof.address}</p>
+                </>
+              )}
+
+              {Array.isArray(prof?.directors) && prof.directors.length > 0 && (
+                <>
+                  <h3>Jajaran Direksi ({s.ticker})</h3>
+                  {prof.directors.slice(0, 6).map((dir: any, idx: number) => (
+                    <div className="detail-pair" key={idx}>
+                      <span>{dir.role || 'Direktur'}</span>
+                      <b>{dir.name}</b>
+                    </div>
+                  ))}
+                </>
+              )}
+
+              {Array.isArray(prof?.commissioners) && prof.commissioners.length > 0 && (
+                <>
+                  <h3>Dewan Komisaris ({s.ticker})</h3>
+                  {prof.commissioners.slice(0, 6).map((com: any, idx: number) => (
+                    <div className="detail-pair" key={idx}>
+                      <span>{com.role || 'Komisaris'}</span>
+                      <b>{com.name}</b>
+                    </div>
+                  ))}
+                </>
+              )}
+
               {onOpenMethod && (
                 <button
                   className="btn"
@@ -316,7 +382,7 @@ export const DrawerModal: React.FC<DrawerModalProps> = ({
           <>
             <div className="drawer-top">
               <span className="drawer-eyebrow">
-                BERITA {n.url ? 'LIVE' : 'CONTOH'} · {n.ticker || 'IHSG'}
+                BERITA {n.url ? 'LIVE INVEZGO' : 'PASAR'} · {n.ticker || 'IHSG'}
               </span>
               <button
                 className="icon-btn"
@@ -375,8 +441,8 @@ export const DrawerModal: React.FC<DrawerModalProps> = ({
                   color: 'var(--muted)',
                 }}
               >
-                Berita diproses secara otomatis via Feed Pasar · Selalu verifikasi
-                ke sumber resmi sebelum mengambil keputusan investasi.
+                Berita diproses secara otomatis via Invezgo Market Feed · Selalu
+                verifikasi ke sumber resmi sebelum mengambil keputusan investasi.
               </div>
             </div>
           </>
@@ -463,10 +529,14 @@ export const DrawerModal: React.FC<DrawerModalProps> = ({
         const d = payload.docItem;
         const s = payload.stock;
         if (!d) return null;
+        const attachments = Array.isArray(d.attachments) ? d.attachments : [];
+
         return (
           <>
             <div className="drawer-top">
-              <span className="drawer-eyebrow">DOKUMEN CONTOH</span>
+              <span className="drawer-eyebrow">
+                KETERBUKAAN INFORMASI RESMI BEI · {s ? s.ticker : ''}
+              </span>
               <button
                 className="icon-btn"
                 id="drawer-close"
@@ -480,19 +550,58 @@ export const DrawerModal: React.FC<DrawerModalProps> = ({
               <h2>{d.title}</h2>
               <div className="flex gap-8 wrap" style={{ marginBottom: '14px' }}>
                 <span className="pill blue">{d.label}</span>
-                <span className="pill outline">{fmtDate(d.date)} · simulasi</span>
+                <span className="pill green">
+                  {d.displayDate || fmtDate(d.date)} · Resmi BEI (IDX)
+                </span>
               </div>
               <div className="notice">
-                Ini bukan dokumen resmi {s ? s.ticker : ''}. Tidak ada file PDF
-                atau pengumuman emiten aktual yang tersedia dalam preview.
+                <strong>Dokumen Resmi Bursa Efek Indonesia ({s ? s.ticker : 'IDX'}).</strong>
+                <br />
+                Pengumuman ini ditarik dari feed Keterbukaan Informasi BEI melalui
+                Invezgo API dan disimpan di database SQLite lokal.
               </div>
-              <h3>Isi ringkasan</h3>
+              <h3>Ringkasan Dokumen</h3>
               <p>{d.body}</p>
-              <h3>Yang akan tampil saat data terhubung</h3>
-              <p>
-                Nama dokumen, tanggal publikasi, halaman sumber, perubahan
-                utama, potensi dampak pada bisnis, serta tautan ke dokumen asli.
-              </p>
+
+              {attachments.length > 0 && (
+                <>
+                  <h3>Lampiran Dokumen Resmi PDF ({attachments.length} File)</h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px' }}>
+                    {attachments.map((att: any, idx: number) => (
+                      <a
+                        key={idx}
+                        href={att.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn"
+                        style={{
+                          justifyContent: 'space-between',
+                          textAlign: 'left',
+                          fontSize: '12px',
+                          padding: '8px 12px',
+                        }}
+                      >
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '85%' }}>
+                          <Icon name="file" cls="sm" /> {att.name || `Lampiran_${idx + 1}.pdf`}
+                        </span>
+                        <Icon name="arrow-up-right" cls="sm" />
+                      </a>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {d.url && attachments.length === 0 && (
+                <a
+                  href={d.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn primary"
+                  style={{ marginTop: '18px', display: 'inline-flex' }}
+                >
+                  Buka Dokumen PDF Resmi BEI <Icon name="arrow-up-right" cls="sm" />
+                </a>
+              )}
             </div>
           </>
         );

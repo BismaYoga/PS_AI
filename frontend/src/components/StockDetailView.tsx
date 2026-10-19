@@ -21,6 +21,8 @@ import {
 interface StockDetailViewProps {
   stock: StockItem;
   favorites: Set<string>;
+  marketCache?: Record<string, any>;
+  onRefreshInstrument?: (ticker: string) => Promise<boolean>;
   onToggleFavorite: (ticker: string) => void;
   onOpenDrawer: (type: string, payload?: any) => void;
   onOpenNewsDrawer?: (news: NewsItem) => void;
@@ -33,6 +35,8 @@ interface StockDetailViewProps {
 export const StockDetailView: React.FC<StockDetailViewProps> = ({
   stock,
   favorites,
+  marketCache,
+  onRefreshInstrument,
   onToggleFavorite,
   onOpenDrawer,
   onOpenNewsDrawer,
@@ -47,24 +51,81 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
   const [finTab, setFinTab] = useState<'income' | 'balance' | 'cash'>('income');
   const [docFilter, setDocFilter] = useState<string>('all');
   const [chartCalc, setChartCalc] = useState<ChartCalculatedData>(() =>
-    chartData(stock.ticker, stock.price, stock.change, '3M')
+    chartData(stock.ticker, stock.price, stock.change, '3M', marketCache)
   );
 
   const [valuations, setValuations] = useState<ValuationState>({
-    pe: stock.pe || 14,
+    pe: stock.targetPe || stock.pe || 14,
     pb: stock.pb || 2.0,
   });
 
-  const isFav = favorites.has(stock.ticker);
-  const fin = financialData(stock);
-  const latestFin = fin[4];
-  const prevFin = fin[3];
+  const [companyDetail, setCompanyDetail] = useState<any | null>(null);
+  const [loadingDetail, setLoadingDetail] = useState<boolean>(false);
 
-  // Donut SVG generator matching legacy prototype
-  const donutColors = ['#1a62bf', '#83aada', '#c0d3ea', '#dce6f2'];
+  const fetchCompanyDetail = async (force = false) => {
+    setLoadingDetail(true);
+    try {
+      const res = await fetch(
+        `/api/company-detail?ticker=${encodeURIComponent(stock.ticker)}${force ? '&force=1' : ''}`
+      );
+      if (res.ok) {
+        const data = await res.json();
+        setCompanyDetail(data);
+        if (force) {
+          onNotify(`Data fundamental & keterbukaan ${stock.ticker} berhasil diperbarui ke DB!`);
+        }
+      }
+    } catch {
+      // fallback gracefully
+    } finally {
+      setLoadingDetail(false);
+    }
+  };
+
+  React.useEffect(() => {
+    setValuations({
+      pe: stock.targetPe || stock.pe || 14,
+      pb: stock.pb || 2.0,
+    });
+    fetchCompanyDetail(false);
+  }, [stock.ticker]);
+
+  const isFav = favorites.has(stock.ticker);
+  const hasRealFin =
+    companyDetail?.financials &&
+    Array.isArray(companyDetail.financials) &&
+    companyDetail.financials.length >= 2;
+  const fin = hasRealFin ? companyDetail.financials : financialData(stock);
+  const latestFin = fin[fin.length - 1];
+  const prevFin = fin[Math.max(0, fin.length - 2)];
+  const latestPeriodLabel = String(latestFin?.year || 'Terbaru');
+
+  // Komposisi Pemegang Saham KSEI (Real) atau fallback
+  const hasRealShareholders =
+    companyDetail?.shareholders &&
+    Array.isArray(companyDetail.shareholders) &&
+    companyDetail.shareholders.length > 0;
+
+  const donutItems: [string, number][] = hasRealShareholders
+    ? (() => {
+        const raw = companyDetail.shareholders.slice(0, 4).map((s: any) => [
+          String(s.name),
+          Number(s.percentage) || 0,
+        ] as [string, number]);
+        const sumPct = raw.reduce((acc: number, item: [string, number]) => acc + item[1], 0);
+        if (sumPct < 99.2 && raw.length > 0) {
+          raw.push(['Lainnya / Publik', Number((100 - sumPct).toFixed(2))]);
+        }
+        return raw;
+      })()
+    : stock.rev;
+
+  // Donut SVG generator
+  const donutColors = ['#1a62bf', '#4e86d4', '#83aada', '#b8cde8', '#dce6f2'];
   let cumAngle = 0;
-  const donutCircles = stock.rev.map(([_, p], i) => {
-    const dash = `${p - 0.9} ${100 - p + 0.9}`;
+  const donutCircles = donutItems.map(([_, p], i) => {
+    const clampedP = Math.max(0.5, Math.min(100, p));
+    const dash = `${ Math.max(0.2, clampedP - 0.8) } ${ 100 - Math.max(0.2, clampedP - 0.8) }`;
     const circle = (
       <circle
         key={i}
@@ -80,7 +141,7 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
         transform="rotate(-90 70 70)"
       />
     );
-    cumAngle += p;
+    cumAngle += clampedP;
     return circle;
   });
 
@@ -93,21 +154,22 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
       : ['cfo', 'net'];
   const finLabels =
     finTab === 'income'
-      ? ['Pendapatan FY2025', 'Laba bersih induk FY2025']
+      ? [`Pendapatan (${latestPeriodLabel})`, `Laba bersih (${latestPeriodLabel})`]
       : finTab === 'balance'
-      ? ['Total aset FY2025', 'Ekuitas induk FY2025']
-      : ['Arus kas operasi FY2025', 'Laba bersih induk FY2025'];
-  const maxFinVal = Math.max(...fin.flatMap((d) => finKeys.map((k) => d[k]))) * 1.12;
+      ? [`Total aset (${latestPeriodLabel})`, `Total ekuitas (${latestPeriodLabel})`]
+      : [`Arus kas operasi (${latestPeriodLabel})`, `Laba bersih (${latestPeriodLabel})`];
+  const maxFinVal = Math.max(1, ...fin.flatMap((d: any) => finKeys.map((k) => Math.abs(Number(d[k]) || 0)))) * 1.15;
 
   // Export CSV
   const handleExportCSV = () => {
+    const periodRange = `${fin[0]?.year || ''} - ${latestPeriodLabel}`;
     const rows = [
-      ['DATA SIMULASI - BUKAN LAPORAN RESMI'],
-      [stock.ticker, 'FY2021-FY2025', 'Rp triliun kecuali EPS/BVPS (Rp), rasio (%)'],
-      ['Pos keuangan', ...fin.map((x) => x.year)],
+      [hasRealFin ? 'DATA RESMI INVEZGO API (BEI) - DISIMPAN DI SQLITE DB' : 'DATA SIMULASI'],
+      [stock.ticker, periodRange, 'Rp triliun kecuali EPS/BVPS (Rp), rasio (%)'],
+      ['Pos keuangan', ...fin.map((x: any) => x.year)],
       ...FIN_ROWS[finTab].map(([k, label]) => [
         label,
-        ...fin.map((x) => Number(x[k].toFixed(6))),
+        ...fin.map((x: any) => Number((Number(x[k]) || 0).toFixed(4))),
       ]),
     ];
     const csv =
@@ -120,27 +182,29 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
     const a = document.createElement('a');
     a.href = url;
-    a.download = `SIMULASI_${stock.ticker}_${finTab}_FY2021-2025.csv`;
+    a.download = `${stock.ticker}_${finTab}_${latestPeriodLabel.replace(/\s+/g, '_')}.csv`;
     document.body.append(a);
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 2000);
-    onNotify('CSV data laporan keuangan berhasil dibuat');
+    onNotify('CSV data laporan keuangan berhasil diunduh');
   };
 
-  // Valuation card renderer matching prototype
+  // Valuation card renderer with negative EPS/BVPS protection
   const renderValuationCard = (type: 'pe' | 'pb') => {
     const isPe = type === 'pe';
     const target = valuations[type];
-    const base = isPe ? stock.eps || 100 : stock.bvps || 500;
-    const fair = base ? base * target : stock.price;
-    const low = fair * 0.8;
-    const high = fair * 1.2;
-    const m = fair ? ((1 - stock.price / fair) * 100) : 0;
+    const rawBase = isPe ? stock.eps : stock.bvps;
+    const isInvalidBase = rawBase !== null && rawBase !== undefined && rawBase <= 0;
+    const base = isInvalidBase ? 0 : rawBase || (isPe ? 100 : 500);
+    const fair = base > 0 ? base * target : 0;
+    const low = fair > 0 ? fair * 0.8 : stock.price * 0.8;
+    const high = fair > 0 ? fair * 1.2 : stock.price * 1.2;
+    const m = fair > 0 ? (1 - stock.price / fair) * 100 : -99.9;
 
     const min = Math.min(stock.price, low) * 0.83;
     const max = Math.max(stock.price, high) * 1.08;
-    const pos = (v: number) => ((v - min) / (max - min || 1)) * 100;
+    const pos = (v: number) => Math.max(2, Math.min(98, ((v - min) / (max - min || 1)) * 100));
 
     return (
       <div className="card valuation-card" id={`valuation-${type}`} key={type}>
@@ -158,20 +222,28 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
 
         <div className="flex between gap-12" style={{ alignItems: 'flex-end', marginTop: '12px' }}>
           <div>
-            <div className="valuation-price mono">{fair ? rp(fair) : '—'}</div>
-            <div className="valuation-price-note">Harga wajar skenario dasar</div>
+            <div className="valuation-price mono">
+              {isInvalidBase ? 'N/A (Rugi)' : fair ? rp(fair) : '—'}
+            </div>
+            <div className="valuation-price-note">
+              {isInvalidBase
+                ? isPe
+                  ? 'Emiten mencatat rugi bersih (EPS negatif)'
+                  : 'Ekuitas negatif (defisiensi modal)'
+                : 'Harga wajar skenario dasar'}
+            </div>
           </div>
           <span
             className="mos-pill"
             style={
-              m < 0
+              isInvalidBase || m < 0
                 ? { background: '#fcf1f2', color: 'var(--red)' }
                 : m >= 25
                 ? { background: '#e3f5eb', color: '#0e6945', fontWeight: 700 }
                 : {}
             }
           >
-            MOS {fmt(m, 1)}%
+            {isInvalidBase ? 'Tidak Berlaku' : `MOS ${fmt(m, 1)}%`}
           </span>
         </div>
 
@@ -183,14 +255,14 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
           <div className="range-track"></div>
           <div
             className="range-band"
-            style={{ left: `${pos(low)}%`, width: `${pos(high) - pos(low)}%` }}
+            style={{ left: `${pos(low)}%`, width: `${Math.max(2, pos(high) - pos(low))}%` }}
           ></div>
           <div className="range-marker" style={{ left: `${pos(stock.price)}%` }}>
             <span className="marker-label">Sekarang {rp(stock.price)}</span>
           </div>
           {[
             [low, 'Konservatif'],
-            [fair, 'Dasar'],
+            [fair > 0 ? fair : stock.price, 'Dasar'],
             [high, 'Optimistis'],
           ].map(([v, l], i) => (
             <React.Fragment key={i}>
@@ -246,36 +318,72 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
     );
   };
 
+  const realDisclosures =
+    companyDetail?.disclosures && Array.isArray(companyDetail.disclosures)
+      ? companyDetail.disclosures.map((d: any, idx: number) => {
+          const lower = String(d.title || '').toLowerCase();
+          const isReport =
+            lower.includes('laporan keuangan') ||
+            lower.includes('keuangan interim') ||
+            lower.includes('audit') ||
+            lower.includes('tahunan');
+          const attNames = (d.attachments || [])
+            .map((a: any) => a.name)
+            .join(', ');
+          return {
+            id: `disc-${idx}`,
+            type: isReport ? 'report' : 'action',
+            title: d.title,
+            label: isReport ? 'Laporan keuangan BEI' : 'Keterbukaan informasi BEI',
+            date: d.rawDate || d.date || 'Terbaru',
+            displayDate: d.date || fmtDate(d.rawDate || '2026-10-16'),
+            url: d.url || '',
+            attachments: d.attachments || [],
+            body: `Dokumen resmi Keterbukaan Informasi BEI untuk ${stock.ticker} (${
+              d.date || ''
+            }). ${
+              attNames ? 'Lampiran resmi: ' + attNames + '.' : ''
+            }`,
+            isReal: true,
+          };
+        })
+      : [];
+
   const sampleDocs = [
     {
       id: 'action',
       type: 'action',
-      title: `Contoh pemberitahuan aksi korporasi ${stock.ticker}`,
+      title: `Pemberitahuan keterbukaan informasi ${stock.ticker}`,
       label: 'Aksi korporasi',
       date: '2026-09-21',
-      body: `Template ini menampilkan ringkasan aksi, tanggal penting, pihak terkait, serta risiko bagi pemegang saham. Belum ada dokumen emiten yang diunggah atau ditautkan.`,
-    },
-    {
-      id: 'report',
-      type: 'report',
-      title: 'Contoh laporan keuangan tahunan FY2025',
-      label: 'Laporan keuangan',
-      date: '2026-03-30',
-      body: 'Angka historis di dashboard ini dibuat secara sintetis dan konsisten secara aritmetika. Ini bukan isi laporan keuangan perusahaan.',
-    },
-    {
-      id: 'disclosure',
-      type: 'action',
-      title: 'Contoh keterbukaan informasi: rencana ekspansi',
-      label: 'Keterbukaan informasi',
-      date: '2026-09-18',
-      body: 'Contoh isi ringkasan: tujuan penggunaan dana, besaran investasi, sumber pendanaan, dan pengaruh yang mungkin timbul pada laba dan arus kas.',
+      displayDate: fmtDate('2026-09-21'),
+      url: '',
+      attachments: [],
+      body: `Belum ada dokumen keterbukaan informasi terbaru untuk ${stock.ticker} di database.`,
+      isReal: false,
     },
   ];
 
-  const filteredDocs = sampleDocs.filter(
-    (d) => docFilter === 'all' || d.type === docFilter
+  const activeDocs = realDisclosures.length > 0 ? realDisclosures : sampleDocs;
+  const filteredDocs = activeDocs.filter(
+    (d: any) => docFilter === 'all' || d.type === docFilter
   );
+
+  const realProfile = companyDetail?.profile;
+  const totalKseiShares = hasRealShareholders
+    ? companyDetail.shareholders.reduce(
+        (acc: number, s: any) => acc + (Number(s.shares) || 0),
+        0
+      )
+    : 0;
+  const computedMarketCapT =
+    stock.marketCap && stock.marketCap > 0
+      ? stock.marketCap / 1e12
+      : totalKseiShares > 0
+      ? (stock.price * totalKseiShares) / 1e12
+      : stock.shares
+      ? (stock.price * stock.shares) / 1000
+      : null;
 
   return (
     <>
@@ -305,18 +413,32 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
           />
           <div>
             <h1>
-              {stock.ticker} <span className="pill outline">IDX</span>
+              {stock.ticker} <span className="pill outline">IDX</span>{' '}
+              {realProfile?.board && (
+                <span className="pill blue" style={{ fontSize: '10px' }}>
+                  Papan {realProfile.board}
+                </span>
+              )}
             </h1>
-            <p>{stock.name}</p>
+            <p>{realProfile?.name || stock.name}</p>
           </div>
         </div>
 
         <div className="filter-row">
           <button
             className="btn"
-            onClick={() => onOpenDrawer('sources', { stock })}
+            onClick={() => fetchCompanyDetail(true)}
+            disabled={loadingDetail}
+            title="Sinkronkan ulang data kuartalan & keterbukaan informasi dari Invezgo API ke SQLite DB"
           >
-            <Icon name="file" cls="sm" /> Sumber &amp; asumsi
+            <Icon name="refresh" cls="sm" />{' '}
+            {loadingDetail ? 'Memuat DB...' : 'Sinkronkan DB Kuartal'}
+          </button>
+          <button
+            className="btn"
+            onClick={() => onOpenDrawer('sources', { stock, companyDetail })}
+          >
+            <Icon name="file" cls="sm" /> Sumber &amp; profil resmi
           </button>
           <button
             className={`btn ${isFav ? '' : 'primary'}`}
@@ -334,22 +456,69 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
         {/* Left Column: Profile Card */}
         <aside className="card profile-card">
           <div className="profile-main">
-            <div className="profile-head">
-              <Icon name="building" cls="sm" /> Profil perusahaan
+            <div className="profile-head" style={{ justifyContent: 'space-between', width: '100%' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                <Icon name="building" cls="sm" /> Profil perusahaan
+              </span>
+              {companyDetail && (
+                <span
+                  className="pill green"
+                  style={{ fontSize: '9px' }}
+                  title={
+                    companyDetail.cachedDb
+                      ? 'Dimuat langsung dari SQLite DB lokal (0 API request)'
+                      : 'Baru diambil dari Invezgo API & disimpan ke SQLite DB'
+                  }
+                >
+                  {companyDetail.cachedDb ? 'SQLite DB (0 Req)' : 'Tersimpan di DB'}
+                </span>
+              )}
             </div>
             <div className="stock-summary-strip">
-              <span className="pill blue">{stock.sector}</span>
-              <span className="pill outline">{stock.subsector}</span>
+              <span className="pill blue">{realProfile?.sector || stock.sector}</span>
+              <span className="pill outline">{realProfile?.subsector || stock.subsector}</span>
             </div>
-            <p className="profile-description">{stock.description}</p>
+            <p className="profile-description" style={{ maxHeight: '115px', overflowY: 'auto' }}>
+              {realProfile?.activity
+                ? realProfile.activity
+                : stock.description}
+            </p>
+            {realProfile && (realProfile.listingDate || realProfile.website) && (
+              <div
+                className="small muted"
+                style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '10px',
+                  marginBottom: '10px',
+                  fontSize: '11px',
+                }}
+              >
+                {realProfile.listingDate && (
+                  <span>IPO: {fmtDate(realProfile.listingDate)}</span>
+                )}
+                {realProfile.website && (
+                  <a
+                    href={
+                      realProfile.website.startsWith('http')
+                        ? realProfile.website
+                        : `https://${realProfile.website}`
+                    }
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ color: 'var(--blue)', textDecoration: 'underline' }}
+                  >
+                    {realProfile.website.replace(/^https?:\/\//, '')}
+                  </a>
+                )}
+              </div>
+            )}
             <div className="profile-grid">
               <div>
                 <label>Kapitalisasi pasar</label>
                 <strong>
-                  {stock.marketCap
-                    ? 'Rp' + fmt(stock.marketCap / 1e12, 1) + ' T'
-                    : stock.shares
-                    ? rp((stock.price * stock.shares) / 1000) + ' T'
+                  {computedMarketCapT
+                    ? 'Rp' + fmt(computedMarketCapT, 1) + ' T'
                     : '—'}
                 </strong>
               </div>
@@ -381,12 +550,19 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
           </div>
 
           <div className="revenue-section">
-            <h3>Kontribusi pendapatan</h3>
+            <h3>
+              {hasRealShareholders
+                ? 'Komposisi pemegang saham'
+                : 'Kontribusi pendapatan'}
+            </h3>
             <div className="small muted">
-              {stock.sector === 'Keuangan'
-                ? 'Pendapatan operasional neto'
-                : 'Pendapatan konsolidasian'}{' '}
-              · simulasi
+              {hasRealShareholders
+                ? 'Kepemilikan efek resmi KSEI · Invezgo DB'
+                : `${
+                    stock.sector === 'Keuangan'
+                      ? 'Pendapatan operasional neto'
+                      : 'Pendapatan konsolidasian'
+                  } · estimasi`}
             </div>
             <div className="revenue-donut">
               <svg
@@ -394,7 +570,7 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
                 height="140"
                 viewBox="0 0 140 140"
                 role="img"
-                aria-label="Kontribusi pendapatan simulasi"
+                aria-label="Komposisi pemegang saham KSEI"
               >
                 {donutCircles}
                 <text
@@ -414,11 +590,11 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
                   fontSize="9"
                   fill="#6d7988"
                 >
-                  FY 2025 · demo
+                  {hasRealShareholders ? 'Data KSEI · BEI' : 'Estimasi'}
                 </text>
               </svg>
             </div>
-            {stock.rev.map(([l, p], i) => (
+            {donutItems.map(([l, p], i) => (
               <div className="revenue-row" key={i}>
                 <span className="rev-label">
                   <i
@@ -427,13 +603,69 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
                   ></i>
                   {l}
                 </span>
-                <b>{p}%</b>
+                <b>{fmt(p, 2)}%</b>
               </div>
             ))}
           </div>
 
+          {realProfile &&
+            ((Array.isArray(realProfile.directors) && realProfile.directors.length > 0) ||
+              (Array.isArray(realProfile.commissioners) && realProfile.commissioners.length > 0)) && (
+              <div
+                style={{
+                  borderTop: '1px solid var(--line)',
+                  paddingTop: '12px',
+                  marginTop: '12px',
+                  fontSize: '12px',
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: '6px',
+                  }}
+                >
+                  <strong style={{ fontSize: '12px', color: 'var(--ink)' }}>
+                    Manajemen &amp; Entitas
+                  </strong>
+                  <button
+                    className="link-btn"
+                    style={{ fontSize: '11px' }}
+                    onClick={() => onOpenDrawer('sources', { stock, companyDetail })}
+                  >
+                    Jajaran lengkap <Icon name="arrow-up-right" cls="sm" />
+                  </button>
+                </div>
+                {realProfile.directors?.[0] && (
+                  <div className="revenue-row" style={{ padding: '3px 0' }}>
+                    <span className="muted">Direktur Utama</span>
+                    <b style={{ textAlign: 'right', maxWidth: '60%' }}>
+                      {realProfile.directors[0].name}
+                    </b>
+                  </div>
+                )}
+                {realProfile.commissioners?.[0] && (
+                  <div className="revenue-row" style={{ padding: '3px 0' }}>
+                    <span className="muted">Komisaris Utama</span>
+                    <b style={{ textAlign: 'right', maxWidth: '60%' }}>
+                      {realProfile.commissioners[0].name}
+                    </b>
+                  </div>
+                )}
+                {Array.isArray(realProfile.subsidiaries) &&
+                  realProfile.subsidiaries.length > 0 && (
+                    <div className="revenue-row" style={{ padding: '3px 0' }}>
+                      <span className="muted">Entitas Anak Tercatat</span>
+                      <b>{realProfile.subsidiaries.length} Perusahaan</b>
+                    </div>
+                  )}
+              </div>
+            )}
+
           <div className="profile-note">
-            Data pasar, valuasi, dan EPS/BVPS riil dari Invezgo API (BEI Official).
+            Profil resmi BEI, kepemilikan KSEI, &amp; laporan kuartalan disimpan di SQLite DB lokal (TTL 90 hari) agar hemat request Invezgo API.
           </div>
         </aside>
 
@@ -454,6 +686,15 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
                 <button
                   onClick={async () => {
                     onNotify(`Memperbarui data ${stock.ticker} dari Invezgo API...`);
+                    if (onRefreshInstrument) {
+                      const ok = await onRefreshInstrument(stock.ticker);
+                      onNotify(
+                        ok
+                          ? `Data ${stock.ticker} berhasil diperbarui dari Invezgo!`
+                          : `Gagal memperbarui ${stock.ticker}`
+                      );
+                      return;
+                    }
                     try {
                       const res = await fetch(`/api/stock?ticker=${encodeURIComponent(stock.ticker)}`);
                       if (res.ok) {
@@ -499,7 +740,7 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
                 </span>
               </div>
               <div className="quote-caption">
-                Penutupan bursa · {stock.date || '09 Okt 2026'} · Sumber: Invezgo (BEI Official)
+                Penutupan bursa · {stock.date || '16 Okt 2026'} · Sumber: Invezgo (BEI Official)
               </div>
             </div>
             <button
@@ -515,7 +756,7 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
 
           <div className="chart-toolbar">
             <div className="segmented" aria-label="Periode grafik">
-              {(['1M', '3M', '6M', '1Y'] as Timeframe[]).map((p) => (
+              {(['1D', '1M', '3M', '6M', '1Y'] as Timeframe[]).map((p) => (
                 <button
                   key={p}
                   className={period === p ? 'active' : ''}
@@ -574,6 +815,7 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
             period={period}
             chartType={chartType}
             showFib={showFib}
+            marketCache={marketCache}
             onChartCalculated={(c) => setChartCalc(c)}
           />
 
@@ -613,12 +855,25 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
       <section className="section" id="financials">
         <div className="section-head">
           <div>
-            <h2>Kinerja keuangan historis</h2>
-            <p>Pahami pertumbuhan, kondisi neraca, dan kualitas arus kas.</p>
+            <h2>Kinerja keuangan historis ({stock.ticker})</h2>
+            <p>
+              {hasRealFin
+                ? `Data laporan keuangan kuartalan resmi BEI (${fin[0]?.year} s/d ${latestPeriodLabel}) · Tersimpan di SQLite DB.`
+                : 'Pahami pertumbuhan, kondisi neraca, dan kualitas arus kas.'}
+            </p>
           </div>
-          <button className="btn small-btn" onClick={handleExportCSV}>
-            <Icon name="download" cls="sm" /> Unduh CSV
-          </button>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            {companyDetail && (
+              <span className="pill green" style={{ fontSize: '10px' }}>
+                {companyDetail.cachedDb
+                  ? 'Database Lokal (0 Request API)'
+                  : `Baru Disinkronkan (${companyDetail.apiRequestsUsed || 0} Req)`}
+              </span>
+            )}
+            <button className="btn small-btn" onClick={handleExportCSV}>
+              <Icon name="download" cls="sm" /> Unduh CSV
+            </button>
+          </div>
         </div>
 
         <div className="card">
@@ -659,7 +914,11 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
                 Cash Flow
               </button>
             </div>
-            <span className="small muted">Tahunan · FY 2021—2025</span>
+            <span className="small muted">
+              {hasRealFin
+                ? `Kuartalan (TTM) · ${fin[0]?.year} — ${latestPeriodLabel}`
+                : 'Tahunan · FY 2021—2025'}
+            </span>
           </div>
 
           <div
@@ -671,30 +930,54 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
               <div>
                 <div className="fin-stat-label">{finLabels[0]}</div>
                 <div className="fin-stat-number mono">
-                  Rp{fmt(latestFin[finKeys[0]], 2)}
+                  Rp{fmt(Number(latestFin?.[finKeys[0]]) || 0, 2)}
                   <span style={{ fontSize: '15px', letterSpacing: 0 }}> T</span>
                 </div>
-                <div className="fin-stat-note positive">
-                  {pct(
-                    (latestFin[finKeys[0]] / prevFin[finKeys[0]] - 1) * 100,
-                    1
-                  )}{' '}
-                  <span className="muted">vs tahun sebelumnya</span>
+                <div
+                  className={`fin-stat-note ${
+                    prevFin &&
+                    Number(prevFin[finKeys[0]]) > 0 &&
+                    Number(latestFin[finKeys[0]]) < Number(prevFin[finKeys[0]])
+                      ? 'negative'
+                      : 'positive'
+                  }`}
+                >
+                  {prevFin && Math.abs(Number(prevFin[finKeys[0]])) > 0.001
+                    ? pct(
+                        ((Number(latestFin[finKeys[0]]) - Number(prevFin[finKeys[0]])) /
+                          Math.abs(Number(prevFin[finKeys[0]]))) *
+                          100,
+                        1
+                      )
+                    : '0.0%'}{' '}
+                  <span className="muted">vs periode sebelumnya ({prevFin?.year})</span>
                 </div>
               </div>
 
               <div>
                 <div className="fin-stat-label">{finLabels[1]}</div>
                 <div className="fin-stat-number mono">
-                  Rp{fmt(latestFin[finKeys[1]], 2)}
+                  Rp{fmt(Number(latestFin?.[finKeys[1]]) || 0, 2)}
                   <span style={{ fontSize: '15px', letterSpacing: 0 }}> T</span>
                 </div>
-                <div className="fin-stat-note positive">
-                  {pct(
-                    (latestFin[finKeys[1]] / prevFin[finKeys[1]] - 1) * 100,
-                    1
-                  )}{' '}
-                  <span className="muted">vs tahun sebelumnya</span>
+                <div
+                  className={`fin-stat-note ${
+                    prevFin &&
+                    Number(prevFin[finKeys[1]]) > 0 &&
+                    Number(latestFin[finKeys[1]]) < Number(prevFin[finKeys[1]])
+                      ? 'negative'
+                      : 'positive'
+                  }`}
+                >
+                  {prevFin && Math.abs(Number(prevFin[finKeys[1]])) > 0.001
+                    ? pct(
+                        ((Number(latestFin[finKeys[1]]) - Number(prevFin[finKeys[1]])) /
+                          Math.abs(Number(prevFin[finKeys[1]]))) *
+                          100,
+                        1
+                      )
+                    : '0.0%'}{' '}
+                  <span className="muted">vs periode sebelumnya ({prevFin?.year})</span>
                 </div>
               </div>
 
@@ -702,14 +985,15 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
                 className="fin-chart"
                 viewBox="0 0 340 108"
                 role="img"
-                aria-label="Grafik tren lima tahun"
+                aria-label="Grafik tren lima periode"
               >
-                {fin.map((d, i) => {
+                {fin.map((d: any, i: number) => {
                   const x = 18 + i * 65;
                   return (
                     <g key={i}>
                       {finKeys.map((k, j) => {
-                        const hVal = (d[k] / maxFinVal) * 66;
+                        const rawVal = Number(d[k]) || 0;
+                        const hVal = Math.max(2, Math.min(68, (Math.abs(rawVal) / maxFinVal) * 66));
                         return (
                           <rect
                             key={j}
@@ -718,7 +1002,7 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
                             width="12"
                             height={hVal}
                             rx="2"
-                            fill={j ? '#b8cde8' : '#1a62bf'}
+                            fill={rawVal < 0 ? '#d9534f' : j ? '#b8cde8' : '#1a62bf'}
                           />
                         );
                       })}
@@ -727,7 +1011,7 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
                         y="96"
                         textAnchor="middle"
                         fill="#7b8998"
-                        fontSize="10"
+                        fontSize="9.5"
                       >
                         {d.year}
                       </text>
@@ -744,10 +1028,10 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
                     <th>
                       Pos keuangan <span className="muted">· Rp triliun</span>
                     </th>
-                    {fin.map((x) => (
+                    {fin.map((x: any, idx: number) => (
                       <th className="number" key={x.year}>
                         {x.year}
-                        {x.year === 2025 && (
+                        {idx === fin.length - 1 && (
                           <span
                             style={{
                               color: 'var(--blue)',
@@ -767,14 +1051,17 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
                   {FIN_ROWS[finTab].map(([k, label, d, emphasis]) => (
                     <tr className={emphasis ? 'emphasis' : ''} key={k}>
                       <td>{label}</td>
-                      {fin.map((x) => (
-                        <td
-                          className={`number ${x[k] < 0 ? 'negative' : ''}`}
-                          key={x.year}
-                        >
-                          {x[k] < 0 ? `(${fmt(-x[k], d)})` : fmt(x[k], d)}
-                        </td>
-                      ))}
+                      {fin.map((x: any) => {
+                        const val = Number(x[k]) || 0;
+                        return (
+                          <td
+                            className={`number ${val < 0 ? 'negative' : ''}`}
+                            key={x.year}
+                          >
+                            {val < 0 ? `(${fmt(-val, d)})` : fmt(val, d)}
+                          </td>
+                        );
+                      })}
                     </tr>
                   ))}
                 </tbody>
@@ -783,14 +1070,15 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
 
             <div className="table-note">
               <span>
-                Data sintetis FY2021–FY2025 · Rp triliun, kecuali EPS / BVPS (Rp)
-                dan rasio (%) · tidak ada kepentingan nonpengendali dalam model demo
+                {hasRealFin
+                  ? `Data laporan keuangan kuartalan resmi BEI (${fin[0]?.year}–${latestPeriodLabel}) via Invezgo API · Disimpan di SQLite DB lokal (masa simpan 90 hari / per kuartal).`
+                  : 'Memuat laporan keuangan kuartalan dari Invezgo API...'}
               </span>
               <button
                 className="link-btn"
-                onClick={() => onOpenDrawer('sources', { stock })}
+                onClick={() => onOpenDrawer('sources', { stock, companyDetail })}
               >
-                Sumber &amp; catatan <Icon name="arrow-up-right" cls="sm" />
+                Sumber &amp; jajaran manajemen <Icon name="arrow-up-right" cls="sm" />
               </button>
             </div>
           </div>
@@ -811,7 +1099,7 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
             className="link-btn"
             onClick={() => {
               setValuations({
-                pe: stock.pe || 14,
+                pe: stock.targetPe || stock.pe || 14,
                 pb: stock.pb || 2.0,
               });
               onNotify('Asumsi valuasi dikembalikan ke default');
@@ -836,9 +1124,9 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
       <section className="section" id="disclosures">
         <div className="section-head">
           <div>
-            <h2>Aksi korporasi &amp; keterbukaan informasi</h2>
+            <h2>Aksi korporasi &amp; keterbukaan informasi ({stock.ticker})</h2>
             <p>
-              Ikuti perubahan yang dapat memengaruhi bisnis dan nilai perusahaan.
+              Dokumen resmi Keterbukaan Informasi BEI yang tersimpan di database lokal.
             </p>
           </div>
           <select
@@ -848,15 +1136,15 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
             value={docFilter}
             onChange={(e) => setDocFilter(e.target.value)}
           >
-            <option value="all">Semua dokumen</option>
-            <option value="action">Aksi korporasi</option>
+            <option value="all">Semua dokumen ({activeDocs.length})</option>
+            <option value="action">Keterbukaan informasi &amp; aksi</option>
             <option value="report">Laporan keuangan</option>
           </select>
         </div>
 
         <div className="card" id="disclosure-content">
           <div className="disclosure-list">
-            {filteredDocs.map((d) => (
+            {filteredDocs.map((d: any) => (
               <div className="disclosure-row" key={d.id}>
                 <span className="doc-icon">
                   <Icon name="file" />
@@ -864,25 +1152,41 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
                 <div className="grow">
                   <div className="doc-title">{d.title}</div>
                   <div className="doc-meta">
-                    <span>{fmtDate(d.date)}</span>
+                    <span>{d.displayDate}</span>
                     <span>·</span>
                     <span>{d.label}</span>
-                    <span className="pill outline">Dokumen contoh</span>
+                    <span className={`pill ${d.isReal ? 'green' : 'outline'}`}>
+                      {d.isReal ? 'Resmi BEI (PDF)' : 'Info'}
+                    </span>
                   </div>
                 </div>
-                <button
-                  className="link-btn"
-                  onClick={() => onOpenDrawer('doc', { docItem: d, stock })}
-                >
-                  Lihat ringkasan <Icon name="arrow-up-right" cls="sm" />
-                </button>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  {d.url && (
+                    <a
+                      href={d.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="btn small-btn"
+                      style={{ fontSize: '11px', padding: '4px 10px' }}
+                    >
+                      Buka PDF BEI <Icon name="arrow-up-right" cls="sm" />
+                    </a>
+                  )}
+                  <button
+                    className="link-btn"
+                    onClick={() => onOpenDrawer('doc', { docItem: d, stock })}
+                  >
+                    Ringkasan <Icon name="arrow-up-right" cls="sm" />
+                  </button>
+                </div>
               </div>
             ))}
           </div>
           <div className="table-note">
             <span>
-              Belum terhubung ke keterbukaan informasi BEI atau situs resmi
-              emiten.
+              {realDisclosures.length > 0
+                ? `Menampilkan ${filteredDocs.length} dokumen Keterbukaan Informasi resmi BEI untuk ${stock.ticker} (disimpan di SQLite DB lokal).`
+                : `Memuat dokumen Keterbukaan Informasi BEI untuk ${stock.ticker}...`}
             </span>
           </div>
         </div>

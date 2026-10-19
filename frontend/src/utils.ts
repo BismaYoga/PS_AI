@@ -14,6 +14,17 @@ export const pct = (n: number, d: number = 1): string =>
 
 export const fmtDate = (s: string): string => {
   try {
+    if (s.includes('T') && s.length >= 16) {
+      const datePart = s.slice(0, 10);
+      const timePart = s.slice(11, 16);
+      const d = new Date(datePart + 'T12:00:00');
+      const dStr = d.toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      });
+      return `${dStr} · ${timePart} WIB`;
+    }
     const d = new Date(s.includes('T') ? s : s + 'T12:00:00');
     return d.toLocaleDateString('id-ID', {
       day: 'numeric',
@@ -27,6 +38,7 @@ export const fmtDate = (s: string): string => {
 
 export const periodLabel = (p: Timeframe): string => {
   switch (p) {
+    case '1D': return '1 hari';
     case '1M': return '1 bulan';
     case '3M': return '3 bulan';
     case '6M': return '6 bulan';
@@ -63,8 +75,6 @@ export const getOHLCData = (
   change: number,
   marketCache?: Record<string, any>
 ): OHLCPoint[] => {
-  if (chartCache[ticker]) return chartCache[ticker];
-
   if (marketCache && marketCache[ticker]?.ohlc && marketCache[ticker].ohlc.length) {
     chartCache[ticker] = marketCache[ticker].ohlc;
     return chartCache[ticker];
@@ -73,15 +83,17 @@ export const getOHLCData = (
   // Fallback to window.MARKET_DATA if in browser
   if (typeof window !== 'undefined') {
     const win = window as any;
-    if (ticker === 'IHSG' && win.IHSG_LIVE_DATA?.ohlc?.length) {
-      chartCache[ticker] = win.IHSG_LIVE_DATA.ohlc;
-      return chartCache[ticker];
-    }
     if (win.MARKET_DATA && win.MARKET_DATA[ticker]?.ohlc?.length) {
       chartCache[ticker] = win.MARKET_DATA[ticker].ohlc;
       return chartCache[ticker];
     }
+    if (ticker === 'IHSG' && win.IHSG_LIVE_DATA?.ohlc?.length) {
+      chartCache[ticker] = win.IHSG_LIVE_DATA.ohlc;
+      return chartCache[ticker];
+    }
   }
+
+  if (chartCache[ticker]) return chartCache[ticker];
 
   // Deterministic generator matching legacy prototype
   const r = rng([...ticker].reduce((a, c) => a + c.charCodeAt(0), 47));
@@ -146,7 +158,6 @@ export const getOHLCData = (
     arr[n - 1].low = Math.min(arr[n - 1].open, price) * 0.993;
   }
 
-  chartCache[ticker] = arr;
   return arr;
 };
 
@@ -189,6 +200,18 @@ export interface ChartCalculatedData {
   highD: OHLCPoint;
 }
 
+const intradayCache: Record<string, OHLCPoint[]> = {};
+
+export const setIntradayCache = (ticker: string, bars: OHLCPoint[]) => {
+  if (bars && bars.length > 0) {
+    intradayCache[ticker.toUpperCase().trim()] = bars;
+  }
+};
+
+export const getIntradayCache = (ticker: string): OHLCPoint[] | null => {
+  return intradayCache[ticker.toUpperCase().trim()] || null;
+};
+
 export const chartData = (
   ticker: string,
   price: number,
@@ -196,8 +219,26 @@ export const chartData = (
   period: Timeframe,
   marketCache?: Record<string, any>
 ): ChartCalculatedData => {
+  const clean = ticker.toUpperCase().trim();
+  if (period === '1D') {
+    const intra =
+      intradayCache[clean] ||
+      marketCache?.[clean]?.intraday ||
+      (typeof window !== 'undefined' ? (window as any).MARKET_DATA?.[clean]?.intraday : null);
+    if (intra && Array.isArray(intra) && intra.length >= 2) {
+      intradayCache[clean] = intra;
+      const lowD = intra.reduce((a: OHLCPoint, b: OHLCPoint) => (a.low < b.low ? a : b), intra[0]);
+      const highD = intra.reduce((a: OHLCPoint, b: OHLCPoint) => (a.high > b.high ? a : b), intra[0]);
+      const levels = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1].map((r) => ({
+        ratio: r,
+        value: highD.high - r * (highD.high - lowD.low),
+      }));
+      return { full: intra, data: intra, start: 0, levels, lowD, highD };
+    }
+  }
+
   const full = getOHLCData(ticker, price, change, marketCache);
-  const count = { '1M': 22, '3M': 66, '6M': 132, '1Y': 260 }[period];
+  const count = { '1D': 15, '1M': 22, '3M': 66, '6M': 132, '1Y': 260 }[period];
   const start = Math.max(0, full.length - count);
   const data = full.slice(start);
   const lowD = data.reduce((a, b) => (a.low < b.low ? a : b), data[0]);

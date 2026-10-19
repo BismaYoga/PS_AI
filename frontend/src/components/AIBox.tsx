@@ -148,10 +148,10 @@ export const AIBox: React.FC<AIBoxProps> = ({
               >
                 <path d="M21 12a9 9 0 1 1-6.219-8.56" />
               </svg>
-              Gemini AI sedang menganalisis teknikal chart ({ticker}) & 3 berita bursa terkini...
+              Gemini AI sedang menganalisis teknikal chart ({ticker}) &amp; seluruh berita Invezgo API...
             </div>
             <p className="small muted" style={{ marginTop: '6px' }}>
-              Memadukan MA20, MA50, RSI 14, Support/Resistance Fibonacci, dan sentimen Google Search hari ini.
+              Memadukan MA20, MA50, RSI 14, Support/Resistance Fibonacci, dan seluruh paket berita terkini dari Invezgo API.
             </p>
           </div>
         </div>
@@ -165,6 +165,7 @@ export const AIBox: React.FC<AIBoxProps> = ({
     const biasColor =
       bias === 'positif' ? 'green' : bias === 'negatif' ? 'red' : 'blue';
     const sentiment = analysis.sentiment || 'Analisis Pasar';
+    const newsCount = (analysis as any).news_count || (analysis as any).news_used?.length || 0;
 
     return (
       <div id="ai-summary">
@@ -179,7 +180,7 @@ export const AIBox: React.FC<AIBoxProps> = ({
                 {sentiment}
               </span>
               <span className="pill outline" style={{ fontSize: '9px' }}>
-                Gemini AI Live
+                Gemini AI · {newsCount > 0 ? `${newsCount} Berita Invezgo` : 'Invezgo Live'}
               </span>
             </div>
             <div className="flex gap-6">
@@ -359,7 +360,7 @@ export const AIBox: React.FC<AIBoxProps> = ({
           className="ai-text"
           style={{ color: '#506479', lineHeight: 1.7, marginBottom: '12px' }}
         >
-          Klik tombol di bawah untuk meminta <strong>Gemini AI</strong> menganalisis pergerakan {ticker}. AI akan memadukan indikator teknikal grafik (<strong>MA20, MA50, RSI 14, Support & Resistance</strong>) dengan <strong>3 berita bursa terkini</strong> yang baru saja terbit hari ini.
+          Klik tombol di bawah untuk meminta <strong>Gemini AI</strong> menganalisis pergerakan {ticker}. AI akan memadukan indikator teknikal grafik (<strong>MA20, MA50, RSI 14, Support &amp; Resistance</strong>) dengan <strong>seluruh berita pasar &amp; emiten terkini dari Invezgo API</strong> sebagai input analisis.
         </p>
 
         <div

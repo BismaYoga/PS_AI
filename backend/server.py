@@ -3,9 +3,20 @@ import socketserver
 import json
 import os
 import urllib.parse
-from fetch_market_data import fetch_single, fetch_all_initial
+import time
+from fetch_market_data import fetch_single, fetch_intraday, fetch_all_initial
 from fetch_news import get_news
 from ai_analyst import analyze_market_instrument
+from invezgo_client import fetch_company_complete_invezgo, fetch_whale_network_invezgo
+from db_manager import (
+    save_market_quotes_bulk_db,
+    load_all_market_quotes_db,
+    save_corporate_events_db,
+    get_corporate_events_db,
+)
+
+_intraday_mem_cache: dict[str, tuple[float, list]] = {}
+INTRADAY_TTL = 10 * 60  # 10 menit hemat request
 
 PORT = 8080
 BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -32,17 +43,23 @@ def get_market_cache():
                 return data
         except Exception:
             pass
-    return {}
+    return load_all_market_quotes_db()
 
 def get_full_bundle():
     json_path = get_data_file('market_data.json')
+    bundle = {'market': {}, 'emitens': [], 'events': []}
     if os.path.exists(json_path):
         try:
             with open(json_path, 'r', encoding='utf-8') as f:
-                return json.load(f)
+                bundle = json.load(f)
         except Exception:
             pass
-    return {'market': {}, 'emitens': [], 'events': []}
+    if not bundle.get('market'):
+        bundle['market'] = get_market_cache()
+    db_events = get_corporate_events_db()
+    if db_events:
+        bundle['events'] = db_events
+    return bundle
 
 def save_market_cache(cache):
     json_path = os.path.join(DATA_DIR, 'market_data.json')
@@ -57,19 +74,23 @@ def save_market_cache(cache):
         except Exception:
             pass
 
-    corporate_events = []
-    events_json_path = get_data_file('corporate_events.json')
-    if os.path.exists(events_json_path):
-        try:
-            with open(events_json_path, 'r', encoding='utf-8') as evf:
-                corporate_events = json.load(evf)
-        except Exception:
-            pass
+    corporate_events = get_corporate_events_db()
+    if not corporate_events:
+        events_json_path = get_data_file('corporate_events.json')
+        if os.path.exists(events_json_path):
+            try:
+                with open(events_json_path, 'r', encoding='utf-8') as evf:
+                    raw_events = json.load(evf)
+                    save_corporate_events_db(raw_events)
+                    corporate_events = get_corporate_events_db() or raw_events
+            except Exception:
+                pass
 
     bundle = {'market': cache, 'emitens': emiten_list, 'events': corporate_events}
     
-    # Save to data/
+    # Save to data/ + SQLite DB
     os.makedirs(DATA_DIR, exist_ok=True)
+    save_market_quotes_bulk_db(cache)
     with open(json_path, 'w', encoding='utf-8') as f:
         json.dump(bundle, f, indent=2)
     with open(js_path, 'w', encoding='utf-8') as f:
@@ -92,6 +113,7 @@ def save_market_cache(cache):
     except Exception:
         pass
 
+
 class CustomHandler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         static_dir = FRONTEND_DIST if os.path.exists(FRONTEND_DIST) else BASE_DIR
@@ -111,6 +133,16 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
 
         # 1. API: Full bundle for React
         if path in ('/api/market-data', '/api/all', '/api/initial-data'):
+            force_refresh = 'refresh' in query and query['refresh'][0].lower() in ('1', 'true', 'yes')
+            if force_refresh:
+                try:
+                    fresh_market = fetch_all_initial()
+                    if fresh_market:
+                        cache = get_market_cache()
+                        cache.update(fresh_market)
+                        save_market_cache(cache)
+                except Exception as e:
+                    print(f"[API /api/market-data refresh error] {e}")
             bundle = get_full_bundle()
             payload = json.dumps(bundle, ensure_ascii=False).encode('utf-8')
             self.send_response(200)
@@ -137,17 +169,34 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(payload)
             return
 
-        # 2. API: /api/ihsg, /api/stock, /api/chart
+        # 2. API: /api/ihsg, /api/stock, /api/chart (Hemat Request: Gunakan cache kecuali force=1 atau belum ada ohlc)
         if path in ('/api/ihsg', '/api/stock', '/api/chart'):
             ticker = 'IHSG'
             if 'ticker' in query and query['ticker']:
                 ticker = query['ticker'][0].upper().strip()
+            force = (
+                ('force' in query and query['force'][0].lower() in ('1', 'true', 'yes'))
+                or ('refresh' in query and query['refresh'][0].lower() in ('1', 'true', 'yes'))
+            )
             
             try:
-                print(f"[API] Permintaan data pasar untuk: {ticker}")
-                data = fetch_single(ticker)
-                
                 cache = get_market_cache()
+                existing_item = cache.get(ticker)
+                if not force and existing_item and existing_item.get('ohlc') and len(existing_item['ohlc']) >= 2:
+                    payload = json.dumps(existing_item).encode('utf-8')
+                    self.send_response(200)
+                    self.send_header('Content-Type', 'application/json; charset=utf-8')
+                    self.send_header('Access-Control-Allow-Origin', '*')
+                    self.send_header('Content-Length', str(len(payload)))
+                    self.end_headers()
+                    self.wfile.write(payload)
+                    return
+
+                print(f"[API] Mengambil chart harian (1 request) dari Invezgo untuk: {ticker}")
+                data = fetch_single(ticker, existing_data=existing_item)
+                if existing_item and existing_item.get('intraday') and not data.get('intraday'):
+                    data['intraday'] = existing_item['intraday']
+                
                 cache[ticker] = data
                 save_market_cache(cache)
 
@@ -170,14 +219,146 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 self.wfile.write(err_payload)
                 return
 
+        # 2b. API: /api/intraday (Chart Daily / 1 Hari Menit-demi-Menit dari Invezgo API, Hemat Request)
+        if path == '/api/intraday':
+            ticker = 'IHSG'
+            if 'ticker' in query and query['ticker']:
+                ticker = query['ticker'][0].upper().strip()
+            force = (
+                ('force' in query and query['force'][0].lower() in ('1', 'true', 'yes'))
+                or ('refresh' in query and query['refresh'][0].lower() in ('1', 'true', 'yes'))
+            )
+            now = time.time()
+            try:
+                if not force and ticker in _intraday_mem_cache:
+                    ts, cached_bars = _intraday_mem_cache[ticker]
+                    if (now - ts) < INTRADAY_TTL and cached_bars:
+                        payload = json.dumps({'ticker': ticker, 'intraday': cached_bars, 'cached': True}).encode('utf-8')
+                        self.send_response(200)
+                        self.send_header('Content-Type', 'application/json; charset=utf-8')
+                        self.send_header('Access-Control-Allow-Origin', '*')
+                        self.send_header('Content-Length', str(len(payload)))
+                        self.end_headers()
+                        self.wfile.write(payload)
+                        return
+
+                cache = get_market_cache()
+                existing_item = cache.get(ticker, {})
+                if not force and existing_item.get('intraday') and len(existing_item['intraday']) >= 2:
+                    bars = existing_item['intraday']
+                    _intraday_mem_cache[ticker] = (now, bars)
+                    payload = json.dumps({'ticker': ticker, 'intraday': bars, 'cached': True}).encode('utf-8')
+                    self.send_response(200)
+                    self.send_header('Content-Type', 'application/json; charset=utf-8')
+                    self.send_header('Access-Control-Allow-Origin', '*')
+                    self.send_header('Content-Length', str(len(payload)))
+                    self.end_headers()
+                    self.wfile.write(payload)
+                    return
+
+                print(f"[API] Mengambil chart Intraday 1D (1 request) dari Invezgo untuk: {ticker}")
+                bars = fetch_intraday(ticker)
+                _intraday_mem_cache[ticker] = (now, bars)
+                if ticker in cache and isinstance(cache[ticker], dict):
+                    cache[ticker]['intraday'] = bars
+                    save_market_cache(cache)
+
+                payload = json.dumps({'ticker': ticker, 'intraday': bars, 'cached': False}).encode('utf-8')
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_header('Content-Length', str(len(payload)))
+                self.end_headers()
+                self.wfile.write(payload)
+                return
+            except Exception as e:
+                print(f"[API/intraday Error] {e}")
+                err_payload = json.dumps({'error': str(e), 'ticker': ticker}).encode('utf-8')
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_header('Content-Length', str(len(err_payload)))
+                self.end_headers()
+                self.wfile.write(err_payload)
+                return
+
+        # 2c. API: /api/company-detail (Laporan Keuangan 5 Kuartal, Profil, KSEI, & Keterbukaan Informasi via SQLite DB)
+        if path == '/api/company-detail':
+            ticker = 'BBCA'
+            if 'ticker' in query and query['ticker']:
+                ticker = query['ticker'][0].upper().strip()
+            force = (
+                ('force' in query and query['force'][0].lower() in ('1', 'true', 'yes'))
+                or ('refresh' in query and query['refresh'][0].lower() in ('1', 'true', 'yes'))
+            )
+            try:
+                res = fetch_company_complete_invezgo(ticker, force=force)
+                if res.get('cachedDb'):
+                    print(f"[API /api/company-detail] Memuat {ticker} dari SQLite DB lokal (0 request API)")
+                else:
+                    print(f"[API /api/company-detail] Mengambil data baru {ticker} dari Invezgo ({res.get('apiRequestsUsed', 0)} request API) & simpan ke SQLite DB")
+                payload = json.dumps(res, ensure_ascii=False).encode('utf-8')
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_header('Content-Length', str(len(payload)))
+                self.end_headers()
+                self.wfile.write(payload)
+                return
+            except Exception as e:
+                print(f"[API/company-detail Error] {e}")
+                err_payload = json.dumps({'error': str(e), 'ticker': ticker}).encode('utf-8')
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_header('Content-Length', str(len(err_payload)))
+                self.end_headers()
+                self.wfile.write(err_payload)
+                return
+
+        # 2d. API: /api/whale-network (Peta Jaring-Jaring Kepemilikan Saham & Whale Tracker KSEI via SQLite DB)
+        if path == '/api/whale-network':
+            holder_name = query.get('name', [None])[0]
+            ticker_param = query.get('ticker', [None])[0]
+            force = (
+                ('force' in query and query['force'][0].lower() in ('1', 'true', 'yes'))
+                or ('refresh' in query and query['refresh'][0].lower() in ('1', 'true', 'yes'))
+            )
+            try:
+                res = fetch_whale_network_invezgo(
+                    holder_name=holder_name, ticker=ticker_param, force=force
+                )
+                payload = json.dumps(res, ensure_ascii=False).encode('utf-8')
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_header('Content-Length', str(len(payload)))
+                self.end_headers()
+                self.wfile.write(payload)
+                return
+            except Exception as e:
+                print(f"[API/whale-network Error] {e}")
+                err_payload = json.dumps({'error': str(e)}).encode('utf-8')
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_header('Content-Length', str(len(err_payload)))
+                self.end_headers()
+                self.wfile.write(err_payload)
+                return
+
         # 3. API: /api/news
         if path == '/api/news':
             ticker = 'IHSG'
             if 'ticker' in query and query['ticker']:
                 ticker = query['ticker'][0].upper().strip()
+            force = (
+                ('force' in query and query['force'][0].lower() in ('1', 'true', 'yes'))
+                or ('refresh' in query and query['refresh'][0].lower() in ('1', 'true', 'yes'))
+            )
             try:
-                print(f"[API] Permintaan berita untuk: {ticker}")
-                news_data = get_news(ticker)
+                print(f"[API] Permintaan berita untuk: {ticker} (force={force})")
+                news_data = get_news(ticker, force_refresh=force)
                 payload = json.dumps(news_data, ensure_ascii=False).encode('utf-8')
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json; charset=utf-8')
@@ -269,10 +450,11 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 self.wfile.write(content)
                 return
 
-        # 7. Fallback for SPA routing: if file doesn't exist, serve frontend/dist/index.html
+        # 7. Fallback for SPA routing: if route (no file extension) doesn't exist, serve frontend/dist/index.html
         static_dir = FRONTEND_DIST if os.path.exists(FRONTEND_DIST) else BASE_DIR
         local_path = os.path.normpath(os.path.join(static_dir, path.lstrip('/')))
-        if not os.path.exists(local_path) and not path.startswith('/api/'):
+        _, ext = os.path.splitext(path)
+        if not os.path.exists(local_path) and not path.startswith('/api/') and not ext:
             index_path = os.path.join(FRONTEND_DIST, 'index.html')
             if os.path.exists(index_path):
                 with open(index_path, 'rb') as inf:
@@ -322,14 +504,42 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
         self.end_headers()
 
 def main():
+    import threading
     os.chdir(BACKEND_DIR)
     js_path = get_data_file('market_data.js')
     if not os.path.exists(js_path):
         print("Bundle data awal belum ada, mengunduh dari Invezgo API...")
         try:
-            fetch_all_initial()
+            fresh = fetch_all_initial()
+            if fresh:
+                save_market_cache(fresh)
         except Exception as err:
             print(f"Gagal mengambil bundle awal: {err}")
+    else:
+        def _bg_sync_if_needed():
+            try:
+                cache = get_market_cache()
+                save_market_quotes_bulk_db(cache)
+                ihsg_cached = cache.get('IHSG', {})
+                ihsg_live = fetch_single('IHSG', existing_data=ihsg_cached)
+                latest_raw_date = ihsg_live.get('rawDate')
+                cached_raw_date = ihsg_cached.get('rawDate')
+                if latest_raw_date and latest_raw_date != cached_raw_date:
+                    print(f"[Auto-Sync] Data pasar baru terdeteksi ({latest_raw_date} vs {cached_raw_date}), memperbarui bundle Invezgo...")
+                    fresh = fetch_all_initial()
+                    if fresh:
+                        cache.update(fresh)
+                        save_market_cache(cache)
+                        print("[Auto-Sync] Bundle pasar berhasil diperbarui.")
+                elif ihsg_cached.get('gainers') is None and ihsg_live.get('gainers') is not None:
+                    if ihsg_cached.get('intraday') and not ihsg_live.get('intraday'):
+                        ihsg_live['intraday'] = ihsg_cached['intraday']
+                    cache['IHSG'] = ihsg_live
+                    save_market_cache(cache)
+                    print("[Auto-Sync] Statistik Gainers/Losers/Turnover IHSG berhasil disinkronkan ke DB.")
+            except Exception as e_sync:
+                print(f"[Auto-Sync Warning] {e_sync}")
+        threading.Thread(target=_bg_sync_if_needed, daemon=True).start()
 
     class ThreadedServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
         daemon_threads = True
@@ -346,3 +556,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+

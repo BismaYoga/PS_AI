@@ -29,17 +29,19 @@ def analyze_market_instrument(ticker: str, tech_input: dict = None, force_refres
             print(f"[ai_analyst] Menggunakan cache analisis untuk {key}")
             return cached_res
 
-    # 1. Ambil 3 berita terkini
+    # 1. Ambil SELURUH berita terkini dari 1 request Invezgo API (atau dari cache jika sudah di-trigger)
     news_items = get_news(key, force_refresh=force_refresh)
     news_summary_list = []
-    for n in news_items[:3]:
+    for n in news_items:
         news_summary_list.append({
             "title": n.get("title", ""),
+            "desc": n.get("desc", ""),
             "date": n.get("date", ""),
             "source": n.get("source", ""),
             "impact": n.get("impact", ""),
             "bias": n.get("bias", "netral")
         })
+    total_news_count = len(news_summary_list)
 
     # 2. Siapkan data teknikal
     tech = tech_input or {}
@@ -57,6 +59,48 @@ def analyze_market_instrument(ticker: str, tech_input: dict = None, force_refres
     emiten_name = EMITEN_NAMES.get(key, key)
     sector = CATEGORY_MAP.get(key, "Pasar Modal")
 
+    # 2b. Ambil data fundamental kuartalan, KSEI, & keterbukaan informasi dari SQLite DB lokal (0 request API)
+    fundamental_context_str = "Data spesifik emiten tidak diperlukan (Indeks Pasar)."
+    if key != "IHSG":
+        try:
+            from db_manager import get_company_detail_db
+            cd = get_company_detail_db(key)
+            if cd:
+                prof = cd.get("profile") or {}
+                if prof.get("name"):
+                    emiten_name = prof["name"]
+                if prof.get("sector"):
+                    sector = prof["sector"]
+                fins = cd.get("financials") or []
+                shs = cd.get("shareholders") or []
+                discs = cd.get("disclosures") or []
+                parts = []
+                if fins:
+                    latest_f = fins[-1]
+                    prev_f = fins[-2] if len(fins) >= 2 else None
+                    parts.append(
+                        f"- Kinerja Kuartal Terbaru ({latest_f.get('year')}): Pendapatan TTM Rp{latest_f.get('revenue')} T, "
+                        f"Laba Bersih TTM Rp{latest_f.get('net')} T (Margin {latest_f.get('margin')}%), "
+                        f"EPS Rp{latest_f.get('eps')}, BVPS Rp{latest_f.get('bvps')}, ROE {latest_f.get('roe')}%, "
+                        f"Total Aset Rp{latest_f.get('assets')} T, Ekuitas Rp{latest_f.get('equity')} T, "
+                        f"Arus Kas Operasi (CFO) Rp{latest_f.get('cfo')} T."
+                    )
+                    if prev_f:
+                        parts.append(
+                            f"- Perbandingan Periode Sebelumnya ({prev_f.get('year')}): Pendapatan Rp{prev_f.get('revenue')} T, "
+                            f"Laba Bersih Rp{prev_f.get('net')} T."
+                        )
+                if shs:
+                    top_sh = ", ".join([f"{s.get('name')} ({s.get('percentage')}%)" for s in shs[:3]])
+                    parts.append(f"- Pemegang Saham Utama KSEI: {top_sh}")
+                if discs:
+                    top_disc = "; ".join([f"{d.get('date')}: {d.get('title')}" for d in discs[:3]])
+                    parts.append(f"- Keterbukaan Informasi BEI Terbaru: {top_disc}")
+                if parts:
+                    fundamental_context_str = "\n".join(parts)
+        except Exception as e_db:
+            print(f"[ai_analyst] Info DB read: {e_db}")
+
     # 3. Panggil Gemini AI
     api_key = get_gemini_api_key()
     if not api_key:
@@ -70,8 +114,8 @@ def analyze_market_instrument(ticker: str, tech_input: dict = None, force_refres
     wib = timezone(timedelta(hours=7))
     current_time_str = datetime.now(wib).strftime("%d %b %Y, %H:%M WIB")
 
-    prompt = f"""Kamu adalah Chief Market Strategist & Technical Analyst profesional di Bursa Efek Indonesia (IDX).
-Tugasmu adalah menyusun 'Ringkasan Eksekutif Terpadu' untuk instrumen {key} ({emiten_name}) berdasarkan data teknikal chart dan 3 berita terkini hari ini:
+    prompt = f"""Kamu adalah Chief Market Strategist, Fundamental & Technical Analyst profesional di Bursa Efek Indonesia (IDX).
+Tugasmu adalah menyusun 'Ringkasan Eksekutif Terpadu' untuk instrumen {key} ({emiten_name}) berdasarkan data teknikal chart, kinerja laporan keuangan kuartalan resmi BEI dari SQLite DB, dan SELURUH ({total_news_count}) berita pasar/emiten terkini dari Invezgo API:
 
 === 1. DATA TEKNIKAL GRAFIK ({period}) ===
 - Instrumen: {key} ({emiten_name}) · Sektor: {sector}
@@ -82,11 +126,14 @@ Tugasmu adalah menyusun 'Ringkasan Eksekutif Terpadu' untuk instrumen {key} ({em
 - Potensi Support Terdekat: Rp{support}
 - Potensi Resistance Terdekat: Rp{resistance}
 
-=== 2. BERITA & KATALIS PASAR TERKINI (GOOGLE SEARCH) ===
+=== 2. DATA FUNDAMENTAL KUARTALAN, KSEI, & KETERBUKAAN INFORMASI BEI (SQLITE DB) ===
+{fundamental_context_str}
+
+=== 3. SELURUH BERITA & KATALIS PASAR TERKINI INVEZGO API ({total_news_count} BERITA) ===
 {json.dumps(news_summary_list, indent=2, ensure_ascii=False)}
 
 === INSTRUKSI ANALISIS ===
-Padukan sinyal teknikal chart (tren MA, posisi RSI, batas support/resistance) dengan sentimen 3 berita terbaru tersebut.
+Padukan sinyal teknikal chart (tren MA, posisi RSI, batas support/resistance), kekuatan fundamental kuartalan terbaru (laba, arus kas, ROE), serta sintesis menyeluruh dari {total_news_count} berita terbaru di atas.
 Buat analisis yang tajam, objektif, dan berorientasi pada keputusan investor.
 
 Format output HANYA sebuah valid JSON murni tanpa markdown wrapper:
@@ -95,9 +142,9 @@ Format output HANYA sebuah valid JSON murni tanpa markdown wrapper:
   "name": "{emiten_name}",
   "sentiment": "Bullish / Bearish / Konsolidasi / Koreksi Sehat",
   "sentiment_bias": "positif / negatif / netral",
-  "executive_summary": "1 paragraf padat (3-4 kalimat) yang menyatukan kondisi teknikal chart dan katalis berita hari ini secara jelas.",
+  "executive_summary": "1 paragraf padat (3-4 kalimat) yang menyatukan kondisi teknikal chart, fundamental kuartalan terbaru, dan rangkuman benang merah dari {total_news_count} berita hari ini secara jelas.",
   "technical_insight": "Ulasan teknikal mendalam: posisi harga thd MA20/50, momentum RSI 14 ({rsi_val}), serta pengujian area support Rp{support} dan resistance Rp{resistance}.",
-  "catalyst_insight": "Ulasan katalis: bagaimana 3 berita hangat hari ini mempengaruhi likuiditas, psikologis pasar, dan prospek pergerakan harga.",
+  "catalyst_insight": "Ulasan katalis menyeluruh dari kinerja kuartalan terbaru & {total_news_count} berita Invezgo hari ini: bagaimana katalis tersebut mempengaruhi likuiditas, valuasi, dan prospek harga.",
   "actionable_plan": "Rencana tindakan taktis bagi investor/trader: area masuk (entry/buy on weakness), level stop loss/proteksi, atau rekomendasi wait-and-see.",
   "key_levels": {{
     "support": "Rp{support}",
@@ -109,7 +156,7 @@ Format output HANYA sebuah valid JSON murni tanpa markdown wrapper:
 }}
 """
 
-    models_to_try = ["gemini-flash-lite-latest", "gemini-3.6-flash", "gemini-3.8-flash"]
+    models_to_try = ["gemini-flash-lite-latest", "gemini-2.5-flash", "gemini-3.6-flash", "gemini-3.8-flash"]
 
     for model_name in models_to_try:
         try:
@@ -129,6 +176,7 @@ Format output HANYA sebuah valid JSON murni tanpa markdown wrapper:
             res = json.loads(raw_text)
             if isinstance(res, dict) and "executive_summary" in res:
                 res["news_used"] = news_summary_list
+                res["news_count"] = total_news_count
                 _analysis_cache[key] = (now, res)
                 return res
         except Exception as e:
