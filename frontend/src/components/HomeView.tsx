@@ -34,11 +34,11 @@ export const HomeView: React.FC<HomeViewProps> = ({
   stocks,
   events,
   favorites,
-  activeInstrument,
+  activeInstrument: _activeInstrument,
   marketCache,
   onRefreshInstrument,
   onRefreshAll,
-  onSelectInstrument,
+  onSelectInstrument: _onSelectInstrument,
   onSelectStockDetail,
   onToggleFavorite,
   onOpenDrawer,
@@ -51,25 +51,22 @@ export const HomeView: React.FC<HomeViewProps> = ({
   const [period, setPeriod] = useState<Timeframe>('3M');
   const [chartType, setChartType] = useState<ChartType>('line');
 
-  const isIHSG = activeInstrument === 'IHSG';
-  const curStock = isIHSG
-    ? null
-    : stocks.find((s) => s.ticker === activeInstrument) || stocks[0];
+  // Dashboard berfokus secara eksklusif pada instrumen acuan pasar: IHSG
+  const activeInstrument = 'IHSG';
+  const isIHSG = true;
 
-  const curPrice = isIHSG ? indexData.price : curStock?.price || 1000;
-  const curChange = isIHSG ? indexData.change : curStock?.change || 0;
-  const chgAbs = isIHSG
-    ? Math.abs(indexData.changeAbs)
-    : Math.abs(curPrice * (curChange / 100));
+  const curPrice = indexData.price;
+  const curChange = indexData.change;
+  const chgAbs = Math.abs(indexData.changeAbs);
 
-  const curDate = isIHSG ? indexData.date : curStock?.date || indexData.date;
-  const curVolume = isIHSG ? indexData.volume : curStock?.volume || '—';
-  const curTurnover = isIHSG ? indexData.turnover : curStock?.turnover || '—';
-  const isLive = isIHSG ? indexData.isLive : !!curStock?.isLive;
+  const curDate = indexData.date;
+  const curVolume = indexData.volume;
+  const curTurnover = indexData.turnover;
+  const isLive = indexData.isLive;
 
   const [chartCalc, setChartCalc] = useState<ChartCalculatedData>(() =>
     chartData(
-      activeInstrument,
+      'IHSG',
       curPrice,
       curChange,
       period,
@@ -77,36 +74,21 @@ export const HomeView: React.FC<HomeViewProps> = ({
     )
   );
 
-  const quickList = [
-    'IHSG',
-    'BBCA',
-    'BBRI',
-    'BMRI',
-    'TLKM',
-    'ASII',
-    'ICBP',
-    'BBNI',
-    'ADRO',
-    'GOTO',
-    'MIKA',
-  ];
-
   return (
     <>
       <div className="page-hero">
         <div>
-          <div className="eyebrow">RINGKASAN PASAR &amp; SAHAM</div>
-          <h1>Pasar &amp; Saham, dalam satu pandangan.</h1>
+          <div className="eyebrow">RINGKASAN PASAR MODAL INDONESIA</div>
+          <h1>IHSG (Indeks Harga Saham Gabungan)</h1>
           <p className="hero-subtitle">
-            Beralih fleksibel antara indeks acuan IHSG dan chart saham emiten individual berbasis data real-time.
+            Pantau arah pergerakan pasar bursa efek, likuiditas transaksi harian, serta evaluasi kelayakan iklim investasi pasar modal via Gemini AI.
           </p>
         </div>
         <div className="date-block">
           {curDate}
           {isLive ? (
             <span className="pill green" style={{ marginTop: '6px' }}>
-              <i className="dot"></i> Data Live Invezgo (
-              {isIHSG ? 'COMPOSITE' : `${activeInstrument}`})
+              <i className="dot"></i> Live IDX Composite
             </span>
           ) : (
             <span className="demo-session">
@@ -116,136 +98,44 @@ export const HomeView: React.FC<HomeViewProps> = ({
         </div>
       </div>
 
-      <section className="card" aria-label="Grafik IHSG dan Saham IDX">
-        <div
-          className="instrument-bar"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '10px',
-            padding: '12px 24px',
-            borderBottom: '1px solid var(--line)',
-            background: '#fafbfc',
-            flexWrap: 'wrap',
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '5px',
-              flexWrap: 'wrap',
-            }}
-          >
-            <span
-              style={{
-                fontSize: '11px',
-                fontWeight: 700,
-                color: 'var(--muted)',
-                letterSpacing: '0.5px',
-                marginRight: '2px',
-              }}
-            >
-              GANTI INSTRUMEN:
-            </span>
-            {quickList.map((sym) => (
-              <button
-                key={sym}
-                className={`btn small-btn ${
-                  activeInstrument === sym ? 'primary' : ''
-                }`}
-                onClick={() => onSelectInstrument(sym)}
-                style={{ padding: '4px 9px', fontSize: '11px', fontWeight: 600 }}
-              >
-                {sym === 'IHSG' ? (
-                  <>
-                    <Icon name="chart" cls="sm" /> IHSG
-                  </>
-                ) : (
-                  sym
-                )}
-              </button>
-            ))}
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <select
-              id="emiten-dropdown"
-              className="select"
-              value={activeInstrument}
-              onChange={(e) => {
-                if (e.target.value) onSelectInstrument(e.target.value);
-              }}
-              style={{
-                fontSize: '11px',
-                padding: '5px 28px 5px 9px',
-                maxWidth: '240px',
-              }}
-            >
-              <option value="">— Cari &amp; Ganti Saham ({stocks.length} Emiten IDX) —</option>
-              <option value="IHSG">IHSG - Indeks Harga Saham Gabungan</option>
-              <optgroup label="Emiten Bursa Efek Indonesia (IDX)">
-                {stocks.map((e) => (
-                  <option key={e.ticker} value={e.ticker}>
-                    {e.ticker} - {e.short}
-                  </option>
-                ))}
-              </optgroup>
-            </select>
-          </div>
-        </div>
-
+      <section className="card" aria-label="Grafik IHSG">
         <div className="chart-top">
           <div>
             <div className="instrument">
-              {isIHSG ? (
-                <span>IHSG</span>
-              ) : (
-                <a
-                  className="stock-symbol"
-                  href={`#stock/${activeInstrument}`}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    onSelectStockDetail(activeInstrument);
-                  }}
-                >
-                  {activeInstrument}
-                </a>
-              )}
-              <span className="pill outline">{isIHSG ? 'Indeks' : 'IDX'}</span>
+              <span>IHSG</span>
+              <span className="pill outline">Indeks Acuan BEI</span>
               {onRefreshInstrument && (
                 <button
                   onClick={async () => {
-                    onNotify(`Memperbarui data ${activeInstrument} dari Invezgo API...`);
-                    const ok = await onRefreshInstrument(activeInstrument);
+                    onNotify('Memperbarui data IHSG real-time...');
+                    const ok = await onRefreshInstrument('IHSG');
                     onNotify(
                       ok
-                        ? `Data ${activeInstrument} berhasil diperbarui dari Invezgo!`
-                        : `Gagal memperbarui ${activeInstrument}`
+                        ? 'Data IHSG berhasil diperbarui!'
+                        : 'Gagal memperbarui data IHSG'
                     );
                   }}
                   className="btn small-btn"
-                  style={{ padding: '2px 8px', fontSize: '10px', marginLeft: '6px' }}
-                  title={`Perbarui data ${activeInstrument} dari Invezgo API`}
+                  style={{ padding: '3px 10px', fontSize: '11px', marginLeft: '8px', gap: '4px' }}
+                  title="Perbarui data IHSG"
                 >
-                  <Icon name="refresh" cls="sm" /> Perbarui
+                  <Icon name="refresh" cls="sm" /> Refresh Data Live
                 </button>
               )}
             </div>
             <div className="quote-line">
               <span className="price-main mono">
-                {isIHSG ? fmt(curPrice, 2) : rp(curPrice)}
+                {fmt(curPrice, 2)}
               </span>
               <div
                 className={`small ${
                   curChange >= 0 ? 'positive' : 'negative'
                 } quote-change`}
               >
-                {pct(curChange, 2)} ({isIHSG ? fmt(chgAbs, 2) : rp(chgAbs)})
+                {pct(curChange, 2)} ({fmt(chgAbs, 2)})
               </div>
               <span className="quote-caption">
-                {isLive ? 'Data live Invezgo API' : 'Sesi contoh 22 Sep 2026'}
+                {isLive ? 'Data pasar real-time' : 'Sesi contoh 22 Sep 2026'}
               </span>
             </div>
           </div>
@@ -259,20 +149,18 @@ export const HomeView: React.FC<HomeViewProps> = ({
               <span className="metric-label">Volume</span>
               <strong className="mono">{curVolume}</strong>
             </div>
-            {isIHSG && (
-              <div className="metric">
-                <span className="metric-label">Naik / Turun</span>
-                <div>
-                  <span style={{ color: 'var(--green)', fontWeight: 700 }}>
-                    {indexData.gainers}
-                  </span>{' '}
-                  <span style={{ color: 'var(--muted)' }}>·</span>{' '}
-                  <span style={{ color: 'var(--red)', fontWeight: 700 }}>
-                    {indexData.losers}
-                  </span>
-                </div>
+            <div className="metric">
+              <span className="metric-label">Naik / Turun</span>
+              <div>
+                <span style={{ color: 'var(--green)', fontWeight: 700 }}>
+                  {indexData.gainers}
+                </span>{' '}
+                <span style={{ color: 'var(--muted)' }}>·</span>{' '}
+                <span style={{ color: 'var(--red)', fontWeight: 700 }}>
+                  {indexData.losers}
+                </span>
               </div>
-            )}
+            </div>
           </div>
         </div>
 
@@ -337,13 +225,13 @@ export const HomeView: React.FC<HomeViewProps> = ({
             </span>
           </div>
           <span className="chart-source">
-            Sumber: Invezgo · Data pasar historis IDX
+            Sumber: Bursa Efek Indonesia (IDX)
           </span>
         </div>
 
         <AIBox
-          stockOrIndex={isIHSG ? indexData : curStock!}
-          isStock={!isIHSG}
+          stockOrIndex={indexData}
+          isStock={false}
           chartCalc={chartCalc}
           period={period}
           onOpenDrawer={onOpenDrawer}

@@ -24,6 +24,7 @@ export const AIBox: React.FC<AIBoxProps> = ({
 }) => {
   const ticker = stockOrIndex.ticker;
   const [analyzing, setAnalyzing] = useState<boolean>(false);
+  const [viewMode, setViewMode] = useState<'ringkas' | 'lengkap'>('ringkas');
   const [analysis, setAnalysis] = useState<AIAnalysisResult | null>(
     aiCache[ticker] || null
   );
@@ -148,10 +149,10 @@ export const AIBox: React.FC<AIBoxProps> = ({
               >
                 <path d="M21 12a9 9 0 1 1-6.219-8.56" />
               </svg>
-              Gemini AI sedang menganalisis teknikal chart ({ticker}) &amp; seluruh berita Invezgo API...
+              Gemini AI sedang menganalisis teknikal chart ({ticker}) &amp; sentimen pasar terkini...
             </div>
             <p className="small muted" style={{ marginTop: '6px' }}>
-              Memadukan MA20, MA50, RSI 14, Support/Resistance Fibonacci, dan seluruh paket berita terkini dari Invezgo API.
+              Memadukan MA20, MA50, RSI 14, Support/Resistance, dan ringkasan berita pasar terkini.
             </p>
           </div>
         </div>
@@ -180,24 +181,42 @@ export const AIBox: React.FC<AIBoxProps> = ({
                 {sentiment}
               </span>
               <span className="pill outline" style={{ fontSize: '9px' }}>
-                Gemini AI · {newsCount > 0 ? `${newsCount} Berita Invezgo` : 'Invezgo Live'}
+                Gemini AI · {newsCount > 0 ? `${newsCount} Berita` : 'Analisis Terpadu'}
               </span>
             </div>
             <div className="flex gap-6">
+              <div className="segmented" style={{ padding: '2px', background: 'var(--soft)', borderRadius: '6px' }}>
+                <button
+                  type="button"
+                  className={viewMode === 'ringkas' ? 'active' : ''}
+                  onClick={() => setViewMode('ringkas')}
+                  style={{ fontSize: '10px', padding: '3px 8px' }}
+                >
+                  Taktis
+                </button>
+                <button
+                  type="button"
+                  className={viewMode === 'lengkap' ? 'active' : ''}
+                  onClick={() => setViewMode('lengkap')}
+                  style={{ fontSize: '10px', padding: '3px 8px' }}
+                >
+                  Mendalam
+                </button>
+              </div>
               <button
                 className="btn small-btn"
                 onClick={() => generateAIAnalysis(true)}
                 title="Analisis ulang dengan berita & teknikal paling mutakhir"
                 style={{ fontSize: '10px', padding: '3px 8px' }}
               >
-                <Icon name="refresh" cls="sm" /> Analisis Ulang
+                <Icon name="refresh" cls="sm" /> Ulang
               </button>
               <button
                 className="link-btn"
                 onClick={() => onOpenDrawer('technical')}
                 style={{ fontSize: '10px', marginLeft: '4px' }}
               >
-                Dasar teknikal <Icon name="arrow-up-right" cls="sm" />
+                Teknikal <Icon name="arrow-up-right" cls="sm" />
               </button>
             </div>
           </div>
@@ -214,79 +233,239 @@ export const AIBox: React.FC<AIBoxProps> = ({
             {analysis.executive_summary}
           </p>
 
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-              gap: '12px',
-              marginBottom: '14px',
-            }}
-          >
+          {/* Status Kelayakan Pasar Khusus IHSG (Jika Indeks) */}
+          {(ticker === 'IHSG' || analysis.is_index) && (
             <div
               style={{
-                background: '#f8fafc',
-                border: '1px solid #eef2f6',
-                borderRadius: '8px',
-                padding: '10px 12px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '12px',
+                background:
+                  analysis.market_status?.includes('Layak')
+                    ? 'rgba(6, 190, 114, 0.08)'
+                    : analysis.market_status?.includes('Waspada') || analysis.market_status?.includes('Wait')
+                    ? 'rgba(217, 119, 6, 0.08)'
+                    : 'rgba(220, 38, 38, 0.08)',
+                border: `1.5px solid ${
+                  analysis.market_status?.includes('Layak')
+                    ? '#059669'
+                    : analysis.market_status?.includes('Waspada') || analysis.market_status?.includes('Wait')
+                    ? '#d97706'
+                    : '#dc2626'
+                }`,
+                borderRadius: '10px',
+                padding: '10px 16px',
+                marginBottom: '14px',
               }}
             >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Icon name="target" cls="sm" style={{ color: 'var(--navy)' }} />
+                <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--navy)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  Kesimpulan Kelayakan Investasi Pasar:
+                </span>
+              </div>
               <div
                 style={{
-                  fontSize: '11px',
-                  fontWeight: 700,
-                  color: 'var(--navy)',
-                  marginBottom: '4px',
+                  fontSize: '13px',
+                  fontWeight: 800,
+                  color:
+                    analysis.market_status?.includes('Layak')
+                      ? '#059669'
+                      : analysis.market_status?.includes('Waspada') || analysis.market_status?.includes('Wait')
+                      ? '#d97706'
+                      : '#dc2626',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',
                 }}
               >
-                <Icon name="chart" cls="sm" /> Sinyal Teknikal & Momentum
+                <span className="dot" style={{
+                  background: analysis.market_status?.includes('Layak') ? '#059669' : '#d97706',
+                  display: 'inline-block',
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%'
+                }}></span>
+                {analysis.market_status || 'Waspada / Netral (Wait & See)'}
               </div>
-              <p
-                style={{
-                  fontSize: '11.5px',
-                  lineHeight: 1.6,
-                  color: '#475569',
-                  margin: 0,
-                }}
-              >
-                {analysis.technical_insight || 'Analisis teknikal MA dan RSI.'}
-              </p>
             </div>
+          )}
+
+          {/* Mode 1: Ringkasan Taktis (Alokasi Aset untuk IHSG vs Trading Plan untuk Emiten) */}
+          {viewMode === 'ringkas' ? (
+            <div style={{ marginBottom: '14px' }}>
+              {(ticker === 'IHSG' || analysis.is_index) ? (
+                /* Alokasi Portofolio Makro IHSG */
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                    gap: '10px',
+                    marginBottom: '10px',
+                  }}
+                >
+                  <div style={{ background: 'var(--soft)', border: '1px solid var(--line)', borderRadius: '8px', padding: '10px 12px' }}>
+                    <span style={{ fontSize: '10px', color: 'var(--muted)', display: 'block', textTransform: 'uppercase', fontWeight: 700 }}>
+                      Porsi Alokasi Saham
+                    </span>
+                    <strong style={{ fontSize: '14px', color: 'var(--green)' }}>
+                      {analysis.asset_allocation?.equity_weight || '30% - 40% Saham'}
+                    </strong>
+                  </div>
+
+                  <div style={{ background: 'var(--soft)', border: '1px solid var(--line)', borderRadius: '8px', padding: '10px 12px' }}>
+                    <span style={{ fontSize: '10px', color: 'var(--muted)', display: 'block', textTransform: 'uppercase', fontWeight: 700 }}>
+                      Porsi Alokasi Kas / Pasar Uang
+                    </span>
+                    <strong style={{ fontSize: '14px', color: 'var(--blue)' }}>
+                      {analysis.asset_allocation?.cash_weight || '60% - 70% Kas'}
+                    </strong>
+                  </div>
+
+                  <div style={{ background: 'var(--soft)', border: '1px solid var(--line)', borderRadius: '8px', padding: '10px 12px', gridColumn: 'span 2' }}>
+                    <span style={{ fontSize: '10px', color: 'var(--muted)', display: 'block', textTransform: 'uppercase', fontWeight: 700 }}>
+                      Fokus Strategi Pasar
+                    </span>
+                    <strong style={{ fontSize: '12px', color: 'var(--ink)' }}>
+                      {analysis.asset_allocation?.strategy_focus || 'Fokus Saham Defensif / Wait and See'}
+                    </strong>
+                  </div>
+                </div>
+              ) : (
+                /* Trading Plan Emiten Saham Individual */
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+                    gap: '8px',
+                    marginBottom: '10px',
+                  }}
+                >
+                  <div style={{ background: 'var(--soft)', border: '1px solid var(--line)', borderRadius: '8px', padding: '8px 10px' }}>
+                    <span style={{ fontSize: '9px', color: 'var(--muted)', display: 'block', textTransform: 'uppercase', fontWeight: 600 }}>
+                      Area Beli (Entry)
+                    </span>
+                    <strong style={{ fontSize: '12px', color: 'var(--ink)' }}>
+                      {analysis.trading_plan?.entry_zone || `Rp${val(S)} - Rp${fmt(stockOrIndex.price, isStock ? 0 : 2)}`}
+                    </strong>
+                  </div>
+
+                  <div style={{ background: 'var(--soft)', border: '1px solid var(--line)', borderRadius: '8px', padding: '8px 10px' }}>
+                    <span style={{ fontSize: '9px', color: 'var(--muted)', display: 'block', textTransform: 'uppercase', fontWeight: 600 }}>
+                      Target 1 (TP1)
+                    </span>
+                    <strong style={{ fontSize: '12px', color: 'var(--green)' }}>
+                      {analysis.trading_plan?.target_price_1 || `Rp${val(R)}`}
+                    </strong>
+                  </div>
+
+                  <div style={{ background: 'var(--soft)', border: '1px solid var(--line)', borderRadius: '8px', padding: '8px 10px' }}>
+                    <span style={{ fontSize: '9px', color: 'var(--muted)', display: 'block', textTransform: 'uppercase', fontWeight: 600 }}>
+                      Target 2 (TP2)
+                    </span>
+                    <strong style={{ fontSize: '12px', color: 'var(--blue)' }}>
+                      {analysis.trading_plan?.target_price_2 || 'Trailing Breakout'}
+                    </strong>
+                  </div>
+
+                  <div style={{ background: 'var(--soft)', border: '1px solid var(--line)', borderRadius: '8px', padding: '8px 10px' }}>
+                    <span style={{ fontSize: '9px', color: 'var(--muted)', display: 'block', textTransform: 'uppercase', fontWeight: 600 }}>
+                      Stop Loss (SL)
+                    </span>
+                    <strong style={{ fontSize: '12px', color: 'var(--red)' }}>
+                      {analysis.trading_plan?.stop_loss || `Bawah Rp${val(S)}`}
+                    </strong>
+                  </div>
+
+                  <div style={{ background: 'var(--soft)', border: '1px solid var(--line)', borderRadius: '8px', padding: '8px 10px' }}>
+                    <span style={{ fontSize: '9px', color: 'var(--muted)', display: 'block', textTransform: 'uppercase', fontWeight: 600 }}>
+                      Risk / Reward
+                    </span>
+                    <strong style={{ fontSize: '12px', color: 'var(--navy)' }}>
+                      {analysis.trading_plan?.risk_reward_ratio || '1 : 2.5'}
+                    </strong>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            /* Mode 2: Analisis Mendalam (Teknikal & Berita) */
             <div
               style={{
-                background: '#f8fafc',
-                border: '1px solid #eef2f6',
-                borderRadius: '8px',
-                padding: '10px 12px',
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+                gap: '12px',
+                marginBottom: '14px',
               }}
             >
               <div
                 style={{
-                  fontSize: '11px',
-                  fontWeight: 700,
-                  color: 'var(--navy)',
-                  marginBottom: '4px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
+                  background: 'var(--soft)',
+                  border: '1px solid var(--line)',
+                  borderRadius: '8px',
+                  padding: '10px 12px',
                 }}
               >
-                <Icon name="file" cls="sm" /> Katalis Berita Terkini
+                <div
+                  style={{
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    color: 'var(--navy)',
+                    marginBottom: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  <Icon name="chart" cls="sm" /> Sinyal Teknikal &amp; Momentum
+                </div>
+                <p
+                  style={{
+                    fontSize: '11.5px',
+                    lineHeight: 1.6,
+                    color: 'var(--muted)',
+                    margin: 0,
+                  }}
+                >
+                  {analysis.technical_insight || 'Analisis teknikal MA dan RSI.'}
+                </p>
               </div>
-              <p
+              <div
                 style={{
-                  fontSize: '11.5px',
-                  lineHeight: 1.6,
-                  color: '#475569',
-                  margin: 0,
+                  background: 'var(--soft)',
+                  border: '1px solid var(--line)',
+                  borderRadius: '8px',
+                  padding: '10px 12px',
                 }}
               >
-                {analysis.catalyst_insight || 'Sentimen berita bursa terkini.'}
-              </p>
+                <div
+                  style={{
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    color: 'var(--navy)',
+                    marginBottom: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  <Icon name="file" cls="sm" /> Katalis Berita Terkini
+                </div>
+                <p
+                  style={{
+                    fontSize: '11.5px',
+                    lineHeight: 1.6,
+                    color: 'var(--muted)',
+                    margin: 0,
+                  }}
+                >
+                  {analysis.catalyst_insight || 'Sentimen berita bursa terkini.'}
+                </p>
+              </div>
             </div>
-          </div>
+          )}
 
           {analysis.actionable_plan && (
             <div
@@ -299,10 +478,16 @@ export const AIBox: React.FC<AIBoxProps> = ({
                 fontSize: '11.5px',
                 color: '#1e4273',
                 lineHeight: 1.65,
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '8px',
               }}
             >
-              <strong>🎯 Rencana Aksi / Rekomendasi:</strong>{' '}
-              {analysis.actionable_plan}
+              <Icon name="target" cls="sm" style={{ color: 'var(--blue)', marginTop: '2px', flexShrink: 0 }} />
+              <div>
+                <strong>{ticker === 'IHSG' ? 'Strategi Investasi Pasar:' : 'Rencana Aksi / Rekomendasi:'}</strong>{' '}
+                {analysis.actionable_plan}
+              </div>
             </div>
           )}
 
@@ -360,7 +545,7 @@ export const AIBox: React.FC<AIBoxProps> = ({
           className="ai-text"
           style={{ color: '#506479', lineHeight: 1.7, marginBottom: '12px' }}
         >
-          Klik tombol di bawah untuk meminta <strong>Gemini AI</strong> menganalisis pergerakan {ticker}. AI akan memadukan indikator teknikal grafik (<strong>MA20, MA50, RSI 14, Support &amp; Resistance</strong>) dengan <strong>seluruh berita pasar &amp; emiten terkini dari Invezgo API</strong> sebagai input analisis.
+          Klik tombol di bawah untuk meminta <strong>Gemini AI</strong> menganalisis pergerakan {ticker}. AI akan memadukan indikator teknikal grafik (<strong>MA20, MA50, RSI 14, Support &amp; Resistance</strong>) dengan <strong>seluruh berita pasar &amp; emiten terkini</strong> sebagai input analisis.
         </p>
 
         <div

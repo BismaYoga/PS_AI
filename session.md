@@ -346,3 +346,139 @@ Sistem ini menggunakan arsitektur **terpisah (decoupled)**:
 
 
 
+
+---
+
+### Sesi 19: Optimalisasi Antarmuka Responsif Mobile, Bottom Navigation Bar & Touch Experience
+- **Kebutuhan**:
+  1. Melakukan pull kode terbaru dari remote GitHub repository (`git pull origin main`).
+  2. Mengoptimalkan seluruh antarmuka dashboard agar sepenuhnya responsif untuk perangkat mobile (smartphone / tablet iOS & Android).
+  3. Menyediakan navigasi bawah (*floating bottom navigation bar*) yang mudah diakses jempol tangan pada layar smartphone.
+  4. Memastikan tabel fundamental dan finansial yang lebar nyaman di-scroll secara horizontal dengan kolom kode emiten/metrik tetap terkunci (*sticky first column*).
+- **Langkah & Implementasi**:
+  1. **Viewport & Safe-Area Inset**:
+     - Memperbarui [`frontend/index.html`](frontend/index.html) dengan atribut `viewport-fit=cover` untuk kompatibilitas penuh dengan notched display (iPhone Safari / dynamic island).
+  2. **Komponen Mobile Bottom Navigation ([`frontend/src/components/MobileBottomNav.tsx`](frontend/src/components/MobileBottomNav.tsx))**:
+     - Menghadirkan bilah navigasi bawah dengan 5 menu cepat:
+       - 📈 **Beranda**: Langsung kembali ke ringkasan & grafik utama.
+       - ⭐ **Watchlist**: Navigasi ke daftar pantauan saham lengkap dengan indikator badge jumlah favorit.
+       - 💰 **Valuasi MOS**: Smooth scroll instan menuju tabel valuasi Margin of Safety.
+       - 📅 **Kalender**: Smooth scroll instan ke tabel aksi korporasi (Dividen & RUPS).
+       - ℹ️ **Tentang**: Membuka drawer modal informasi arsitektur data.
+     - Dipasang di [`frontend/src/App.tsx`](frontend/src/App.tsx) dan otomatis aktif di layar `<=` 800px dengan efek translucent glassmorphism (`backdrop-filter: blur(16px)`).
+  3. **Penyesuaian Komponen & Layout Mobile**:
+     - [`frontend/src/components/HomeView.tsx`](frontend/src/components/HomeView.tsx): Konversi instrument selector ke touch pills dengan *horizontal momentum scrolling* tanpa scrollbar visual yang mengganggu, serta dropdown emiten IDX yang responsif full-width.
+     - [`frontend/src/components/NewsSection.tsx`](frontend/src/components/NewsSection.tsx): Tombol trigger load news full-width pada mobile.
+  4. **Styling & Touch Optimizations ([`frontend/src/index.css`](frontend/src/index.css))**:
+     - *Sticky first column* dengan drop shadow halus pada tabel valuasi dan tabel laporan keuangan saat di-scroll horizontal.
+     - Penambahan padding bawah dinamis `calc(76px + env(safe-area-inset-bottom, 0px))` pada kontainer utama agar tidak tertutup floating bar.
+     - Penyesuaian modal drawer agar full-width (`100vw`) di layar kecil `<= 600px`.
+  5. **Build & Live Verification**:
+     - Kompilasi produksi `npm run build` berhasil tanpa warning/error.
+     - Bundle terbaru pada `frontend/dist/` langsung aktif dilayani oleh backend port 8080 (`ps_ai.service`).
+
+---
+
+### Sesi 20: Overhaul Antarmuka Mobile Clean Minimalist & Retensi Fitur 100%
+- **Kebutuhan**:
+  1. Memperbaiki dan menyegarkan tampilan versi mobile project PS_AI agar lebih *clean minimalist*, modern, dan ergonomis.
+  2. Memastikan **100% fitur tetap ada dan dapat diakses** tanpa ada metrik atau alat yang hilang.
+- **Implementasi**:
+  1. **Top Bar & Demo Ribbon Ringkas**: Mengubah teks panjang menjadi status ribbon satu baris minimalis (`● LIVE INVEZGO · 909 EMITEN` & `Data Pasar BEI & SQLite DB Lokal`).
+  2. **Pemulihan Metrik Pasar (Market Metrics)**: Menampilkan kembali Turnover, Volume, dan Rasio Naik/Turun di mobile dalam bentuk *horizontal stat chips strip*.
+  3. **Tampilan Detail Emiten Chart-First**: Mengubah hierarki tata letak mobile dengan menempatkan grafik teknikal dan harga di paling atas (`order: 1`), serta menambahkan *Mobile Section Jump Chips* (`[Grafik & AI] [Profil] [Keuangan] [Valuasi MOS] [Dokumen]`).
+  4. **Retensi Sektor Emiten**: Menambahkan badge sektor langsung di bawah kode saham pada tabel fundamental MOS sehingga informasi sektor tetap terbaca di layar smartphone.
+  5. **Polish Bottom Nav & Kompilasi**: Merapikan bilah navigasi bawah dengan translucent blur dan safe-area insets. Build produksi Vite (`npm run build`) sukses dan langsung aktif di `http://202.10.47.34:8080/`.
+
+---
+
+### Sesi 21: Dark Mode OLED Engine, Fitur Komparasi Saham Head-to-Head, Peningkatan Gemini AI & Export CSV
+- **Kebutuhan**:
+  1. Menghadirkan engine Dark Mode OLED bergaya terminal trading finansial modern (TradingView / Bloomberg) yang responsif di desktop & mobile.
+  2. Menambahkan fitur komparasi emiten head-to-head (membandingkan 2 saham berdampingan secara metrik valuasi, MOS, PER, PBV, dan dividen).
+  3. Mempertajam analisis Gemini AI dengan rencana trading konkret (Entry Zone, TP1, TP2, Stop Loss, dan Risk-to-Reward Ratio) serta toggle Mode Taktis vs Mendalam.
+  4. Menghadirkan fitur Export Watchlist & Tabel MOS ke file CSV/Excel berstandar UTF-8 BOM.
+  5. Menambahkan indikator estimasi Dividend Yield dan quick chip saham populer pada menu pencarian.
+- **Implementasi**:
+  1. **Dark Mode Engine**: Mengintegrasikan `[data-theme="dark"]` dengan CSS variable scale di `index.css`, switch state di `App.tsx` dengan persistensi `localStorage`, serta tombol toggle matahari/bulan di `Header.tsx`.
+  2. **Komparasi Saham (`CompareModal.tsx`)**: Komponen modal responsif dengan preset quick pairs (BCA vs BRI, Mandiri vs BNI, dll.) dan tabel metrik head-to-head.
+  3. **AI Analyst Upgrade**: Memperbarui prompt Gemini di `ai_analyst.py` dan komponen `AIBox.tsx` untuk menampilkan trading plan matrix dan mode view switcher.
+  4. **Export CSV & Dividend Yield**: Menambahkan utilitas `dividendYield` dan `exportStocksToCSV` di `utils.ts` dan tombol unduh di `FundamentalSection.tsx`.
+  5. **Build & Live Verification**: Frontend Vite/TypeScript berhasil dikompilasi ulang (`npm run build`) dan live di port 8080.
+
+---
+
+### Sesi 22: Landing Page SaaS Modern, Sistem Autentikasi Pengguna & Dashboard Admin Console Lengkap
+- **Kebutuhan**:
+  1. Membuat Landing Page SaaS modern untuk PintarSaham Intelligence (`#landing`).
+  2. Menambahkan fitur Login & Registrasi pengguna multi-peran (Super Admin, Pro Trader, Free Member) dengan persistensi sesi.
+  3. Mengembangkan halaman Admin Console terpadu (`#admin`) untuk memonitor kesehatan sistem, manajemen pengguna, kontrol database SQLite, dan log aktivitas API.
+- **Implementasi**:
+  1. **Landing Page SaaS (`LandingPage.tsx`)**:
+     - Desain visual hero modern dengan badge live ticker IHSG real-time.
+     - Showcase 6 pilar fitur unggulan: Invezgo live data 909 emiten, Gemini AI Market Strategist, Kalkulator Valuasi MOS & Fair Value, Komparasi Head-to-Head, Kalender Aksi Korporasi, dan Export CSV/Excel.
+     - Showcase live price ticker kartu emiten teratas (BBCA, BBRI, BMRI, TLKM, ASII, UNTR).
+     - Pricing tiers transparan (Free, Pro Trader, Institutional) dan FAQ interaktif.
+  2. **Autentikasi Pengguna (`LoginModal.tsx`)**:
+     - Modal login & registrasi dengan validasi input, status visual role, dan toast feedback.
+     - Quick Demo Login buttons (`Super Admin: admin / admin123`, `Pro Trader: bisma / trader123`) untuk mempermudah review dan pengujian seketika.
+     - Integrasi menu profile avatar di header dengan status tier badge dan tombol logout.
+  3. **Admin Console Terpadu (`AdminView.tsx`)**:
+     - Dilengkapi 4 tab operasional:
+       - *Ringkasan & Telemetri*: Health score 99.8%, Total Emiten (909), DB Size (3.2MB), Gemini AI Status (Online).
+       - *Manajemen Pengguna*: Daftar pengguna, toggle role admin/user, ubah tier, suspend/aktifkan akun, dan modal tambah pengguna baru.
+       - *SQLite Database & Cache*: Status sinkronisasi, tombol pre-seed cache fundamental LQ45, dan pembersihan cache lawas (>90 hari).
+       - *Log API & Aktivitas*: Stream audit HTTP log request dengan response time dan status code.
+     - Route guard perlindungan rute: akses ke `#admin` dibatasi khusus akun bertipe `admin`.
+  4. **Build & Verifikasi**:
+     - Sukses dikompilasi dengan TypeScript & Vite (`dist/index.html` terbarui).
+     - Telah diverifikasi dan diuji langsung via browser Playwright.
+     - Siap diakses live di `http://202.10.47.34:8080/`.
+
+
+---
+
+### Sesi 23: Kalender Aksi Korporasi — Urutan Terdekat (Nearest First) & Audit Asal Data
+- **Kebutuhan**:
+  1. Mengurutkan agenda Kalender & Aksi Korporasi dari tanggal terdekat (mendatang) terlebih dahulu, agar event yang akan datang dalam beberapa hari langsung terlihat di posisi teratas.
+  2. Memberikan kejelasan mengenai asal sumber data kalender aksi korporasi yang saat ini digunakan di sistem.
+- **Implementasi**:
+  1. **Smart Sorting (Terdekat Dulu)**:
+     - Mengubah query SQLite pada `backend/db_manager.py` (`get_corporate_events_db`) agar memprioritaskan agenda mendatang (`event_date >= date('now')`) diurutkan secara menaik (ASC), disusul agenda yang telah lewat secara menurun (DESC).
+     - Menambahkan dynamic countdown badges di `CorporateEventsSection.tsx`: `H-3 (Segera)`, `H-5`, `Hari ini`, dan `Selesai`.
+     - Menyediakan selector urutan: *Terdekat (Mendatang Dulu)*, *Terbaru (Tanggal Terakhir)*, *Terlama (Arsip Tanggal)*.
+     - Menyediakan filter status waktu: *Semua Waktu*, *Hanya Mendatang (Upcoming)*, dan *Riwayat / Selesai*.
+  2. **Asal Sumber Data**:
+     - Database lokal: SQLite `data/pintarsaham.db` tabel `corporate_calendar`.
+     - Data upstream: Keterbukaan Informasi Resmi PT Bursa Efek Indonesia (BEI / IDX Disclosures), KSEI (jadwal dividen), dan Invezgo Feed API.
+  3. **Build & Live Verification**:
+     - Frontend dikompilasi ulang via `npm run build` dan terverifikasi di `http://202.10.47.34:8080/`.
+
+
+---
+
+### Sesi 24: Overhaul Dashboard IHSG, Sidebar Emiten ala Stockbit, Halaman Bandingkan Bebas Pilih, dan Pembersihan UI/Emoji
+- **Kebutuhan**:
+  1. Dashboard difokuskan secara eksklusif ke instrumen acuan pasar IHSG, dan ringkasan Gemini AI khusus menyimpulkan kelayakan investasi pasar secara makro (bukan trading plan emiten individual).
+  2. Halaman Emiten dilengkapi sidebar ala Stockbit: pencarian real-time (by ticker atau nama perusahaan), tabs "Semua Emiten (909)" & "Watchlist Saya", serta daftar emiten interaktif yang langsung mengubah detail di panel kanan.
+  3. Fitur Komparasi Saham diubah dari modal menjadi Halaman Penuh mandiri (`#compare` / `CompareView.tsx`) dengan 2 selector searchable fleksibel tanpa paket bandingan statis.
+  4. Menu "Emiten" ditambahkan ke navigasi utama header dan mobile nav sejajar dengan Dashboard, Watchlist, dan Bandingkan.
+  5. Seluruh emoji digantikan oleh SVG icons modern, pita ribbon teknis/dev disembunyikan, dan teks-teks teknis/internal ("Live Invezgo API", "Invezgo API Siap") dibersihkan menjadi nama resmi BEI & KSEI.
+- **Implementasi**:
+  1. **AI Analyst Makro IHSG (`backend/ai_analyst.py` & `AIBox.tsx`)**:
+     - Deteksi khusus instrumen IHSG untuk mengevaluasi iklim pasar modal secara makro: status kelayakan investasi (*"Layak Investasi / Akumulasi"*, *"Cukup Layak / Selektif"*, *"Waspada / Netral (Wait & See)"*), tren indeks, dan matriks alokasi aset (Porsi Saham vs Kas & Fokus Strategi).
+  2. **Sidebar Stockbit di Halaman Emiten (`StockDetailView.tsx` & `index.css`)**:
+     - Menghadirkan layout split-pane responsif `.stockbit-layout` dengan sidebar emiten scrollable di sisi kiri.
+     - Search input responsif yang mencocokkan ticker dan nama perusahaan secara real-time.
+     - Tab filter Semua Emiten dan Watchlist Saya dengan tombol bintang instan.
+  3. **Halaman Penuh Bandingkan (`CompareView.tsx`)**:
+     - Halaman `#compare` mandiri dengan dua dropdown searchable untuk memilih kombinasi 2 emiten apa saja dari 909 emiten IDX.
+     - Tombol swap dan tabel komparasi lengkap (PER, PBV, Fair Value, MOS, Dividend Yield, EPS, BVPS, ROE, Margin, Turnover).
+  4. **Navigasi Sejajar di Header & Mobile (`Header.tsx` & `MobileBottomNav.tsx`)**:
+     - Menambahkan link menu `Emiten` sejajar dengan `Dashboard`, `Watchlist`, dan `Bandingkan`.
+  5. **Pembersihan Teks Teknis & SVG Icons (`Icon.tsx`, `constants.ts`, `NewsSection.tsx`, `FundamentalSection.tsx`)**:
+     - Menghapus pita ribbon `DemoBar` dari tampilan utama.
+     - Mengganti teks status teknis vendor menjadi representasi resmi Bursa Efek Indonesia (IDX) & KSEI.
+     - Mengganti semua emoji dengan SVG icons inline (crown, flame, clock, target, zap, check, compare).
+  6. **Build & Live Verification**:
+     - Kompilasi Vite sukses (`dist/index.html` terbarui) dan terverifikasi live di port 8080.

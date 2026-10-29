@@ -20,9 +20,11 @@ import {
 
 interface StockDetailViewProps {
   stock: StockItem;
+  stocks?: StockItem[];
   favorites: Set<string>;
   marketCache?: Record<string, any>;
   onRefreshInstrument?: (ticker: string) => Promise<boolean>;
+  onSelectStock?: (ticker: string) => void;
   onToggleFavorite: (ticker: string) => void;
   onOpenDrawer: (type: string, payload?: any) => void;
   onOpenNewsDrawer?: (news: NewsItem) => void;
@@ -30,13 +32,16 @@ interface StockDetailViewProps {
   onOpenAbout: () => void;
   onNavigateHome: () => void;
   onNotify: (msg: string) => void;
+  onOpenCompare?: (tickerA?: string) => void;
 }
 
 export const StockDetailView: React.FC<StockDetailViewProps> = ({
   stock,
+  stocks = [],
   favorites,
   marketCache,
   onRefreshInstrument,
+  onSelectStock,
   onToggleFavorite,
   onOpenDrawer,
   onOpenNewsDrawer,
@@ -44,12 +49,15 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
   onOpenAbout,
   onNavigateHome,
   onNotify,
+  onOpenCompare,
 }) => {
   const [period, setPeriod] = useState<Timeframe>('3M');
   const [chartType, setChartType] = useState<ChartType>('line');
   const [showFib, setShowFib] = useState<boolean>(true);
   const [finTab, setFinTab] = useState<'income' | 'balance' | 'cash'>('income');
   const [docFilter, setDocFilter] = useState<string>('all');
+  const [sidebarSearch, setSidebarSearch] = useState<string>('');
+  const [sidebarTab, setSidebarTab] = useState<'all' | 'watchlist'>('all');
   const [chartCalc, setChartCalc] = useState<ChartCalculatedData>(() =>
     chartData(stock.ticker, stock.price, stock.change, '3M', marketCache)
   );
@@ -281,7 +289,7 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
         <div className="valuation-controls">
           <div className="assumption">
             <label>
-              {isPe ? 'EPS riil (TTM)' : 'BVPS riil'} · Invezgo API
+              {isPe ? 'EPS riil (TTM)' : 'BVPS riil'} · BEI Official
             </label>
             <strong>{base ? `${rp(base)} / saham` : '—'}</strong>
           </div>
@@ -385,6 +393,24 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
       ? (stock.price * stock.shares) / 1000
       : null;
 
+  // Filter sidebar emiten (Stockbit style)
+  const filteredSidebarStocks = React.useMemo(() => {
+    let list = stocks;
+    if (sidebarTab === 'watchlist') {
+      list = list.filter((s) => favorites.has(s.ticker));
+    }
+    if (sidebarSearch.trim()) {
+      const q = sidebarSearch.toLowerCase().trim();
+      list = list.filter(
+        (s) =>
+          s.ticker.toLowerCase().includes(q) ||
+          s.name.toLowerCase().includes(q) ||
+          s.short.toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [stocks, sidebarTab, favorites, sidebarSearch]);
+
   return (
     <>
       <div className="breadcrumb">
@@ -403,58 +429,237 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
         <span style={{ color: 'var(--ink)' }}>{stock.ticker}</span>
       </div>
 
-      <div className="detail-header">
-        <div className="company-head">
-          <StockLogo
-            ticker={stock.ticker}
-            mark={stock.mark}
-            color={stock.color}
-            large={true}
-          />
-          <div>
-            <h1>
-              {stock.ticker} <span className="pill outline">IDX</span>{' '}
-              {realProfile?.board && (
-                <span className="pill blue" style={{ fontSize: '10px' }}>
-                  Papan {realProfile.board}
-                </span>
+      <div className="stockbit-layout">
+        {/* SIDEBAR STOCKBIT: PEMILIHAN EMITEN & WATCHLIST */}
+        <aside className="stockbit-sidebar" aria-label="Daftar Emiten & Watchlist">
+          {/* 1. Kotak Pencarian Real-Time by Ticker / Nama */}
+          <div className="stockbit-search-box">
+            <div className="stockbit-search-input-wrap">
+              <Icon name="search" cls="stockbit-search-icon" />
+              <input
+                type="text"
+                className="stockbit-search-input"
+                placeholder="Cari ticker / nama emiten..."
+                value={sidebarSearch}
+                onChange={(e) => setSidebarSearch(e.target.value)}
+              />
+              {sidebarSearch && (
+                <button
+                  onClick={() => setSidebarSearch('')}
+                  style={{
+                    position: 'absolute',
+                    right: '8px',
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--muted)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                  }}
+                  title="Hapus pencarian"
+                >
+                  <Icon name="close" cls="sm" />
+                </button>
               )}
-            </h1>
-            <p>{realProfile?.name || stock.name}</p>
+            </div>
           </div>
-        </div>
 
-        <div className="filter-row">
-          <button
-            className="btn"
-            onClick={() => fetchCompanyDetail(true)}
-            disabled={loadingDetail}
-            title="Sinkronkan ulang data kuartalan & keterbukaan informasi dari Invezgo API ke SQLite DB"
-          >
-            <Icon name="refresh" cls="sm" />{' '}
-            {loadingDetail ? 'Memuat DB...' : 'Sinkronkan DB Kuartal'}
-          </button>
-          <button
-            className="btn"
-            onClick={() => onOpenDrawer('sources', { stock, companyDetail })}
-          >
-            <Icon name="file" cls="sm" /> Sumber &amp; profil resmi
-          </button>
-          <button
-            className={`btn ${isFav ? '' : 'primary'}`}
-            id="detail-favorite"
-            onClick={() => onToggleFavorite(stock.ticker)}
-          >
-            <Icon name={isFav ? 'check' : 'star'} cls="sm" />{' '}
-            {isFav ? 'Di watchlist' : 'Tambah watchlist'}
-          </button>
-        </div>
-      </div>
+          {/* 2. Tabs Switcher: Semua Emiten vs Watchlist */}
+          <div className="stockbit-tabs">
+            <button
+              className={`stockbit-tab-btn ${sidebarTab === 'all' ? 'active' : ''}`}
+              onClick={() => setSidebarTab('all')}
+            >
+              Semua ({stocks.length})
+            </button>
+            <button
+              className={`stockbit-tab-btn ${sidebarTab === 'watchlist' ? 'active' : ''}`}
+              onClick={() => setSidebarTab('watchlist')}
+            >
+              Watchlist ({favorites.size})
+            </button>
+          </div>
+
+          {/* 3. Scrollable List of Emitens */}
+          <div className="stockbit-stock-list">
+            {filteredSidebarStocks.length === 0 ? (
+              <div style={{ padding: '24px 16px', textAlign: 'center', color: 'var(--muted)', fontSize: '12px' }}>
+                {sidebarTab === 'watchlist'
+                  ? 'Belum ada emiten di watchlist.'
+                  : 'Emiten tidak ditemukan.'}
+              </div>
+            ) : (
+              filteredSidebarStocks.map((s) => {
+                const isSelected = s.ticker === stock.ticker;
+                const isSaved = favorites.has(s.ticker);
+                const isPositive = s.change >= 0;
+                return (
+                  <div
+                    key={s.ticker}
+                    className={`stockbit-item ${isSelected ? 'active' : ''}`}
+                    onClick={() => onSelectStock && onSelectStock(s.ticker)}
+                  >
+                    <div className="stockbit-item-left">
+                      <StockLogo
+                        ticker={s.ticker}
+                        mark={s.mark}
+                        color={s.color}
+                        large={false}
+                      />
+                      <div className="stockbit-item-info">
+                        <div className="stockbit-item-ticker">
+                          {s.ticker}
+                        </div>
+                        <div className="stockbit-item-name" title={s.name}>
+                          {s.short || s.name}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="stockbit-item-right">
+                      <span className="stockbit-item-price">
+                        {rp(s.price)}
+                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span className={`stockbit-item-chg ${isPositive ? 'pos' : 'neg'}`}>
+                          {pct(s.change, 1)}
+                        </span>
+                        <button
+                          className={`stockbit-star-btn ${isSaved ? 'saved' : ''}`}
+                          title={isSaved ? 'Hapus dari Watchlist' : 'Tambah ke Watchlist'}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onToggleFavorite(s.ticker);
+                          }}
+                        >
+                          <Icon name="star" cls="sm" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </aside>
+
+        {/* MAIN DETAIL PANEL */}
+        <div className="stockbit-main-content">
+          <div className="detail-header">
+            <div className="company-head">
+              <StockLogo
+                ticker={stock.ticker}
+                mark={stock.mark}
+                color={stock.color}
+                large={true}
+              />
+              <div>
+                <h1>
+                  {stock.ticker} <span className="pill outline">IDX</span>{' '}
+                  {realProfile?.board && (
+                    <span className="pill blue" style={{ fontSize: '10px' }}>
+                      Papan {realProfile.board}
+                    </span>
+                  )}
+                </h1>
+                <p>{realProfile?.name || stock.name}</p>
+              </div>
+            </div>
+
+            <div className="filter-row detail-action-row">
+              <button
+                className="btn"
+                onClick={() => fetchCompanyDetail(true)}
+                disabled={loadingDetail}
+                title="Sinkronkan ulang data kuartalan & keterbukaan informasi dari Invezgo API ke SQLite DB"
+              >
+                <Icon name="refresh" cls="sm" />{' '}
+                {loadingDetail ? 'Memuat DB...' : 'Sinkronkan DB'}
+              </button>
+              <button
+                className="btn"
+                onClick={() => onOpenDrawer('sources', { stock, companyDetail })}
+              >
+                <Icon name="file" cls="sm" /> Sumber &amp; profil
+              </button>
+              {onOpenCompare && (
+                <button
+                  className="btn"
+                  onClick={() => onOpenCompare(stock.ticker)}
+                  title={`Bandingkan ${stock.ticker} dengan emiten lain`}
+                >
+                  <Icon name="compare" cls="sm" /> Bandingkan
+                </button>
+              )}
+              <button
+                className={`btn ${isFav ? '' : 'primary'}`}
+                id="detail-favorite"
+                onClick={() => onToggleFavorite(stock.ticker)}
+              >
+                <Icon name={isFav ? 'check' : 'star'} cls="sm" />{' '}
+                {isFav ? 'Di watchlist' : 'Tambah watchlist'}
+              </button>
+            </div>
+          </div>
+
+      {/* Mobile Quick Section Jump Chips */}
+      <nav className="mobile-section-chips" aria-label="Navigasi bagian saham">
+        <button
+          type="button"
+          className="section-chip active"
+          onClick={() => {
+            const el = document.getElementById('chart-section');
+            if (el) el.scrollIntoView({ behavior: 'smooth' });
+          }}
+        >
+          <Icon name="chart" cls="sm" /> Grafik &amp; AI
+        </button>
+        <button
+          type="button"
+          className="section-chip"
+          onClick={() => {
+            const el = document.getElementById('profile-section');
+            if (el) el.scrollIntoView({ behavior: 'smooth' });
+          }}
+        >
+          <Icon name="building" cls="sm" /> Profil
+        </button>
+        <button
+          type="button"
+          className="section-chip"
+          onClick={() => {
+            const el = document.getElementById('financials');
+            if (el) el.scrollIntoView({ behavior: 'smooth' });
+          }}
+        >
+          <Icon name="coins" cls="sm" /> Keuangan
+        </button>
+        <button
+          type="button"
+          className="section-chip"
+          onClick={() => {
+            const el = document.getElementById('valuation');
+            if (el) el.scrollIntoView({ behavior: 'smooth' });
+          }}
+        >
+          <Icon name="sparkles" cls="sm" /> Valuasi MOS
+        </button>
+        <button
+          type="button"
+          className="section-chip"
+          onClick={() => {
+            const el = document.getElementById('disclosures');
+            if (el) el.scrollIntoView({ behavior: 'smooth' });
+          }}
+        >
+          <Icon name="file" cls="sm" /> Dokumen
+        </button>
+      </nav>
 
       {/* Two-column layout matching .detail-top */}
       <div className="detail-top">
         {/* Left Column: Profile Card */}
-        <aside className="card profile-card">
+        <aside className="card profile-card" id="profile-section">
           <div className="profile-main">
             <div className="profile-head" style={{ justifyContent: 'space-between', width: '100%' }}>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
@@ -557,7 +762,7 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
             </h3>
             <div className="small muted">
               {hasRealShareholders
-                ? 'Kepemilikan efek resmi KSEI · Invezgo DB'
+                ? 'Kepemilikan Efek Resmi KSEI (Data BEI)'
                 : `${
                     stock.sector === 'Keuangan'
                       ? 'Pendapatan operasional neto'
@@ -665,13 +870,14 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
             )}
 
           <div className="profile-note">
-            Profil resmi BEI, kepemilikan KSEI, &amp; laporan kuartalan disimpan di SQLite DB lokal (TTL 90 hari) agar hemat request Invezgo API.
+            Profil resmi emiten tercatat di Bursa Efek Indonesia (BEI), struktur kepemilikan KSEI, dan laporan kuartalan terkini.
           </div>
         </aside>
 
         {/* Right Column: Stock Chart Card */}
         <section
           className="card stock-chart-card"
+          id="chart-section"
           aria-label="Grafik teknikal emiten"
         >
           <div className="chart-top">
@@ -680,17 +886,17 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
                 Pergerakan harga {stock.ticker} <span className="pill outline">IDR</span>{' '}
                 {stock.isLive && (
                   <span className="pill green" style={{ fontSize: '9px' }}>
-                    LIVE Invezgo ({stock.ticker})
+                    LIVE DATA
                   </span>
                 )}
                 <button
                   onClick={async () => {
-                    onNotify(`Memperbarui data ${stock.ticker} dari Invezgo API...`);
+                    onNotify(`Memperbarui data ${stock.ticker}...`);
                     if (onRefreshInstrument) {
                       const ok = await onRefreshInstrument(stock.ticker);
                       onNotify(
                         ok
-                          ? `Data ${stock.ticker} berhasil diperbarui dari Invezgo!`
+                          ? `Data ${stock.ticker} berhasil diperbarui!`
                           : `Gagal memperbarui ${stock.ticker}`
                       );
                       return;
@@ -698,7 +904,7 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
                     try {
                       const res = await fetch(`/api/stock?ticker=${encodeURIComponent(stock.ticker)}`);
                       if (res.ok) {
-                        onNotify(`Data ${stock.ticker} berhasil diperbarui dari Invezgo!`);
+                        onNotify(`Data ${stock.ticker} berhasil diperbarui!`);
                         window.location.reload();
                       } else {
                         onNotify(`Gagal memperbarui ${stock.ticker}`);
@@ -709,7 +915,7 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
                   }}
                   className="btn small-btn"
                   style={{ padding: '2px 8px', fontSize: '10px', marginLeft: '6px' }}
-                  title="Perbarui data saham dari Invezgo API"
+                  title="Perbarui data saham"
                 >
                   <Icon name="refresh" cls="sm" /> Perbarui
                 </button>
@@ -740,7 +946,7 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
                 </span>
               </div>
               <div className="quote-caption">
-                Penutupan bursa · {stock.date || '16 Okt 2026'} · Sumber: Invezgo (BEI Official)
+                Penutupan bursa · {stock.date || '16 Okt 2026'} · Data Resmi BEI
               </div>
             </div>
             <button
@@ -828,7 +1034,7 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
                 <i className="legend-line ma"></i> MA 20
               </span>
             </div>
-            <span className="chart-source">Sumber: Invezgo · Data resmi BEI</span>
+            <span className="chart-source">Sumber: Data Resmi Bursa Efek Indonesia (IDX)</span>
           </div>
 
           {showFib && (
@@ -1071,8 +1277,8 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
             <div className="table-note">
               <span>
                 {hasRealFin
-                  ? `Data laporan keuangan kuartalan resmi BEI (${fin[0]?.year}–${latestPeriodLabel}) via Invezgo API · Disimpan di SQLite DB lokal (masa simpan 90 hari / per kuartal).`
-                  : 'Memuat laporan keuangan kuartalan dari Invezgo API...'}
+                  ? `Data laporan keuangan kuartalan resmi BEI (${fin[0]?.year}–${latestPeriodLabel}).`
+                  : 'Memuat laporan keuangan kuartalan...'}
               </span>
               <button
                 className="link-btn"
@@ -1199,6 +1405,8 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
           onOpenNewsDrawer ? onOpenNewsDrawer(item) : onOpenDrawer('news', { newsItem: item })
         }
       />
+        </div> {/* End of .stockbit-main-content */}
+      </div> {/* End of .stockbit-layout */}
 
       <Footer onOpenMethod={onOpenMethod} onOpenAbout={onOpenAbout} />
     </>

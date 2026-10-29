@@ -220,6 +220,76 @@
     "note": "Perkiraan tanggal rilis laporan keuangan resmi kuartalan untuk PT Bank Central Asia Tbk (BBCA) berdasarkan kalender resmi Invezgo & IDX Official Feed (BEI)."
   },
   {
+    "id": "bei_UNTR_20261016_0",
+    "ticker": "UNTR",
+    "date": "2026-10-16",
+    "type": "RUPS",
+    "title": "Pemanggilan Rapat Umum Pemegang Saham Luar Biasa",
+    "sub": "Keterbukaan Informasi Resmi BEI (UNTR)",
+    "amount": "Dokumen Resmi BEI",
+    "note": "Pengumuman resmi Bursa Efek Indonesia untuk UNTR pada 16 Oct 2026: Pemanggilan Rapat Umum Pemegang Saham Luar Biasa."
+  },
+  {
+    "id": "bei_AMRT_20261005_1",
+    "ticker": "AMRT",
+    "date": "2026-10-05",
+    "type": "Dividen",
+    "title": "Penyampaian Bukti Iklan Jadwal Pembagian dividen interim",
+    "sub": "Keterbukaan Informasi Resmi BEI (AMRT)",
+    "amount": "Dokumen Resmi BEI",
+    "note": "Pengumuman resmi Bursa Efek Indonesia untuk AMRT pada 05 Oct 2026: Penyampaian Bukti Iklan Jadwal Pembagian dividen interim."
+  },
+  {
+    "id": "bei_AMRT_20261005_2",
+    "ticker": "AMRT",
+    "date": "2026-10-05",
+    "type": "Dividen",
+    "title": "Jadwal Dividen Tunai Interim",
+    "sub": "Keterbukaan Informasi Resmi BEI (AMRT)",
+    "amount": "Dokumen Resmi BEI",
+    "note": "Pengumuman resmi Bursa Efek Indonesia untuk AMRT pada 05 Oct 2026: Jadwal Dividen Tunai Interim."
+  },
+  {
+    "id": "bei_APIC_20261005_1",
+    "ticker": "APIC",
+    "date": "2026-10-05",
+    "type": "Laporan Keuangan",
+    "title": "Penyampaian Bukti Iklan Informasi Laporan Keuangan Interim",
+    "sub": "Keterbukaan Informasi Resmi BEI (APIC)",
+    "amount": "Dokumen Resmi BEI",
+    "note": "Pengumuman resmi Bursa Efek Indonesia untuk APIC pada 05 Oct 2026: Penyampaian Bukti Iklan Informasi Laporan Keuangan Interim."
+  },
+  {
+    "id": "bei_APIC_20261001_2",
+    "ticker": "APIC",
+    "date": "2026-10-01",
+    "type": "Laporan Keuangan",
+    "title": "Penyampaian Laporan Keuangan Interim (KOREKSI)",
+    "sub": "Keterbukaan Informasi Resmi BEI (APIC)",
+    "amount": "Dokumen Resmi BEI",
+    "note": "Pengumuman resmi Bursa Efek Indonesia untuk APIC pada 01 Oct 2026: Penyampaian Laporan Keuangan Interim (KOREKSI)."
+  },
+  {
+    "id": "bei_APIC_20261001_3",
+    "ticker": "APIC",
+    "date": "2026-10-01",
+    "type": "Laporan Keuangan",
+    "title": "Penyampaian Laporan Keuangan Interim Auditan",
+    "sub": "Keterbukaan Informasi Resmi BEI (APIC)",
+    "amount": "Dokumen Resmi BEI",
+    "note": "Pengumuman resmi Bursa Efek Indonesia untuk APIC pada 01 Oct 2026: Penyampaian Laporan Keuangan Interim Auditan."
+  },
+  {
+    "id": "bei_PTBA_20260928_2",
+    "ticker": "PTBA",
+    "date": "2026-09-28",
+    "type": "RUPS",
+    "title": "Transaksi Material Tanpa Persetujuan RUPS",
+    "sub": "Keterbukaan Informasi Resmi BEI (PTBA)",
+    "amount": "Dokumen Resmi BEI",
+    "note": "Pengumuman resmi Bursa Efek Indonesia untuk PTBA pada 28 Sep 2026: Transaksi Material Tanpa Persetujuan RUPS."
+  },
+  {
     "id": "earn_PGAS_20260922",
     "ticker": "PGAS",
     "date": "2026-09-22",
@@ -250,6 +320,16 @@
     "note": "Distribusi dividen tunai riil untuk pemegang saham PT Cisarua Mountain Dairy Tbk (CMRY) sebesar Rp100 per lembar saham."
   },
   {
+    "id": "bei_PGAS_20260901_2",
+    "ticker": "PGAS",
+    "date": "2026-09-01",
+    "type": "Laporan Keuangan",
+    "title": "Perubahan Komite Audit",
+    "sub": "Keterbukaan Informasi Resmi BEI (PGAS)",
+    "amount": "Dokumen Resmi BEI",
+    "note": "Pengumuman resmi Bursa Efek Indonesia untuk PGAS pada 01 Sep 2026: Perubahan Komite Audit."
+  },
+  {
     "id": "div_BBCA_20260831",
     "ticker": "BBCA",
     "date": "2026-08-31",
@@ -278,6 +358,26 @@
     "sub": "Dividen Rp50 per lembar saham",
     "amount": "Rp50 per saham",
     "note": "Distribusi dividen tunai riil untuk pemegang saham PT AKR Corporindo Tbk (AKRA) sebesar Rp50 per lembar saham."
+  },
+  {
+    "id": "bei_ICBP_20260731_3",
+    "ticker": "ICBP",
+    "date": "2026-07-31",
+    "type": "Laporan Keuangan",
+    "title": "Penyampaian Laporan Keuangan Interim Yang Tidak Diaudit",
+    "sub": "Keterbukaan Informasi Resmi BEI (ICBP)",
+    "amount": "Dokumen Resmi BEI",
+    "note": "Pengumuman resmi Bursa Efek Indonesia untuk ICBP pada 31 Jul 2026: Penyampaian Laporan Keuangan Interim Yang Tidak Diaudit."
+  },
+  {
+    "id": "bei_INDF_20260731_2",
+    "ticker": "INDF",
+    "date": "2026-07-31",
+    "type": "Laporan Keuangan",
+    "title": "Penyampaian Laporan Keuangan Interim Yang Tidak Diaudit",
+    "sub": "Keterbukaan Informasi Resmi BEI (INDF)",
+    "amount": "Dokumen Resmi BEI",
+    "note": "Pengumuman resmi Bursa Efek Indonesia untuk INDF pada 31 Jul 2026: Penyampaian Laporan Keuangan Interim Yang Tidak Diaudit."
   },
   {
     "id": "div_WIFI_20260709",
@@ -388,6 +488,16 @@
     "sub": "Dividen Rp8 per lembar saham",
     "amount": "Rp8 per saham",
     "note": "Distribusi dividen tunai riil untuk pemegang saham PT Rukun Raharja Tbk (RAJA) sebesar Rp8 per lembar saham."
+  },
+  {
+    "id": "bei_INDF_20260630_4",
+    "ticker": "INDF",
+    "date": "2026-06-30",
+    "type": "Dividen",
+    "title": "Keterbukaan Informasi terkait Aksi Korporasi - Dividen Tunai - 30062026",
+    "sub": "Keterbukaan Informasi Resmi BEI (INDF)",
+    "amount": "Dokumen Resmi BEI",
+    "note": "Pengumuman resmi Bursa Efek Indonesia untuk INDF pada 30 Jun 2026: Keterbukaan Informasi terkait Aksi Korporasi - Dividen Tunai - 30062026."
   },
   {
     "id": "div_ESSA_20260629",

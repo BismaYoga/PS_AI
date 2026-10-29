@@ -93,18 +93,18 @@ export const NewsSection: React.FC<NewsSectionProps> = ({
         <div>
           <div className="flex gap-8 align-center">
             <h2>Kabar Terkini Pasar &amp; Emiten</h2>
-            {triggered && isLive ? (
+            {loading ? (
+              <span className="pill blue" id="news-loading-badge">
+                <i className="dot"></i> Memuat Berita...
+              </span>
+            ) : triggered ? (
               <span className="pill green" id="news-live-badge">
-                <i className="dot"></i> Top 3 dari {pool.length} Berita Invezgo (Input AI)
+                <i className="dot"></i> Berita Terkini
               </span>
-            ) : (
-              <span className="pill blue" id="news-static-badge">
-                <i className="dot"></i> {loading ? 'Memuat Invezgo...' : 'Invezgo API Siap'}
-              </span>
-            )}
+            ) : null}
           </div>
           <p id="news-subtitle">
-            Menampilkan Top 3 berita utama {name} (seluruh {pool.length ? `${pool.length} ` : ''}berita dalam 1 request digunakan sebagai input Analisis AI).
+            Menampilkan ringkasan berita utama, keterbukaan informasi, dan sentimen pasar terkini untuk {name}.
           </p>
         </div>
 
@@ -116,7 +116,7 @@ export const NewsSection: React.FC<NewsSectionProps> = ({
                 onClick={handleCycleNews}
                 disabled={loading}
                 style={{ cursor: 'pointer', padding: '6px 12px', fontSize: '11px', fontWeight: 600 }}
-                title="Ganti tampilan ke 3 berita berikutnya dari pool Invezgo"
+                title="Ganti tampilan ke berita berikutnya"
               >
                 <Icon name="refresh" cls="sm" /> Ganti Berita ({batchIndex + 1}/{totalBatches})
               </button>
@@ -126,9 +126,9 @@ export const NewsSection: React.FC<NewsSectionProps> = ({
               onClick={() => loadNews(true)}
               disabled={loading}
               style={{ cursor: 'pointer', padding: '6px 11px', fontSize: '11px' }}
-              title="Tarik ulang berita terbaru langsung dari Invezgo API (1 request)"
+              title="Perbarui berita pasar terkini"
             >
-              <Icon name="refresh" cls="sm" /> Perbarui dari API
+              <Icon name="refresh" cls="sm" /> Perbarui Berita
             </button>
           </div>
         )}
@@ -170,12 +170,12 @@ export const NewsSection: React.FC<NewsSectionProps> = ({
                 lineHeight: 1.65,
               }}
             >
-              Klik tombol di samping untuk memuat berita pasar modal terkini, sentimen emiten, dan keterbukaan informasi resmi BEI untuk <strong>{name}</strong> secara real-time dari <strong>Invezgo API</strong>. Anda juga dapat menekan tombol <em>Ganti Berita</em> untuk melihat berita lainnya.
+              Klik tombol di samping untuk memuat berita pasar modal terkini, sentimen emiten, dan keterbukaan informasi resmi BEI untuk <strong>{name}</strong> secara real-time. Anda juga dapat menekan tombol <em>Ganti Berita</em> untuk melihat berita lainnya.
             </p>
           </div>
 
           <button
-            className="btn primary"
+            className="btn primary news-trigger-btn"
             onClick={() => loadNews(false)}
             style={{
               padding: '10px 18px',
@@ -282,7 +282,6 @@ export const NewsSection: React.FC<NewsSectionProps> = ({
                       </span>
                       <span>
                         {dateStr}
-                        {isLive ? ' · Invezgo' : ' · Simulasi'}
                       </span>
                     </div>
                     <h3>{n.title}</h3>

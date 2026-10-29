@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { StockItem } from '../types';
 import { Icon } from './Icon';
 import { StockLogo } from './StockLogo';
-import { fmt, rp, pct, fairValue, mos, getOHLCData } from '../utils';
+import { fmt, rp, pct, fairValue, mos, dividendYield, exportStocksToCSV, getOHLCData } from '../utils';
 
 interface FundamentalSectionProps {
   stocks: StockItem[];
@@ -107,16 +107,11 @@ export const FundamentalSection: React.FC<FundamentalSectionProps> = ({
                 ? 'Emiten dalam pantauan'
                 : 'Saham fundamental dengan MOS menarik'}
             </h2>
-            {!onlySaved && hasLiveStocks && (
-              <span className="pill green">
-                <i className="dot"></i> Live Invezgo API ({stocks.length} Emiten)
-              </span>
-            )}
           </div>
           <p>
             {onlySaved
               ? 'Saham tersimpan di browser ini. Klik emiten untuk membuka analisis.'
-              : 'Valuasi harga wajar (EPS TTM riil × Target PER) & Margin of Safety real-time seluruh emiten BEI dari Invezgo API.'}
+              : 'Valuasi harga wajar (EPS TTM riil × Target PER) & Margin of Safety real-time seluruh emiten Bursa Efek Indonesia.'}
           </p>
         </div>
         <div className="filter-row">
@@ -166,6 +161,15 @@ export const FundamentalSection: React.FC<FundamentalSectionProps> = ({
             <option value="mos">MOS tertinggi</option>
             <option value="ticker">Kode A–Z</option>
           </select>
+
+          <button
+            className="btn small-btn"
+            onClick={() => exportStocksToCSV(list, onlySaved ? 'Watchlist_PintarSaham.csv' : 'Valuasi_MOS_PintarSaham.csv')}
+            title="Download data emiten dan valuasi MOS dalam format CSV"
+            style={{ padding: '6px 10px', fontSize: '11px' }}
+          >
+            <Icon name="download" cls="sm" /> Export CSV
+          </button>
 
           {!onlySaved && onRefreshAll && (
             <button
@@ -219,6 +223,7 @@ export const FundamentalSection: React.FC<FundamentalSectionProps> = ({
                   pagedList.map((s) => {
                     const fv = fairValue(s);
                     const mVal = mos(s);
+                    const dy = dividendYield(s);
                     const mosStyle: React.CSSProperties =
                       mVal === null
                         ? {}
@@ -251,7 +256,10 @@ export const FundamentalSection: React.FC<FundamentalSectionProps> = ({
                               >
                                 {s.ticker}
                               </a>
-                              <span className="stock-company">{s.short}</span>
+                              <div className="stock-name-group">
+                                <span className="stock-company">{s.short}</span>
+                                <span className="stock-mobile-sector">{s.sector}</span>
+                              </div>
                             </div>
                           </div>
                         </td>
@@ -275,6 +283,11 @@ export const FundamentalSection: React.FC<FundamentalSectionProps> = ({
                           <span className="mos-pill" style={mosStyle}>
                             {mVal !== null ? fmt(mVal, 1) + '%' : '—'}
                           </span>
+                          {dy != null && (
+                            <div className="tiny muted" style={{ marginTop: '3px', fontSize: '10px' }} title="Estimasi Dividend Yield">
+                              Div: <strong style={{ color: 'var(--green)' }}>{fmt(dy, 1)}%</strong>
+                            </div>
+                          )}
                         </td>
                         <td className="trend-column">
                           <svg
@@ -417,7 +430,7 @@ export const FundamentalSection: React.FC<FundamentalSectionProps> = ({
           <div className="table-note">
             <span>
               {list.length} emiten · Harga wajar: EPS riil × Target PER · MOS = (1
-              − harga / harga wajar) × 100% · Sumber: Invezgo (BEI Official)
+              − harga / harga wajar) × 100% · Sumber: Data Resmi Bursa Efek Indonesia (IDX)
             </span>
             <span>
               Halaman {currentPage} dari {totalPages}

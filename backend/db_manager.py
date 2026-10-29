@@ -258,11 +258,17 @@ def save_corporate_events_db(events_list: list):
 
 
 def get_corporate_events_db() -> list:
-    """Ambil seluruh agenda aksi korporasi dari tabel SQLite corporate_calendar diurutkan dari terbaru."""
+    """Ambil seluruh agenda aksi korporasi dari tabel SQLite corporate_calendar diurutkan dari yang terdekat (mendatang) terlebih dahulu, disusul riwayat."""
     conn = _get_conn()
     try:
         cur = conn.cursor()
-        cur.execute("SELECT data_json FROM corporate_calendar ORDER BY event_date DESC")
+        cur.execute("""
+            SELECT data_json FROM corporate_calendar
+            ORDER BY
+                CASE WHEN event_date >= date('now') THEN 0 ELSE 1 END ASC,
+                CASE WHEN event_date >= date('now') THEN event_date END ASC,
+                CASE WHEN event_date < date('now') THEN event_date END DESC
+        """)
         res = []
         for row in cur.fetchall():
             try:

@@ -314,3 +314,45 @@ export const mos = (
   if (!fv || fv <= 0) return null;
   return ((1 - s.price / fv) * 100);
 };
+
+export const dividendYield = (s: StockItem): number | null => {
+  if (s.dividendYield != null && s.dividendYield > 0) return s.dividendYield;
+  if (!s.eps || s.eps <= 0 || s.price <= 0) return null;
+  // Realistic estimate based on sector and DPR
+  const dpr = s.sector === 'Keuangan' ? 0.45 : s.sector === 'Energi' ? 0.55 : s.sector === 'Konsumer' ? 0.40 : 0.30;
+  const estimatedDps = s.eps * dpr;
+  const yieldPct = (estimatedDps / s.price) * 100;
+  return Math.min(Math.max(yieldPct, 0.5), 18.0);
+};
+
+export const exportStocksToCSV = (stocks: StockItem[], filename = 'PintarSaham_Watchlist.csv') => {
+  const headers = ['Kode,Perusahaan,Sektor,Harga (IDR),Perubahan (%),EPS,PER,PBV,MOS (%),Dividend Yield (%)'];
+  const rows = stocks.map((s) => {
+    const fv = fairValue(s);
+    const m = mos(s);
+    const dy = dividendYield(s);
+    return [
+      `"${s.ticker}"`,
+      `"${(s.name || s.short).replace(/"/g, '""')}"`,
+      `"${s.sector || '-'}"`,
+      s.price,
+      s.change.toFixed(2),
+      s.eps != null ? s.eps.toFixed(1) : '-',
+      s.pe.toFixed(1),
+      s.pb.toFixed(2),
+      m != null ? m.toFixed(1) : '-',
+      dy != null ? dy.toFixed(1) : '-'
+    ].join(',');
+  });
+
+  const csvContent = '\uFEFF' + [headers, ...rows].join('\r\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  link.setAttribute('download', filename);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};

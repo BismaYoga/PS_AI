@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Route, StockItem, IndexItem, CorporateEvent } from './types';
+import { Route, StockItem, IndexItem, CorporateEvent, UserProfile } from './types';
 import {
   PRESET_STOCKS,
   INITIAL_EMITENS,
@@ -10,15 +10,86 @@ import { DemoBar } from './components/DemoBar';
 import { HomeView } from './components/HomeView';
 import { WatchlistView } from './components/WatchlistView';
 import { StockDetailView } from './components/StockDetailView';
+import { CompareView } from './components/CompareView';
+import { AdminView } from './components/AdminView';
+import { LoginModal } from './components/LoginModal';
 import { DrawerModal, DrawerPayload } from './components/DrawerModal';
 import { Toast } from './components/Toast';
+import { MobileBottomNav } from './components/MobileBottomNav';
 
 export default function App() {
+  // Theme state: dark / light
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    try {
+      const saved = localStorage.getItem('ps-theme');
+      if (saved === 'dark' || saved === 'light') return saved;
+      return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        ? 'dark'
+        : 'light';
+    } catch {
+      return 'light';
+    }
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    try {
+      localStorage.setItem('ps-theme', theme);
+    } catch {}
+  }, [theme]);
+
+  const toggleTheme = useCallback(() => {
+    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
+  }, []);
+
+  // User Authentication state
+  const [user, setUser] = useState<UserProfile | null>(() => {
+    try {
+      const saved = localStorage.getItem('ps-auth-user');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const [loginModalOpen, setLoginModalOpen] = useState(false);
+
+  const handleLoginSuccess = useCallback((usr: UserProfile) => {
+    setUser(usr);
+    try {
+      localStorage.setItem('ps-auth-user', JSON.stringify(usr));
+    } catch {}
+  }, []);
+
+  const handleLogout = useCallback(() => {
+    setUser(null);
+    try {
+      localStorage.removeItem('ps-auth-user');
+    } catch {}
+    setToastMessage('Anda telah keluar (logout).');
+  }, []);
+
+  // Compare page state
+  const [compareTickerA, setCompareTickerA] = useState('BBCA');
+  const [compareTickerB, setCompareTickerB] = useState('BBRI');
+
+  const handleOpenCompare = useCallback((tickerA?: string, tickerB?: string) => {
+    if (tickerA) setCompareTickerA(tickerA);
+    if (tickerB) setCompareTickerB(tickerB);
+    window.location.hash = '#compare';
+  }, []);
+
   // Parse initial route from URL hash
   const parseHash = (): { route: Route; ticker: string } => {
     const hash = window.location.hash || '#home';
-    if (hash.startsWith('#stock/')) {
-      const t = hash.replace('#stock/', '').trim().toUpperCase();
+    if (hash === '#compare') {
+      return { route: 'compare', ticker: 'BBCA' };
+    }
+    if (hash === '#admin') {
+      return { route: 'admin', ticker: 'BBCA' };
+    }
+    if (hash === '#stock' || hash.startsWith('#stock/')) {
+      const t = hash.replace(/^#stock\/?/, '').trim().toUpperCase();
       return { route: 'stock', ticker: t || 'BBCA' };
     }
     if (hash === '#watchlist') {
@@ -98,7 +169,7 @@ export default function App() {
   }, []);
 
   const refreshAllMarket = useCallback(async () => {
-    notify('Memperbarui data fundamental & MOS seluruh emiten dari Invezgo API...');
+    notify('Memperbarui data fundamental & MOS seluruh emiten...');
     try {
       const res = await fetch('/api/market-data?refresh=1');
       if (res.ok) {
@@ -106,13 +177,13 @@ export default function App() {
         if (bundle.market) setMarketBundle(bundle.market);
         if (bundle.events && bundle.events.length) setCorporateEvents(bundle.events);
         if (bundle.emitens && bundle.emitens.length) setAllEmitens(bundle.emitens);
-        notify('Data fundamental & MOS berhasil diperbarui dari Invezgo API!');
+        notify('Data fundamental & MOS berhasil diperbarui!');
         return;
       }
     } catch (err) {
       console.warn('Refresh all market data failed:', err);
     }
-    notify('Gagal memperbarui bundle pasar dari Invezgo API');
+    notify('Gagal memperbarui data pasar');
   }, [notify]);
 
   // Fetch live market data bundle & complete 976 emitens catalog
@@ -198,6 +269,10 @@ export default function App() {
       document.title = `${selectedStockTicker} — PintarSaham Intelligence`;
     } else if (route === 'watchlist') {
       document.title = 'Watchlist — PintarSaham Intelligence';
+    } else if (route === 'compare') {
+      document.title = 'Komparasi Emiten Head-to-Head — PintarSaham Intelligence';
+    } else if (route === 'admin') {
+      document.title = 'Admin Console — PintarSaham Intelligence';
     } else {
       document.title = 'Beranda — PintarSaham Intelligence';
     }
@@ -267,14 +342,32 @@ export default function App() {
 
   // Navigation handlers
   const handleNavigate = (newRoute: Route, ticker?: string) => {
-    if (newRoute === 'stock' && ticker) {
-      window.location.hash = `#stock/${ticker}`;
+    if (newRoute === 'stock') {
+      const targetTicker = ticker || selectedStockTicker || 'BBCA';
+      window.location.hash = `#stock/${targetTicker}`;
     } else if (newRoute === 'watchlist') {
       window.location.hash = '#watchlist';
+    } else if (newRoute === 'compare') {
+      window.location.hash = '#compare';
+    } else if (newRoute === 'admin') {
+      if (user?.role !== 'admin') {
+        notify('Akses Admin terbatas: Silakan masuk sebagai akun Super Admin.');
+        setLoginModalOpen(true);
+        return;
+      }
+      window.location.hash = '#admin';
     } else {
       window.location.hash = '#home';
     }
   };
+
+  // Guard admin route on logout or direct access
+  useEffect(() => {
+    if (route === 'admin' && user?.role !== 'admin') {
+      notify('Akses Admin memerlukan kredensial Super Admin.');
+      window.location.hash = '#home';
+    }
+  }, [route, user, notify]);
 
   // Watchlist toggle handler
   const handleToggleFavorite = (ticker: string) => {
@@ -334,20 +427,44 @@ export default function App() {
 
   return (
     <div className="app-root">
-      {/* 1. Header (Identical 1:1, NO ADMIN LINK) */}
+      {/* 1. Header */}
       <Header
         route={route}
+        currentTicker={selectedStockTicker}
         watchlistCount={favorites.size}
         onNavigate={handleNavigate}
         stocks={stocks}
         onOpenDrawer={(type) => setDrawerPayload({ type })}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+        onOpenCompare={() => handleOpenCompare()}
+        user={user}
+        onOpenLogin={() => setLoginModalOpen(true)}
+        onLogout={handleLogout}
       />
 
-      {/* 2. Demo Bar */}
-      <DemoBar onOpenAbout={() => setDrawerPayload({ type: 'about' })} />
-
-      {/* 3. Main Views */}
+      {/* 2. Main Views */}
       <main id="app" className="main">
+        {route === 'admin' && (
+          <AdminView
+            currentUser={user}
+            stocks={stocks}
+            onNotify={notify}
+            onNavigateHome={() => handleNavigate('home')}
+          />
+        )}
+
+        {route === 'compare' && (
+          <CompareView
+            stocks={stocks}
+            defaultTickerA={compareTickerA}
+            defaultTickerB={compareTickerB}
+            onSelectStockDetail={(sym) => handleNavigate('stock', sym)}
+            onOpenMethod={() => setDrawerPayload({ type: 'method' })}
+            onOpenAbout={() => setDrawerPayload({ type: 'about' })}
+          />
+        )}
+
         {route === 'home' && (
           <HomeView
             indexData={indexData}
@@ -385,6 +502,8 @@ export default function App() {
         {route === 'stock' && (
           <StockDetailView
             stock={currentStock}
+            stocks={stocks}
+            onSelectStock={(sym) => handleNavigate('stock', sym)}
             favorites={favorites}
             marketCache={marketBundle}
             onRefreshInstrument={(t) => refreshSingleInstrument(t, true)}
@@ -395,11 +514,28 @@ export default function App() {
             onOpenAbout={() => setDrawerPayload({ type: 'about' })}
             onNavigateHome={() => handleNavigate('home')}
             onNotify={notify}
+            onOpenCompare={(tA) => handleOpenCompare(tA)}
           />
         )}
       </main>
 
-      {/* 4. Slide-in Drawer Modal */}
+      {/* 4. Mobile Bottom Navigation Bar */}
+      <MobileBottomNav
+        route={route}
+        watchlistCount={favorites.size}
+        onNavigate={handleNavigate}
+        onOpenDrawer={(type) => setDrawerPayload({ type })}
+      />
+
+      {/* 5. Login & Register Modal */}
+      <LoginModal
+        isOpen={loginModalOpen}
+        onClose={() => setLoginModalOpen(false)}
+        onLoginSuccess={handleLoginSuccess}
+        onNotify={notify}
+      />
+
+      {/* 7. Slide-in Drawer Modal */}
       <DrawerModal
         payload={drawerPayload}
         onClose={() => setDrawerPayload(null)}

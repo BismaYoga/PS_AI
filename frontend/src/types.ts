@@ -124,12 +124,32 @@ export interface ValuationState {
 }
 
 export interface AIAnalysisResult {
+  ticker?: string;
+  name?: string;
+  is_index?: boolean;
+  market_status?: string;
   executive_summary: string;
   sentiment_bias?: string;
   sentiment?: string;
   technical_insight?: string;
   catalyst_insight?: string;
   actionable_plan?: string;
+  trading_plan?: {
+    entry_zone?: string;
+    target_price_1?: string;
+    target_price_2?: string;
+    stop_loss?: string;
+    risk_reward_ratio?: string;
+  };
+  investing_plan?: {
+    valuation_assessment?: string;
+    time_horizon?: string;
+  };
+  asset_allocation?: {
+    equity_weight?: string;
+    cash_weight?: string;
+    strategy_focus?: string;
+  };
   key_levels?: {
     support?: string;
     resistance?: string;
@@ -142,5 +162,16 @@ export interface AIAnalysisResult {
 
 export type Timeframe = '1D' | '1M' | '3M' | '6M' | '1Y';
 export type ChartType = 'line' | 'candle';
-export type Route = 'home' | 'watchlist' | 'stock' | 'network';
+export type Route = 'home' | 'watchlist' | 'stock' | 'compare' | 'admin';
+
+export interface UserProfile {
+  id: string;
+  username: string;
+  name: string;
+  email: string;
+  role: 'admin' | 'user';
+  tier: 'free' | 'pro' | 'institutional';
+  avatar?: string;
+  createdAt?: string;
+}
 
