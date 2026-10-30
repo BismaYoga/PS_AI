@@ -169,6 +169,24 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(payload)
             return
 
+        # 1c. API: /api/top-foreign (hemat token, refresh 1x per hari)
+        if path == '/api/top-foreign':
+            force_refresh = 'refresh' in query and query['refresh'][0].lower() in ('1', 'true', 'yes')
+            try:
+                from fetch_top_foreign import fetch_top_foreign
+                top_data = fetch_top_foreign(force=force_refresh)
+            except Exception as e:
+                print(f"[API /api/top-foreign error] {e}")
+                top_data = {"top_tickers": ['BBCA', 'BBRI', 'BMRI', 'BBNI', 'TLKM', 'ASII', 'AMMN', 'ADRO', 'ICBP', 'GOTO'], "items": []}
+            payload = json.dumps(top_data, ensure_ascii=False).encode('utf-8')
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json; charset=utf-8')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.send_header('Content-Length', str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
+            return
+
         # 2. API: /api/ihsg, /api/stock, /api/chart (Hemat Request: Gunakan cache kecuali force=1 atau belum ada ohlc)
         if path in ('/api/ihsg', '/api/stock', '/api/chart'):
             ticker = 'IHSG'

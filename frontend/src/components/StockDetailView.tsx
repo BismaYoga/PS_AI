@@ -398,7 +398,35 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
     'ASII', 'AMMN', 'ADRO', 'ICBP', 'GOTO'
   ], []);
 
-  // Filter sidebar emiten: Cukup 10 trending dulu secara default, muat seluruh 900+ emiten saat user mengetik di search bar
+  // Top Foreign state (di-fetch 1x per hari dari cache Invezgo top_foreign.json)
+  const [topForeignTickers, setTopForeignTickers] = React.useState<string[]>([]);
+  const [foreignTradingDate, setForeignTradingDate] = React.useState<string>('');
+
+  React.useEffect(() => {
+    let isMounted = true;
+    fetch('/data/top_foreign.json')
+      .then((r) => {
+        if (!r.ok) return fetch('/api/top-foreign').then((r2) => r2.json());
+        return r.json();
+      })
+      .then((data) => {
+        if (!isMounted) return;
+        if (data && Array.isArray(data.top_tickers) && data.top_tickers.length > 0) {
+          setTopForeignTickers(data.top_tickers.slice(0, 10));
+          if (data.trading_date) {
+            setForeignTradingDate(data.trading_date);
+          }
+        }
+      })
+      .catch((err) => {
+        console.warn('Gagal memuat top_foreign.json, fallback default', err);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Filter sidebar emiten: Cukup 10 Top Foreign dulu secara default, muat seluruh 900+ emiten saat user mengetik di search bar
   const filteredSidebarStocks = React.useMemo(() => {
     // 1. Tab Watchlist
     if (sidebarTab === 'watchlist') {
@@ -428,18 +456,19 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
         .slice(0, 30); // Batasi hasil instan agar DOM tetap ringan
     }
 
-    // 3. Default saat masuk: Cukup 10 emiten trending terpopuler BEI
-    const trendingStocks = TRENDING_TICKERS
+    // 3. Default saat masuk: 10 emiten Top Foreign Invezgo (atau fallback ke trending populer)
+    const activeTopList = topForeignTickers.length > 0 ? topForeignTickers : TRENDING_TICKERS;
+    const defaultStocks = activeTopList
       .map((t) => stocks.find((s) => s.ticker === t))
       .filter((s): s is StockItem => Boolean(s));
 
-    // Pastikan emiten yang sedang aktif dilihat tetap muncul di list jika di luar 10 trending
-    if (stock && !trendingStocks.some((s) => s.ticker === stock.ticker)) {
-      return [stock, ...trendingStocks];
+    // Pastikan emiten yang sedang aktif dilihat tetap muncul di list jika di luar top list
+    if (stock && !defaultStocks.some((s) => s.ticker === stock.ticker)) {
+      return [stock, ...defaultStocks];
     }
 
-    return trendingStocks;
-  }, [stocks, sidebarTab, favorites, sidebarSearch, TRENDING_TICKERS, stock]);
+    return defaultStocks;
+  }, [stocks, sidebarTab, favorites, sidebarSearch, TRENDING_TICKERS, topForeignTickers, stock]);
 
   return (
     <>
@@ -494,7 +523,7 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
             </div>
           </div>
 
-          {/* 2. Tabs Switcher: Trending/Hasil Cari vs Watchlist */}
+          {/* 2. Tabs Switcher: Top Foreign/Hasil Cari vs Watchlist */}
           <div className="stockbit-tabs">
             <button
               className={`stockbit-tab-btn ${sidebarTab === 'all' ? 'active' : ''}`}
@@ -502,7 +531,7 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
             >
               {sidebarSearch.trim()
                 ? `Hasil Cari (${filteredSidebarStocks.length})`
-                : `Trending (${Math.min(10, filteredSidebarStocks.length)})`}
+                : `Top Foreign (${Math.min(10, filteredSidebarStocks.length)})`}
             </button>
             <button
               className={`stockbit-tab-btn ${sidebarTab === 'watchlist' ? 'active' : ''}`}
@@ -530,7 +559,7 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
                 ? `${filteredSidebarStocks.length} Saham di Watchlist`
                 : sidebarSearch.trim()
                 ? `Menampilkan ${filteredSidebarStocks.length} emiten`
-                : '10 Saham Paling Banyak Dicari'}
+                : `Top Akumulasi Asing${foreignTradingDate ? ` (${foreignTradingDate})` : ''}`}
             </span>
             {!sidebarSearch && sidebarTab === 'all' && (
               <span style={{ fontSize: '9px', color: 'var(--blue)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>

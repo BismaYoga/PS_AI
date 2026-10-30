@@ -1,0 +1,224 @@
+{
+  "updated_at": "2026-10-30T07:20:49.156834",
+  "trading_date": "2026-10-29",
+  "top_tickers": [
+    "SATU",
+    "SMMA",
+    "SUNI",
+    "RONY",
+    "HYGN",
+    "PZZA",
+    "ALII",
+    "DRMA",
+    "JELI",
+    "MDIY",
+    "TBIG",
+    "TCID",
+    "HDFA",
+    "SCNP",
+    "FILM"
+  ],
+  "items": [
+    {
+      "ticker": "SATU",
+      "name": "Kota Satu Properti",
+      "price": 218,
+      "change": 1.869,
+      "value": 542347200,
+      "volume": 2498600,
+      "calculated_value": 88.76513052893056,
+      "logo": "https://storage.invezgo.com/icon/SATU.png"
+    },
+    {
+      "ticker": "SMMA",
+      "name": "Sinar Mas Multiartha",
+      "price": 20300,
+      "change": 0.247,
+      "value": 22247500,
+      "volume": 1100,
+      "calculated_value": 82.00921451848522,
+      "logo": "https://storage.invezgo.com/icon/SMMA.png"
+    },
+    {
+      "ticker": "SUNI",
+      "name": "Sunindo Pratama",
+      "price": 555,
+      "change": -2.632,
+      "value": 715425500,
+      "volume": 1288100,
+      "calculated_value": 73.10789173715501,
+      "logo": "https://storage.invezgo.com/icon/SUNI.png"
+    },
+    {
+      "ticker": "RONY",
+      "name": "Aesler Grup Internasional",
+      "price": 1210,
+      "change": 0.833,
+      "value": 37479000,
+      "volume": 31600,
+      "calculated_value": 66.18106139438085,
+      "logo": "https://storage.invezgo.com/icon/RONY.png"
+    },
+    {
+      "ticker": "HYGN",
+      "name": "Ecocare Indo Pasifik",
+      "price": 172,
+      "change": 0.585,
+      "value": 147821900,
+      "volume": 865300,
+      "calculated_value": 63.58753337631298,
+      "logo": "https://storage.invezgo.com/icon/HYGN.png"
+    },
+    {
+      "ticker": "PZZA",
+      "name": "Sarimelati Kencana",
+      "price": 162,
+      "change": -0.613,
+      "value": 51809200,
+      "volume": 317900,
+      "calculated_value": 59.01751040355767,
+      "logo": "https://storage.invezgo.com/icon/PZZA.png"
+    },
+    {
+      "ticker": "ALII",
+      "name": "Ancara Logistics Indonesia",
+      "price": 610,
+      "change": -1.613,
+      "value": 863999500,
+      "volume": 1442000,
+      "calculated_value": 57.99193170829382,
+      "logo": "https://storage.invezgo.com/icon/ALII.png"
+    },
+    {
+      "ticker": "DRMA",
+      "name": "Dharma Polimetal",
+      "price": 960,
+      "change": -2.041,
+      "value": 694135000,
+      "volume": 719600,
+      "calculated_value": 54.17231518364583,
+      "logo": "https://storage.invezgo.com/icon/DRMA.png"
+    },
+    {
+      "ticker": "JELI",
+      "name": "Niramas Utama",
+      "price": 244,
+      "change": -5.426,
+      "value": 518692400,
+      "volume": 2115800,
+      "calculated_value": 53.91665657719296,
+      "logo": "https://storage.invezgo.com/icon/JELI.png"
+    },
+    {
+      "ticker": "MDIY",
+      "name": "Daya Intiguna Yasa",
+      "price": 730,
+      "change": -2.013,
+      "value": 52091500,
+      "volume": 71500,
+      "calculated_value": 53.559601854429225,
+      "logo": "https://storage.invezgo.com/icon/MDIY.png"
+    },
+    {
+      "ticker": "TBIG",
+      "name": "Tower Bersama Infrastructure",
+      "price": 1070,
+      "change": -1.835,
+      "value": 963137500,
+      "volume": 912500,
+      "calculated_value": 51.616409910319135,
+      "logo": "https://storage.invezgo.com/icon/TBIG.png"
+    },
+    {
+      "ticker": "TCID",
+      "name": "Mandom Indonesia",
+      "price": 2470,
+      "change": 0.816,
+      "value": 987000,
+      "volume": 400,
+      "calculated_value": 50.050658561296856,
+      "logo": "https://storage.invezgo.com/icon/TCID.png"
+    },
+    {
+      "ticker": "HDFA",
+      "name": "Radana Bhaskara Finance",
+      "price": 89,
+      "change": 4.706,
+      "value": 23966100,
+      "volume": 276600,
+      "calculated_value": 49.74902049144416,
+      "logo": "https://storage.invezgo.com/icon/HDFA.png"
+    },
+    {
+      "ticker": "SCNP",
+      "name": "Selaras Citra Nusantara Perkasa",
+      "price": 155,
+      "change": 0.649,
+      "value": 26205700,
+      "volume": 170400,
+      "calculated_value": 48.84967774186532,
+      "logo": "https://storage.invezgo.com/icon/SCNP.png"
+    },
+    {
+      "ticker": "FILM",
+      "name": "MD Entertainment",
+      "price": 322,
+      "change": -6.936,
+      "value": 3543886400,
+      "volume": 10715100,
+      "calculated_value": 48.590112820772134,
+      "logo": "https://storage.invezgo.com/icon/FILM.png"
+    },
+    {
+      "ticker": "RELI",
+      "name": "Reliance Sekuritas Indonesia",
+      "price": 488,
+      "change": -1.215,
+      "value": 3087900,
+      "volume": 6500,
+      "calculated_value": 45.85640726707471,
+      "logo": "https://storage.invezgo.com/icon/RELI.png"
+    },
+    {
+      "ticker": "MAPB",
+      "name": "MAP Boga Adiperkasa",
+      "price": 1000,
+      "change": -1.961,
+      "value": 51728000,
+      "volume": 52700,
+      "calculated_value": 44.279693782864214,
+      "logo": "https://storage.invezgo.com/icon/MAPB.png"
+    },
+    {
+      "ticker": "SULI",
+      "name": "SLJ Global",
+      "price": 66,
+      "change": -1.493,
+      "value": 171757800,
+      "volume": 2532900,
+      "calculated_value": 43.817515128861686,
+      "logo": "https://storage.invezgo.com/icon/SULI.png"
+    },
+    {
+      "ticker": "FITT",
+      "name": "Hotel Fitra International",
+      "price": 272,
+      "change": -2.158,
+      "value": 230876200,
+      "volume": 817700,
+      "calculated_value": 43.034838584488135,
+      "logo": "https://storage.invezgo.com/icon/FITT.png"
+    },
+    {
+      "ticker": "MLIA",
+      "name": "Mulia Industrindo",
+      "price": 185,
+      "change": -3.646,
+      "value": 32889800,
+      "volume": 175900,
+      "calculated_value": 42.76797061703021,
+      "logo": "https://storage.invezgo.com/icon/MLIA.png"
+    }
+  ],
+  "total_accum_count": 278
+}
