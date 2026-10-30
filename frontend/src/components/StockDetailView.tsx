@@ -1157,7 +1157,7 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
             <h2>Kinerja keuangan historis ({stock.ticker})</h2>
             <p>
               {hasRealFin
-                ? `Data laporan keuangan ${finTimeframe === 'annual' ? 'tahunan fiskal' : 'kuartalan'} resmi BEI (${fin[0]?.year} s/d ${latestPeriodLabel}) · Tersimpan di SQLite DB.`
+                ? `Data laporan keuangan ${finTimeframe === 'annual' ? 'tahunan fiskal (FY 2019–2025)' : 'kuartalan berurutan (Q2 2024–Q3 2026, Q4 dilaporkan via FY)'} resmi BEI · Tersimpan di SQLite DB.`
                 : 'Pahami pertumbuhan, kondisi neraca, dan kualitas arus kas.'}
             </p>
           </div>
@@ -1213,7 +1213,7 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
                   type="button"
                   onClick={() => setFinTimeframe('quarterly')}
                   style={{
-                    padding: '3px 9px',
+                    padding: '3px 10px',
                     fontSize: '11px',
                     fontWeight: finTimeframe === 'quarterly' ? 700 : 500,
                     borderRadius: '4px',
@@ -1223,13 +1223,13 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
                     cursor: 'pointer'
                   }}
                 >
-                  Kuartalan ({companyDetail?.financials?.length || 8}Q)
+                  Kuartalan ({companyDetail?.financials?.length || fin.length} Periode)
                 </button>
                 <button
                   type="button"
                   onClick={() => setFinTimeframe('annual')}
                   style={{
-                    padding: '3px 9px',
+                    padding: '3px 10px',
                     fontSize: '11px',
                     fontWeight: finTimeframe === 'annual' ? 700 : 500,
                     borderRadius: '4px',
@@ -1239,12 +1239,12 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
                     cursor: 'pointer'
                   }}
                 >
-                  Tahunan ({companyDetail?.financialsAnnual?.length || 7} FY)
+                  Tahunan ({companyDetail?.financialsAnnual?.length || 7} Tahun Fiskal)
                 </button>
               </div>
               <span className="small muted">
                 {finTimeframe === 'annual'
-                  ? `Tahunan · ${fin[0]?.year} — ${latestPeriodLabel}`
+                  ? `Tahunan Fiskal · ${fin[0]?.year} — ${latestPeriodLabel}`
                   : `Kuartalan · ${fin[0]?.year} — ${latestPeriodLabel}`}
               </span>
             </div>
@@ -1255,6 +1255,12 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
             role="tabpanel"
             aria-labelledby={`tab-${finTab}`}
           >
+            <div style={{ padding: '8px 14px', background: 'var(--bg-subtle, rgba(26, 98, 191, 0.05))', borderRadius: '6px', margin: '0 16px 12px', fontSize: '12px', color: 'var(--text-muted, #555)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Icon name="info" cls="sm" />
+              <span>
+                <strong>Catatan Laporan Bursa:</strong> Di BEI, emiten tidak merilis laporan kuartal IV (Q4) terpisah melainkan langsung dalam bentuk <strong>Laporan Keuangan Tahunan Teraudit (FY)</strong>. Pilih toggle <strong>Tahunan</strong> untuk melihat riwayat jangka panjang sejak 2019.
+              </span>
+            </div>
             <div className="financial-summary">
               <div>
                 <div className="fin-stat-label">{finLabels[0]}</div>

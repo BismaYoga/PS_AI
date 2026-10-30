@@ -685,6 +685,51 @@ def _parse_keystat_to_financials(ks_payload: dict) -> list[dict]:
     return result
 
 
+def _stitch_quarterly_with_fy(q_list: list[dict], fy_list: list[dict]) -> list[dict]:
+    """
+    Di Bursa Efek Indonesia (BEI), emiten tidak merilis laporan keuangan interim Q4 tersendiri.
+    Periode penutup tahun dilaporkan sebagai Laporan Keuangan Tahunan Teraudit (Audited Full Year / FY).
+    Fungsi ini menyisipkan data FY sebagai representasi Kuartal IV (Q4 FY) secara kronologis
+    agar urutan kuartal berurutan tanpa jeda atau kuartal yang bolong.
+    """
+    if not q_list:
+        return []
+    if not fy_list:
+        return list(q_list)
+
+    import re
+    fy_by_year = {}
+    for item in fy_list:
+        m = re.search(r"(\d{4})", str(item.get("year", "")))
+        if m:
+            fy_by_year[int(m.group(1))] = item
+
+    def parse_sort_key(p_str: str) -> int:
+        m_yr = re.search(r"(\d{4})", p_str)
+        yr = int(m_yr.group(1)) if m_yr else 0
+        tag_val = 0
+        order = {"Q1": 1, "Q2": 2, "Q3": 3, "Q4": 4, "FY": 4}
+        for k, v in order.items():
+            if k in p_str:
+                tag_val = v
+                break
+        return yr * 10 + tag_val
+
+    existing_periods = {str(x.get("year", "")) for x in q_list}
+    merged = list(q_list)
+
+    for yr, fy_item in fy_by_year.items():
+        has_q_in_year = any(str(yr) in p for p in existing_periods)
+        has_q4_already = any(f"Q4 {yr}" in p for p in existing_periods)
+        if has_q_in_year and not has_q4_already:
+            cp = dict(fy_item)
+            cp["year"] = f"Q4 {yr} (FY)"
+            merged.append(cp)
+
+    merged.sort(key=lambda x: parse_sort_key(str(x.get("year", ""))))
+    return merged
+
+
 def _parse_shareholders(sh_list: list) -> list[dict]:
     """Format daftar komposisi pemegang saham KSEI terbaru (deduplikasi berdasarkan tanggal terbaru)."""
     if not isinstance(sh_list, list) or not sh_list:
@@ -794,11 +839,14 @@ def fetch_company_complete_invezgo(ticker: str, force: bool = False) -> dict:
             need_disclosures = False
 
     if not need_fundamentals and not need_disclosures and cached:
+        cached_q = cached.get("financials") or []
+        cached_fy = cached.get("financials_annual") or []
+        stitched_q = _stitch_quarterly_with_fy(cached_q, cached_fy) if cached_q and cached_fy else cached_q
         return {
             "ticker": clean,
             "profile": cached.get("profile"),
-            "financials": cached.get("financials") or [],
-            "financialsAnnual": cached.get("financials_annual") or [],
+            "financials": stitched_q,
+            "financialsAnnual": cached_fy,
             "shareholders": cached.get("shareholders") or [],
             "disclosures": cached.get("disclosures") or [],
             "fundamentalsUpdatedAt": cached.get("fundamentals_updated_at"),
@@ -844,8 +892,6 @@ def fetch_company_complete_invezgo(ticker: str, force: bool = False) -> dict:
         ks_resp = _request(f"/analysis/keystat/{clean}", params={"type": "Q", "limit": 8}, timeout=15)
         requests_used += 1
         parsed_fin = _parse_keystat_to_financials(ks_resp)
-        if parsed_fin:
-            financials = parsed_fin
 
         # 2b. Laporan Keuangan Tahunan Maksimal 8 Periode (/analysis/keystat/{code}?type=FY&limit=8)
         ks_fy_resp = _request(f"/analysis/keystat/{clean}", params={"type": "FY", "limit": 8}, timeout=15)
@@ -853,6 +899,10 @@ def fetch_company_complete_invezgo(ticker: str, force: bool = False) -> dict:
         parsed_fin_fy = _parse_keystat_to_financials(ks_fy_resp)
         if parsed_fin_fy:
             financials_annual = parsed_fin_fy
+
+        if parsed_fin:
+            # Sisipkan FY sebagai representasi Kuartal IV (Q4 FY) kronologis
+            financials = _stitch_quarterly_with_fy(parsed_fin, parsed_fin_fy or [])
 
         # 3. Komposisi Pemegang Saham KSEI (/analysis/shareholder-detail?code={code})
         sh_resp = _request("/analysis/shareholder-detail", params={"code": clean}, timeout=12)

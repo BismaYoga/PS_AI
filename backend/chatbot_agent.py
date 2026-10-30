@@ -377,21 +377,23 @@ def tool_get_company_financials(ticker: str) -> dict:
 
     fins_q = cd.get("financials") or []
     fins_fy = cd.get("financials_annual") or []
+    from invezgo_client import _stitch_quarterly_with_fy
+    stitched_q = _stitch_quarterly_with_fy(fins_q, fins_fy) if fins_q and fins_fy else fins_q
 
     return {
         "status": "success",
         "ticker": code,
         "name": (cd.get("profile") or {}).get("name") or code,
-        "quarters_available": len(fins_q),
-        "quarterly_financials": fins_q,
+        "quarters_available": len(stitched_q),
+        "quarterly_financials": stitched_q,
         "years_available": len(fins_fy),
         "annual_financials": fins_fy,
         "coverage": {
-            "quarterly_range": f"{fins_q[0]['year']} s/d {fins_q[-1]['year']}" if fins_q else "—",
+            "quarterly_range": f"{stitched_q[0]['year']} s/d {stitched_q[-1]['year']}" if stitched_q else "—",
             "annual_range": f"{fins_fy[0]['year']} s/d {fins_fy[-1]['year']}" if fins_fy else "—"
         },
-        "financial_data": fins_q,  # backward compatibility
-        "note": "Data laporan keuangan lengkap mencakup rentang maksimal hingga 8 kuartal dan 7-8 tahun fiskal historis yang tersimpan permanen di database."
+        "financial_data": stitched_q,  # backward compatibility
+        "note": "Data laporan keuangan lengkap mencakup rentang kuartalan berurutan (termasuk kuartal IV / FY audited) serta histori tahunan 7-8 tahun fiskal yang tersimpan permanen di database."
     }
 
 
