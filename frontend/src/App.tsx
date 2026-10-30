@@ -16,6 +16,7 @@ import { LoginModal } from './components/LoginModal';
 import { DrawerModal, DrawerPayload } from './components/DrawerModal';
 import { Toast } from './components/Toast';
 import { MobileBottomNav } from './components/MobileBottomNav';
+import { AIChatWidget } from './components/AIChatWidget';
 
 export default function App() {
   // Theme state: dark / light
@@ -546,6 +547,9 @@ export default function App() {
 
       {/* 5. Toast Notifications */}
       <Toast message={toastMessage} />
+
+      {/* 6. AI Assistant Chatbot (Draggable, Pojok Kiri Bawah) */}
+      <AIChatWidget />
     </div>
   );
 }

@@ -482,3 +482,74 @@ Sistem ini menggunakan arsitektur **terpisah (decoupled)**:
      - Mengganti semua emoji dengan SVG icons inline (crown, flame, clock, target, zap, check, compare).
   6. **Build & Live Verification**:
      - Kompilasi Vite sukses (`dist/index.html` terbarui) dan terverifikasi live di port 8080.
+
+---
+
+### Sesi 25: Integrasi Chatbot AI PintarSaham (Google AI Studio + Invezgo Tools + Anti-Halusinasi + Widget Pojok Kiri Bawah)
+- **Kebutuhan**:
+  1. Menghadirkan asisten chatbot cerdas di PintarSaham yang dapat menjawab pertanyaan seputar pasar modal BEI secara komprehensif.
+  2. Terkoneksi ke Google AI Studio (`GEMINI_API`) dan Invezgo API (`INVESGO_API`) sebagai tools Function Calling agar jawaban faktual dan tidak halusinasi.
+  3. Menerapkan aturan ketat (*Strict Grounding Guardrail*): Jika pengguna bertanya di luar data pasar modal BEI yang disediakan tools (seperti politik, cuaca, coding umum, gosip, resep), bot wajib menolak dengan sopan.
+  4. Widget mengambang (*Floating Action Button*) secara default di **pojok kiri bawah** yang interaktif, bisa digeser (*draggable*) dengan posisi tersimpan, dan membuka modal dialog popup obrolan saat diklik.
+- **Implementasi**:
+  1. **Backend Agent (`backend/chatbot_agent.py`)**:
+     - Memanfaatkan model Google Gemini Flash via REST Function Calling.
+     - Dideklarasikan 5 tools pasar modal: `get_stock_quote` (harga, PER, PBV, ROE, MOS), `get_market_ihsg` (level indeks, gainers, losers, turnover), `get_company_financials` (kinerja 5 kuartal), `get_shareholders_and_insiders` (pemegang saham KSEI & keterbukaan BEI), dan `get_corporate_events` (jadwal RUPS, dividen, rights issue).
+     - System prompt tegas dengan aturan anti-halusinasi: menolak secara sopan setiap topik di luar data sistem.
+  2. **API Endpoint (`backend/server.py`)**:
+     - Menambahkan handler `POST /api/ai-chat` untuk menangani pesan percakapan multi-turn.
+  3. **Frontend Component & Styling (`frontend/src/components/AIChatWidget.tsx` & `index.css`)**:
+     - Tombol FAB dengan ikon AI, badge status, dan efek pulsing.
+     - Posisi default pojok kiri bawah (`bottom: 24px; left: 24px; z-index: 99999`) dengan kemampuan drag-and-drop sentuh/mouse yang persisten di `localStorage`.
+     - Modal popup chat responsif dengan chip penanda tool yang sedang dieksekusi, indikator animasi loading, bubble chat rapi (mendukung light/dark theme), serta rekomendasi pertanyaan cepat (*quick suggestions*).
+  4. **Build & Live Verification**:
+     - Dikompilasi via `npm run build` dan terverifikasi live di `http://202.10.47.34:8080/`.
+
+---
+
+### Sesi 26: Relokasi Widget Chatbot ke Pojok Kanan Bawah & Halaman Admin Monitor Usage Invezgo
+- **Kebutuhan**:
+  1. Memindahkan posisi default ikon widget AI Chatbot ke **pojok kanan bawah** (tetap *draggable* dan posisi persisten).
+  2. Menambahkan tab khusus di Halaman Admin (`AdminView.tsx`) untuk memantau token/usage Invezgo secara langsung:
+     - `GET /usage/api`: Penggunaan kuota bulanan, sisa limit, role/tier token, addon quota, dan jadwal expire/reset.
+     - `GET /usage/logs`: Riwayat log pemanggilan API beserta timestamp, path endpoint, status kode respon, dan response time.
+- **Implementasi**:
+  1. **Widget Relocation (`AIChatWidget.tsx` & `index.css`)**:
+     - Posisi default diatur ke `right: 24px; bottom: 24px`.
+     - Logika kalkulasi drag diadaptasi untuk acuan `right` dan `bottom`.
+     - Key penyimpanan posisi diperbarui ke `ps-chat-pos-v2`.
+  2. **Backend API (`server.py`)**:
+     - Menghadirkan endpoint proxy `GET /api/invezgo-usage` yang memanggil `GET /usage/api` dan `GET /usage/logs` dari `https://api.invezgo.com` dengan header autentikasi token live.
+  3. **Admin Console Tab (`AdminView.tsx`)**:
+     - Ditambahkan tab navigasi *"Invezgo Token & Usage"*.
+     - 4 Stat Cards interaktif: Penggunaan Kuota Bulanan (dengan progress bar), Sisa Kuota Tersedia (status normal/blocked), Paket & Tier Token (`ADVANCE`), dan Jadwal Expire / Reset.
+     - Tabel Riwayat Log Request lengkap dengan badge status HTTP (200 OK, 404, error), waktu, method, endpoint, dan latency.
+  4. **Build & Live Verification**:
+     - Dikompilasi via `npm run build` dan terverifikasi live di `http://202.10.47.34:8080/`.
+
+---
+
+### Sesi 27: Dynamic AI Intent Planner & Interactive Quota Approval Card
+- **Kebutuhan**:
+  1. Mengganti pola pencocokan keyword kaku (*if-else*) dengan AI Planner (Gemini) agar mampu memahami compound intent (misal: "saham yang lagi turun dan diakumulasi").
+  2. Menampilkan kartu persetujuan kuota yang informatif (Title, Deskripsi, Metodologi, Estimasi kuota data bursa, tombol Approve/Cancel) sebelum data ditarik.
+  3. Pembersihan markdown mentah (*FormattedMessage*) pada respons chat agar rapi dan tanpa karakter aneh (`### **`, dll).
+  4. Efek otomatis kembali (*auto snap-back*) ikon melayang ke pojok kanan bawah dalam 5 detik jika digeser.
+- **Implementasi**:
+  1. `analyze_chat_intent_and_estimate` di `backend/chatbot_agent.py` menggunakan Gemini dengan schema JSON terstruktur (`needs_approval`, `title`, `description`, `methodology`, `estimated_quota`, `execution_plan`).
+  2. Frontend `AIChatWidget.tsx` menangani approval hand-off sehingga query yang disetujui dieksekusi sesuai `execution_plan` AI.
+  3. Ikon FAB mengaktifkan timer 5 detik untuk kembali ke posisi awal (`DEFAULT_POS`).
+
+---
+
+### Sesi 28: Integrasi Indikator Teknikal (RSI 14, Stochastic RSI %K & %D, Smart 2-Step Screener)
+- **Kebutuhan**:
+  1. Menghadirkan analisis teknikal momentum: Wilder's RSI (14 Periode), Moving Average (MA20, MA50), Support & Resistance harian, dan Stochastic RSI (%K & %D).
+  2. Menyediakan kemampuan skrining multi-emiten untuk saham dengan Stochastic RSI mendekati atau di level 0 (oversold ekstrem) tanpa harus mengecek satu per satu secara manual.
+- **Implementasi**:
+  1. Tool `get_stock_technicals`: Menghitung deret Wilder's RSI-14, MA20/MA50, dan deret Stochastic RSI (%K & %D) dari grafik candle harian bursa.
+  2. Tool `screen_market_stocks`:
+     - Mendukung kriteria `oversold_rsi`, `overbought_rsi`, `rebound_rsi`.
+     - Smart 2-Step Pre-filtering Pipeline untuk `stochastic_oversold`: Pre-filter 1 request ke bursa untuk menyaring saham dengan RSI < 32 & likuid, dilanjutkan kalkulasi paralel StochRSI di backend dan pengurutan %K paling mendekati 0.
+     - Dilengkapi in-memory caching untuk mematuhi rate limit bursa 1 req/menit.
+  3. Build frontend dan restart `ps_ai.service`.

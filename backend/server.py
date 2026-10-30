@@ -4,11 +4,22 @@ import json
 import os
 import urllib.parse
 import time
+import socket
+import requests
+
+# Prioritaskan IPv4 untuk mempercepat panggilan API eksternal (Invezgo & Gemini)
+_orig_getaddrinfo = socket.getaddrinfo
+def _ipv4_first_getaddrinfo(*args, **kwargs):
+    res = _orig_getaddrinfo(*args, **kwargs)
+    return sorted(res, key=lambda x: 0 if x[0] == socket.AF_INET else 1)
+socket.getaddrinfo = _ipv4_first_getaddrinfo
 from fetch_market_data import fetch_single, fetch_intraday, fetch_all_initial
 from fetch_news import get_news
 from ai_analyst import analyze_market_instrument
+from chatbot_agent import run_chatbot_conversation, analyze_chat_intent_and_estimate
 from invezgo_client import fetch_company_complete_invezgo, fetch_whale_network_invezgo
 from db_manager import (
+    save_single_market_quote_db,
     save_market_quotes_bulk_db,
     load_all_market_quotes_db,
     save_corporate_events_db,
@@ -216,6 +227,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                     data['intraday'] = existing_item['intraday']
                 
                 cache[ticker] = data
+                save_single_market_quote_db(ticker, data)
                 save_market_cache(cache)
 
                 payload = json.dumps(data).encode('utf-8')
@@ -292,6 +304,44 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
             except Exception as e:
                 print(f"[API/intraday Error] {e}")
                 err_payload = json.dumps({'error': str(e), 'ticker': ticker}).encode('utf-8')
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_header('Content-Length', str(len(err_payload)))
+                self.end_headers()
+                self.wfile.write(err_payload)
+                return
+
+        # 2c. API: /api/invezgo-usage (Cek kuota, limit & logs langsung dari Invezgo API)
+        if path == '/api/invezgo-usage':
+            try:
+                from invezgo_client import get_auth_headers, INVEZGO_BASE_URL
+                headers = get_auth_headers()
+                
+                # GET /usage/api
+                r_quota = requests.get(f"{INVEZGO_BASE_URL}/usage/api", headers=headers, timeout=8)
+                quota_data = r_quota.json() if r_quota.status_code == 200 else {"error": r_quota.text}
+                
+                # GET /usage/logs
+                r_logs = requests.get(f"{INVEZGO_BASE_URL}/usage/logs", headers=headers, timeout=8)
+                logs_data = r_logs.json() if r_logs.status_code == 200 else []
+                
+                res_payload = json.dumps({
+                    "quota": quota_data,
+                    "logs": logs_data,
+                    "status": "success"
+                }, ensure_ascii=False).encode('utf-8')
+                
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_header('Content-Length', str(len(res_payload)))
+                self.end_headers()
+                self.wfile.write(res_payload)
+                return
+            except Exception as e:
+                print(f"[API/invezgo-usage Error] {e}")
+                err_payload = json.dumps({'error': str(e), 'status': 'error'}).encode('utf-8')
                 self.send_response(500)
                 self.send_header('Content-Type', 'application/json; charset=utf-8')
                 self.send_header('Access-Control-Allow-Origin', '*')
@@ -488,6 +538,58 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
 
     def do_POST(self):
         parsed = urllib.parse.urlparse(self.path)
+        if parsed.path == '/api/ai-chat-estimate':
+            try:
+                content_len = int(self.headers.get('Content-Length', 0))
+                post_body = self.rfile.read(content_len).decode('utf-8')
+                data = json.loads(post_body) if post_body else {}
+                text = data.get('text', '')
+                estimate_res = analyze_chat_intent_and_estimate(text)
+                payload = json.dumps(estimate_res, ensure_ascii=False).encode('utf-8')
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_header('Content-Length', str(len(payload)))
+                self.end_headers()
+                self.wfile.write(payload)
+                return
+            except Exception as e:
+                err_payload = json.dumps({'error': str(e)}).encode('utf-8')
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_header('Content-Length', str(len(err_payload)))
+                self.end_headers()
+                self.wfile.write(err_payload)
+                return
+
+        if parsed.path == '/api/ai-chat':
+            try:
+                content_len = int(self.headers.get('Content-Length', 0))
+                post_body = self.rfile.read(content_len).decode('utf-8')
+                data = json.loads(post_body) if post_body else {}
+                messages = data.get('messages', [])
+                print(f"[API POST /api/ai-chat] Memproses percakapan ({len(messages)} pesan)")
+                chat_res = run_chatbot_conversation(messages)
+                payload = json.dumps(chat_res, ensure_ascii=False).encode('utf-8')
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_header('Content-Length', str(len(payload)))
+                self.end_headers()
+                self.wfile.write(payload)
+                return
+            except Exception as e:
+                print(f"[API POST /api/ai-chat Error] {e}")
+                err_payload = json.dumps({'error': str(e)}).encode('utf-8')
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_header('Content-Length', str(len(err_payload)))
+                self.end_headers()
+                self.wfile.write(err_payload)
+                return
+
         if parsed.path == '/api/ai-analysis':
             try:
                 content_len = int(self.headers.get('Content-Length', 0))

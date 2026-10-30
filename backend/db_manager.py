@@ -323,6 +323,37 @@ def save_market_quotes_bulk_db(cache_dict: dict):
             conn.close()
 
 
+def save_single_market_quote_db(ticker: str, data: dict):
+    """Simpan atau perbarui 1 instrumen saham secara instan dan permanen ke SQLite DB."""
+    if not ticker or not isinstance(data, dict):
+        return
+    now = time.time()
+    sym = ticker.upper().strip()
+    has_ohlc = 1 if (data.get("ohlc") and len(data["ohlc"]) >= 2) else 0
+    has_intra = 1 if (data.get("intraday") and len(data["intraday"]) >= 2) else 0
+    with _db_lock:
+        conn = _get_conn()
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                INSERT INTO market_quotes (ticker, data_json, ohlc_updated_at, intraday_updated_at, updated_at)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(ticker) DO UPDATE SET
+                    data_json = excluded.data_json,
+                    ohlc_updated_at = CASE WHEN excluded.ohlc_updated_at > 0 THEN excluded.ohlc_updated_at ELSE market_quotes.ohlc_updated_at END,
+                    intraday_updated_at = CASE WHEN excluded.intraday_updated_at > 0 THEN excluded.intraday_updated_at ELSE market_quotes.intraday_updated_at END,
+                    updated_at = excluded.updated_at
+                """,
+                (sym, json.dumps(data, ensure_ascii=False), now if has_ohlc else 0, now if has_intra else 0, now),
+            )
+            conn.commit()
+        except Exception as e:
+            print(f"[db_manager] Error saving single quote {sym}: {e}")
+        finally:
+            conn.close()
+
+
 def load_all_market_quotes_db() -> dict:
     """Muat seluruh kamus market_quotes dari SQLite jika tersedia."""
     conn = _get_conn()

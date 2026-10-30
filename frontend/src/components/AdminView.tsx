@@ -1,6 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { UserProfile, StockItem } from '../types';
 import { Icon } from './Icon';
+
+interface InvezgoUsageData {
+  usage: number;
+  remaining: number;
+  limit: number;
+  isBlocked: boolean;
+  expire: string;
+  role: string;
+  addonQuota: number;
+}
+
+interface InvezgoLogItem {
+  id: string;
+  date: string;
+  method: string;
+  url: string;
+  access: string;
+  status: number;
+  response_time: number;
+}
 
 interface AdminViewProps {
   currentUser: UserProfile | null;
@@ -25,7 +45,36 @@ export const AdminView: React.FC<AdminViewProps> = ({
   onNotify,
   onNavigateHome,
 }) => {
-  const [activeTab, setActiveTab] = useState<'stats' | 'users' | 'database' | 'logs'>('stats');
+  const [activeTab, setActiveTab] = useState<'stats' | 'invezgo' | 'users' | 'database' | 'logs'>('stats');
+
+  // Invezgo API Usage Live State
+  const [invezgoQuota, setInvezgoQuota] = useState<InvezgoUsageData | null>(null);
+  const [invezgoLogs, setInvezgoLogs] = useState<InvezgoLogItem[]>([]);
+  const [loadingUsage, setLoadingUsage] = useState<boolean>(false);
+
+  const fetchInvezgoUsage = async () => {
+    setLoadingUsage(true);
+    try {
+      const res = await fetch('/api/invezgo-usage');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.quota && !data.quota.error) {
+          setInvezgoQuota(data.quota);
+        }
+        if (Array.isArray(data.logs)) {
+          setInvezgoLogs(data.logs);
+        }
+      }
+    } catch (e) {
+      console.error('Error fetching invezgo usage:', e);
+    } finally {
+      setLoadingUsage(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchInvezgoUsage();
+  }, []);
 
   // Dummy user database
   const [userList, setUserList] = useState<UserRecord[]>([
@@ -207,6 +256,17 @@ export const AdminView: React.FC<AdminViewProps> = ({
         </button>
         <button
           type="button"
+          className={`btn ${activeTab === 'invezgo' ? 'primary' : ''}`}
+          onClick={() => {
+            setActiveTab('invezgo');
+            fetchInvezgoUsage();
+          }}
+          style={{ borderRadius: '8px', fontSize: '12px' }}
+        >
+          <Icon name="zap" cls="sm" /> Invezgo Token &amp; Usage
+        </button>
+        <button
+          type="button"
           className={`btn ${activeTab === 'users' ? 'primary' : ''}`}
           onClick={() => setActiveTab('users')}
           style={{ borderRadius: '8px', fontSize: '12px' }}
@@ -290,6 +350,165 @@ export const AdminView: React.FC<AdminViewProps> = ({
                 <span className="muted small">Host Address &amp; Port</span>
                 <div style={{ fontWeight: 600, marginTop: '2px' }}><code>http://202.10.47.34:8080/</code></div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── TAB INVEZGO: USAGE & TOKEN LIVE ── */}
+      {activeTab === 'invezgo' && (
+        <div>
+          {/* Header Bar */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <div>
+              <h2 style={{ fontSize: '18px', fontWeight: 800 }}>Invezgo API Token &amp; Usage Monitor</h2>
+              <p className="small muted">Memantau konsumsi kuota bulanan, limit pemanggilan, dan log riwayat request secara langsung dari Invezgo.</p>
+            </div>
+            <button
+              type="button"
+              className="btn"
+              onClick={fetchInvezgoUsage}
+              disabled={loadingUsage}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+            >
+              <Icon name="clock" cls="sm" /> {loadingUsage ? 'Memuat Data...' : 'Segarkan Data'}
+            </button>
+          </div>
+
+          {/* Quota Cards */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
+              gap: '14px',
+              marginBottom: '20px',
+            }}
+          >
+            <div className="card" style={{ padding: '18px' }}>
+              <div className="small muted" style={{ fontWeight: 600 }}>PENGGUNAAN KUOTA (BULANAN)</div>
+              <div style={{ fontSize: '24px', fontWeight: 800, marginTop: '6px', color: 'var(--primary)' }}>
+                {invezgoQuota ? invezgoQuota.usage.toLocaleString('id-ID') : '—'}
+                <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-sub)' }}>
+                  {' '}/ {invezgoQuota ? invezgoQuota.limit.toLocaleString('id-ID') : '30.000'} req
+                </span>
+              </div>
+              <div style={{ marginTop: '10px', height: '6px', background: 'var(--line)', borderRadius: '3px', overflow: 'hidden' }}>
+                <div
+                  style={{
+                    height: '100%',
+                    width: invezgoQuota ? `${Math.min(100, (invezgoQuota.usage / invezgoQuota.limit) * 100)}%` : '0%',
+                    background: '#0284c7',
+                    borderRadius: '3px',
+                  }}
+                />
+              </div>
+              <div className="small muted" style={{ marginTop: '6px', fontSize: '11px' }}>
+                Terpakai {invezgoQuota ? ((invezgoQuota.usage / invezgoQuota.limit) * 100).toFixed(1) : 0}% dari batas kuota
+              </div>
+            </div>
+
+            <div className="card" style={{ padding: '18px' }}>
+              <div className="small muted" style={{ fontWeight: 600 }}>SISA KUOTA TERSEDIA</div>
+              <div style={{ fontSize: '24px', fontWeight: 800, marginTop: '6px', color: '#10b981' }}>
+                {invezgoQuota ? invezgoQuota.remaining.toLocaleString('id-ID') : '—'}
+              </div>
+              <div className="small muted" style={{ marginTop: '4px' }}>
+                Status: {invezgoQuota?.isBlocked ? (
+                  <span className="pill red" style={{ fontSize: '10px' }}>Terblokir</span>
+                ) : (
+                  <span className="pill green" style={{ fontSize: '10px' }}>Aktif &amp; Normal</span>
+                )}
+              </div>
+            </div>
+
+            <div className="card" style={{ padding: '18px' }}>
+              <div className="small muted" style={{ fontWeight: 600 }}>PAKET &amp; TIER TOKEN</div>
+              <div style={{ fontSize: '24px', fontWeight: 800, marginTop: '6px' }}>
+                {invezgoQuota?.role || 'ADVANCE'}
+              </div>
+              <div className="small muted" style={{ marginTop: '4px' }}>
+                Addon Quota: {invezgoQuota?.addonQuota || 0}
+              </div>
+            </div>
+
+            <div className="card" style={{ padding: '18px' }}>
+              <div className="small muted" style={{ fontWeight: 600 }}>JADWAL RESET / EXPIRE</div>
+              <div style={{ fontSize: '16px', fontWeight: 700, marginTop: '8px' }}>
+                {invezgoQuota?.expire ? (
+                  new Date(invezgoQuota.expire).toLocaleDateString('id-ID', {
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  }) + ' WIB'
+                ) : '—'}
+              </div>
+              <div className="small muted" style={{ marginTop: '4px', fontSize: '11px' }}>
+                Endpoint: <code>GET /usage/api</code>
+              </div>
+            </div>
+          </div>
+
+          {/* Logs Table */}
+          <div className="card">
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--line)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h3 style={{ fontSize: '15px', fontWeight: 700 }}>Riwayat Log Pemanggilan Invezgo API</h3>
+                <p className="small muted" style={{ marginTop: '2px' }}>Daftar aktivitas request dan status response (Endpoint: <code>GET /usage/logs</code>)</p>
+              </div>
+              <span className="pill blue" style={{ fontSize: '11px' }}>
+                {invezgoLogs.length} Entri Terbaru
+              </span>
+            </div>
+            <div className="table-scroll">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Waktu (WIB)</th>
+                    <th>Method</th>
+                    <th>Endpoint Path</th>
+                    <th>User-Agent / Access</th>
+                    <th>Response Time</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {invezgoLogs.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} style={{ textAlign: 'center', padding: '24px' }} className="muted">
+                        {loadingUsage ? 'Memuat riwayat log Invezgo...' : 'Tidak ada riwayat log terbaru.'}
+                      </td>
+                    </tr>
+                  ) : (
+                    invezgoLogs.map((log) => {
+                      const logDate = log.date ? new Date(log.date).toLocaleTimeString('id-ID', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                      }) + ' WIB' : '—';
+                      return (
+                        <tr key={log.id}>
+                          <td className="small muted">{logDate}</td>
+                          <td><span className="pill gray" style={{ fontSize: '10px', fontWeight: 700 }}>{log.method}</span></td>
+                          <td><code style={{ fontSize: '12px' }}>{log.url}</code></td>
+                          <td className="small muted">{log.access || '—'}</td>
+                          <td className="small">{log.response_time ? `${log.response_time} ms` : '—'}</td>
+                          <td>
+                            {log.status === 200 ? (
+                              <span className="pill green" style={{ fontSize: '10px' }}>200 OK</span>
+                            ) : log.status === 404 ? (
+                              <span className="pill gray" style={{ fontSize: '10px' }}>404 Not Found</span>
+                            ) : (
+                              <span className="pill red" style={{ fontSize: '10px' }}>{log.status}</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
