@@ -55,7 +55,8 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
   const [chartType, setChartType] = useState<ChartType>('line');
   const [showFib, setShowFib] = useState<boolean>(true);
   const [finTab, setFinTab] = useState<'income' | 'balance' | 'cash'>('income');
-  const [finTimeframe, setFinTimeframe] = useState<'quarterly' | 'annual'>('quarterly');
+  const [finTimeframe, setFinTimeframe] = useState<'quarterly' | 'annual'>('annual');
+  const [showYoY, setShowYoY] = useState<boolean>(true);
   const [docFilter, setDocFilter] = useState<string>('all');
   const [sidebarSearch, setSidebarSearch] = useState<string>('');
   const [sidebarTab, setSidebarTab] = useState<'all' | 'watchlist'>('all');
@@ -178,17 +179,72 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
       : [`Arus kas operasi (${latestPeriodLabel})`, `Laba bersih (${latestPeriodLabel})`];
   const maxFinVal = Math.max(1, ...fin.flatMap((d: any) => finKeys.map((k) => Math.abs(Number(d[k]) || 0)))) * 1.15;
 
+  // Helper to compute YoY growth for a period index
+  const getCompPeriodLabel = (idx: number): string => {
+    if (idx < 0 || idx >= fin.length) return '';
+    if (finTimeframe === 'annual') {
+      return idx > 0 ? String(fin[idx - 1]?.year || '') : '';
+    }
+    const curYearLabel = String(fin[idx]?.year || '');
+    const match = curYearLabel.match(/(Q\d|FY)\s*(\d{4})/);
+    if (match) {
+      const tag = match[1];
+      const yr = parseInt(match[2], 10);
+      const target = fin.find((x: any) => String(x.year || '').includes(`${tag} ${yr - 1}`));
+      return target ? String(target.year) : '';
+    }
+    return '';
+  };
+
+  const getYoYGrowth = (k: string, idx: number): number | null => {
+    if (idx < 0 || idx >= fin.length) return null;
+    const curItem = fin[idx];
+    const curVal = Number(curItem?.[k]) || 0;
+
+    let prevItem: any = null;
+    if (finTimeframe === 'annual') {
+      if (idx > 0) prevItem = fin[idx - 1];
+    } else {
+      const curYearLabel = String(curItem?.year || '');
+      const match = curYearLabel.match(/(Q\d|FY)\s*(\d{4})/);
+      if (match) {
+        const tag = match[1];
+        const yr = parseInt(match[2], 10);
+        prevItem = fin.find((x: any) => String(x.year || '').includes(`${tag} ${yr - 1}`));
+      }
+    }
+
+    if (!prevItem) return null;
+    const prevVal = Number(prevItem?.[k]) || 0;
+    if (Math.abs(prevVal) < 0.0001) return null;
+    return ((curVal - prevVal) / Math.abs(prevVal)) * 100;
+  };
+
   // Export CSV
   const handleExportCSV = () => {
     const periodRange = `${fin[0]?.year || ''} - ${latestPeriodLabel}`;
     const rows = [
-      [hasRealFin ? 'DATA LAPORAN KEUANGAN RESMI BEI - PINTARSAHAM INTELLIGENCE' : 'DATA ESTIMASI'],
-      [stock.ticker, `${finTimeframe === 'annual' ? 'Tahunan (FY)' : 'Kuartalan (Q)'} · ${periodRange}`, 'Rp triliun kecuali EPS/BVPS (Rp), rasio (%)'],
+      [hasRealFin ? 'DATA LAPORAN KEUANGAN RESMI BEI (YEAR ON YEAR) - PINTARSAHAM INTELLIGENCE' : 'DATA ESTIMASI'],
+      [stock.ticker, `${finTimeframe === 'annual' ? 'Tahunan (FY) · Year on Year' : 'Kuartalan (Q)'} · ${periodRange}`, 'Rp triliun kecuali EPS/BVPS (Rp), rasio (%)'],
       ['Pos keuangan', ...fin.map((x: any) => x.year)],
-      ...FIN_ROWS[finTab].map(([k, label]) => [
-        label,
-        ...fin.map((x: any) => Number((Number(x[k]) || 0).toFixed(4))),
-      ]),
+      ...FIN_ROWS[finTab].flatMap(([k, label]) => {
+        const valRow = [
+          label,
+          ...fin.map((x: any) => Number((Number(x[k]) || 0).toFixed(4))),
+        ];
+        const isGrowthCandidate = ['revenue', 'net', 'eps', 'assets', 'equity', 'cfo'].includes(k);
+        if (showYoY && isGrowthCandidate) {
+          const yoyRow = [
+            `↳ Pertumbuhan ${label.split('(')[0].trim()} YoY (%)`,
+            ...fin.map((_: any, idx: number) => {
+              const y = getYoYGrowth(k, idx);
+              return y !== null ? Number(y.toFixed(2)) : '—';
+            }),
+          ];
+          return [valRow, yoyRow];
+        }
+        return [valRow];
+      }),
     ];
     const csv =
       '\uFEFF' +
@@ -200,7 +256,7 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${stock.ticker}_${finTimeframe}_${finTab}_${latestPeriodLabel.replace(/\s+/g, '_')}.csv`;
+    a.download = `${stock.ticker}_${finTimeframe}_YoY_${finTab}_${latestPeriodLabel.replace(/\s+/g, '_')}.csv`;
     document.body.append(a);
     a.click();
     a.remove();
@@ -1207,14 +1263,30 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
               </button>
             </div>
             
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
               <div style={{ display: 'inline-flex', background: 'var(--bg-subtle, #f1f5f9)', padding: '2px', borderRadius: '6px', border: '1px solid var(--border, #e2e8f0)' }}>
+                <button
+                  type="button"
+                  onClick={() => setFinTimeframe('annual')}
+                  style={{
+                    padding: '4px 11px',
+                    fontSize: '11.5px',
+                    fontWeight: finTimeframe === 'annual' ? 700 : 500,
+                    borderRadius: '4px',
+                    border: 'none',
+                    background: finTimeframe === 'annual' ? 'var(--blue)' : 'transparent',
+                    color: finTimeframe === 'annual' ? '#fff' : 'inherit',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Year on Year / Tahunan ({companyDetail?.financialsAnnual?.length || 7} FY)
+                </button>
                 <button
                   type="button"
                   onClick={() => setFinTimeframe('quarterly')}
                   style={{
-                    padding: '3px 10px',
-                    fontSize: '11px',
+                    padding: '4px 11px',
+                    fontSize: '11.5px',
                     fontWeight: finTimeframe === 'quarterly' ? 700 : 500,
                     borderRadius: '4px',
                     border: 'none',
@@ -1225,26 +1297,32 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
                 >
                   Kuartalan ({companyDetail?.financials?.length || fin.length} Periode)
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setFinTimeframe('annual')}
-                  style={{
-                    padding: '3px 10px',
-                    fontSize: '11px',
-                    fontWeight: finTimeframe === 'annual' ? 700 : 500,
-                    borderRadius: '4px',
-                    border: 'none',
-                    background: finTimeframe === 'annual' ? 'var(--blue)' : 'transparent',
-                    color: finTimeframe === 'annual' ? '#fff' : 'inherit',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Tahunan ({companyDetail?.financialsAnnual?.length || 7} Tahun Fiskal)
-                </button>
               </div>
+
+              <button
+                type="button"
+                onClick={() => setShowYoY(!showYoY)}
+                title="Tampilkan atau sembunyikan baris persentase pertumbuhan Year on Year"
+                style={{
+                  padding: '4px 9px',
+                  fontSize: '11.5px',
+                  fontWeight: showYoY ? 700 : 500,
+                  borderRadius: '5px',
+                  border: '1px solid ' + (showYoY ? 'var(--blue)' : 'var(--border, #cbd5e1)'),
+                  background: showYoY ? 'rgba(26, 98, 191, 0.1)' : 'transparent',
+                  color: showYoY ? 'var(--blue)' : 'inherit',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                <Icon name="sparkles" cls="sm" /> YoY Growth (%)
+              </button>
+
               <span className="small muted">
                 {finTimeframe === 'annual'
-                  ? `Tahunan Fiskal · ${fin[0]?.year} — ${latestPeriodLabel}`
+                  ? `Tahunan (FY) · ${fin[0]?.year} — ${latestPeriodLabel}`
                   : `Kuartalan · ${fin[0]?.year} — ${latestPeriodLabel}`}
               </span>
             </div>
@@ -1258,63 +1336,56 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
             <div style={{ padding: '8px 14px', background: 'var(--bg-subtle, rgba(26, 98, 191, 0.05))', borderRadius: '6px', margin: '0 16px 12px', fontSize: '12px', color: 'var(--text-muted, #555)', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Icon name="info" cls="sm" />
               <span>
-                <strong>Catatan Laporan Bursa:</strong> Di BEI, emiten tidak merilis laporan kuartal IV (Q4) terpisah melainkan langsung dalam bentuk <strong>Laporan Keuangan Tahunan Teraudit (FY)</strong>. Pilih toggle <strong>Tahunan</strong> untuk melihat riwayat jangka panjang sejak 2019.
+                <strong>Tampilan Year on Year (YoY):</strong> Menampilkan perbandingan kinerja jangka panjang ({finTimeframe === 'annual' ? '7 tahun fiskal 2019–2025' : 'kuartalan berurutan'}) lengkap dengan persentase pertumbuhan tahunan (YoY). {finTimeframe === 'annual' ? 'Klik Kuartalan jika ingin melihat rincian triwulan.' : 'Di BEI, kuartal IV dilaporkan sebagai Laporan Tahunan (FY).'}
               </span>
             </div>
             <div className="financial-summary">
-              <div>
-                <div className="fin-stat-label">{finLabels[0]}</div>
-                <div className="fin-stat-number mono">
-                  Rp{fmt(Number(latestFin?.[finKeys[0]]) || 0, 2)}
-                  <span style={{ fontSize: '15px', letterSpacing: 0 }}> T</span>
-                </div>
-                <div
-                  className={`fin-stat-note ${
-                    prevFin &&
-                    Number(prevFin[finKeys[0]]) > 0 &&
-                    Number(latestFin[finKeys[0]]) < Number(prevFin[finKeys[0]])
-                      ? 'negative'
-                      : 'positive'
-                  }`}
-                >
-                  {prevFin && Math.abs(Number(prevFin[finKeys[0]])) > 0.001
-                    ? pct(
-                        ((Number(latestFin[finKeys[0]]) - Number(prevFin[finKeys[0]])) /
-                          Math.abs(Number(prevFin[finKeys[0]]))) *
-                          100,
-                        1
-                      )
-                    : '0.0%'}{' '}
-                  <span className="muted">vs periode sebelumnya ({prevFin?.year})</span>
-                </div>
-              </div>
+              {(() => {
+                const latestYoY0 = getYoYGrowth(finKeys[0], fin.length - 1);
+                const compLabel0 = getCompPeriodLabel(fin.length - 1);
+                const latestYoY1 = getYoYGrowth(finKeys[1], fin.length - 1);
+                const compLabel1 = getCompPeriodLabel(fin.length - 1);
 
-              <div>
-                <div className="fin-stat-label">{finLabels[1]}</div>
-                <div className="fin-stat-number mono">
-                  Rp{fmt(Number(latestFin?.[finKeys[1]]) || 0, 2)}
-                  <span style={{ fontSize: '15px', letterSpacing: 0 }}> T</span>
-                </div>
-                <div
-                  className={`fin-stat-note ${
-                    prevFin &&
-                    Number(prevFin[finKeys[1]]) > 0 &&
-                    Number(latestFin[finKeys[1]]) < Number(prevFin[finKeys[1]])
-                      ? 'negative'
-                      : 'positive'
-                  }`}
-                >
-                  {prevFin && Math.abs(Number(prevFin[finKeys[1]])) > 0.001
-                    ? pct(
-                        ((Number(latestFin[finKeys[1]]) - Number(prevFin[finKeys[1]])) /
-                          Math.abs(Number(prevFin[finKeys[1]]))) *
-                          100,
-                        1
-                      )
-                    : '0.0%'}{' '}
-                  <span className="muted">vs periode sebelumnya ({prevFin?.year})</span>
-                </div>
-              </div>
+                return (
+                  <>
+                    <div>
+                      <div className="fin-stat-label">{finLabels[0]}</div>
+                      <div className="fin-stat-number mono">
+                        Rp{fmt(Number(latestFin?.[finKeys[0]]) || 0, 2)}
+                        <span style={{ fontSize: '15px', letterSpacing: 0 }}> T</span>
+                      </div>
+                      <div
+                        className={`fin-stat-note ${
+                          latestYoY0 !== null && latestYoY0 < 0 ? 'negative' : 'positive'
+                        }`}
+                      >
+                        {latestYoY0 !== null ? `${latestYoY0 > 0 ? '+' : ''}${latestYoY0.toFixed(1)}%` : '0.0%'}{' '}
+                        <span className="muted">
+                          YoY vs {finTimeframe === 'annual' ? 'tahun sebelumnya' : 'kuartal sama tahun lalu'} {compLabel0 ? `(${compLabel0})` : ''}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="fin-stat-label">{finLabels[1]}</div>
+                      <div className="fin-stat-number mono">
+                        Rp{fmt(Number(latestFin?.[finKeys[1]]) || 0, 2)}
+                        <span style={{ fontSize: '15px', letterSpacing: 0 }}> T</span>
+                      </div>
+                      <div
+                        className={`fin-stat-note ${
+                          latestYoY1 !== null && latestYoY1 < 0 ? 'negative' : 'positive'
+                        }`}
+                      >
+                        {latestYoY1 !== null ? `${latestYoY1 > 0 ? '+' : ''}${latestYoY1.toFixed(1)}%` : '0.0%'}{' '}
+                        <span className="muted">
+                          YoY vs {finTimeframe === 'annual' ? 'tahun sebelumnya' : 'kuartal sama tahun lalu'} {compLabel1 ? `(${compLabel1})` : ''}
+                        </span>
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
 
               <svg
                 className="fin-chart"
@@ -1385,22 +1456,50 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
                   </tr>
                 </thead>
                 <tbody>
-                  {FIN_ROWS[finTab].map(([k, label, d, emphasis]) => (
-                    <tr className={emphasis ? 'emphasis' : ''} key={k}>
-                      <td>{label}</td>
-                      {fin.map((x: any) => {
-                        const val = Number(x[k]) || 0;
-                        return (
-                          <td
-                            className={`number ${val < 0 ? 'negative' : ''}`}
-                            key={x.year}
-                          >
-                            {val < 0 ? `(${fmt(-val, d)})` : fmt(val, d)}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
+                  {FIN_ROWS[finTab].map(([k, label, d, emphasis]) => {
+                    const isGrowthCandidate = ['revenue', 'net', 'eps', 'assets', 'equity', 'cfo'].includes(k);
+                    return (
+                      <React.Fragment key={k}>
+                        <tr className={emphasis ? 'emphasis' : ''}>
+                          <td>{label}</td>
+                          {fin.map((x: any) => {
+                            const val = Number(x[k]) || 0;
+                            return (
+                              <td
+                                className={`number ${val < 0 ? 'negative' : ''}`}
+                                key={x.year}
+                              >
+                                {val < 0 ? `(${fmt(-val, d)})` : fmt(val, d)}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                        {showYoY && isGrowthCandidate && (
+                          <tr className="yoy-row" style={{ background: 'rgba(0,0,0,0.018)', fontSize: '12px' }}>
+                            <td style={{ paddingLeft: '22px', color: 'var(--text-muted, #64748b)' }}>
+                              ↳ Pertumbuhan {label.split('(')[0].trim()} YoY
+                            </td>
+                            {fin.map((x: any, idx: number) => {
+                              const yoy = getYoYGrowth(k, idx);
+                              return (
+                                <td
+                                  className={`number ${yoy !== null && yoy < 0 ? 'negative' : yoy !== null && yoy > 0 ? 'positive' : ''}`}
+                                  key={x.year}
+                                  style={{
+                                    fontSize: '11.5px',
+                                    fontWeight: 600,
+                                    color: yoy === null ? 'var(--text-muted, #94a3b8)' : yoy < 0 ? 'var(--red, #d9534f)' : 'var(--green, #2e7d32)'
+                                  }}
+                                >
+                                  {yoy !== null ? `${yoy > 0 ? '+' : ''}${yoy.toFixed(1)}%` : '—'}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
