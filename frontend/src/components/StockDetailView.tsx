@@ -55,6 +55,7 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
   const [chartType, setChartType] = useState<ChartType>('line');
   const [showFib, setShowFib] = useState<boolean>(true);
   const [finTab, setFinTab] = useState<'income' | 'balance' | 'cash'>('income');
+  const [finTimeframe, setFinTimeframe] = useState<'quarterly' | 'annual'>('quarterly');
   const [docFilter, setDocFilter] = useState<string>('all');
   const [sidebarSearch, setSidebarSearch] = useState<string>('');
   const [sidebarTab, setSidebarTab] = useState<'all' | 'watchlist'>('all');
@@ -99,11 +100,20 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
   }, [stock.ticker]);
 
   const isFav = favorites.has(stock.ticker);
-  const hasRealFin =
+  const hasRealQuarterly =
     companyDetail?.financials &&
     Array.isArray(companyDetail.financials) &&
     companyDetail.financials.length >= 2;
-  const fin = hasRealFin ? companyDetail.financials : financialData(stock);
+  const hasRealAnnual =
+    companyDetail?.financialsAnnual &&
+    Array.isArray(companyDetail.financialsAnnual) &&
+    companyDetail.financialsAnnual.length >= 2;
+
+  const hasRealFin = finTimeframe === 'annual' ? hasRealAnnual : hasRealQuarterly;
+  const rawFin = finTimeframe === 'annual'
+    ? (hasRealAnnual ? companyDetail.financialsAnnual : financialData(stock))
+    : (hasRealQuarterly ? companyDetail.financials : financialData(stock));
+  const fin = Array.isArray(rawFin) && rawFin.length > 0 ? rawFin : financialData(stock);
   const latestFin = fin[fin.length - 1];
   const prevFin = fin[Math.max(0, fin.length - 2)];
   const latestPeriodLabel = String(latestFin?.year || 'Terbaru');
@@ -172,8 +182,8 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
   const handleExportCSV = () => {
     const periodRange = `${fin[0]?.year || ''} - ${latestPeriodLabel}`;
     const rows = [
-      [hasRealFin ? 'DATA RESMI INVEZGO API (BEI) - DISIMPAN DI SQLITE DB' : 'DATA SIMULASI'],
-      [stock.ticker, periodRange, 'Rp triliun kecuali EPS/BVPS (Rp), rasio (%)'],
+      [hasRealFin ? 'DATA LAPORAN KEUANGAN RESMI BEI - PINTARSAHAM INTELLIGENCE' : 'DATA ESTIMASI'],
+      [stock.ticker, `${finTimeframe === 'annual' ? 'Tahunan (FY)' : 'Kuartalan (Q)'} · ${periodRange}`, 'Rp triliun kecuali EPS/BVPS (Rp), rasio (%)'],
       ['Pos keuangan', ...fin.map((x: any) => x.year)],
       ...FIN_ROWS[finTab].map(([k, label]) => [
         label,
@@ -190,7 +200,7 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${stock.ticker}_${finTab}_${latestPeriodLabel.replace(/\s+/g, '_')}.csv`;
+    a.download = `${stock.ticker}_${finTimeframe}_${finTab}_${latestPeriodLabel.replace(/\s+/g, '_')}.csv`;
     document.body.append(a);
     a.click();
     a.remove();
@@ -1147,7 +1157,7 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
             <h2>Kinerja keuangan historis ({stock.ticker})</h2>
             <p>
               {hasRealFin
-                ? `Data laporan keuangan kuartalan resmi BEI (${fin[0]?.year} s/d ${latestPeriodLabel}) · Tersimpan di SQLite DB.`
+                ? `Data laporan keuangan ${finTimeframe === 'annual' ? 'tahunan fiskal' : 'kuartalan'} resmi BEI (${fin[0]?.year} s/d ${latestPeriodLabel}) · Tersimpan di SQLite DB.`
                 : 'Pahami pertumbuhan, kondisi neraca, dan kualitas arus kas.'}
             </p>
           </div>
@@ -1159,7 +1169,7 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
         </div>
 
         <div className="card">
-          <div className="financial-header">
+          <div className="financial-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
             <div
               className="tabs"
               role="tablist"
@@ -1196,11 +1206,48 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
                 Cash Flow
               </button>
             </div>
-            <span className="small muted">
-              {hasRealFin
-                ? `Kuartalan (TTM) · ${fin[0]?.year} — ${latestPeriodLabel}`
-                : 'Tahunan · FY 2021—2025'}
-            </span>
+            
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <div style={{ display: 'inline-flex', background: 'var(--bg-subtle, #f1f5f9)', padding: '2px', borderRadius: '6px', border: '1px solid var(--border, #e2e8f0)' }}>
+                <button
+                  type="button"
+                  onClick={() => setFinTimeframe('quarterly')}
+                  style={{
+                    padding: '3px 9px',
+                    fontSize: '11px',
+                    fontWeight: finTimeframe === 'quarterly' ? 700 : 500,
+                    borderRadius: '4px',
+                    border: 'none',
+                    background: finTimeframe === 'quarterly' ? 'var(--blue)' : 'transparent',
+                    color: finTimeframe === 'quarterly' ? '#fff' : 'inherit',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Kuartalan ({companyDetail?.financials?.length || 8}Q)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFinTimeframe('annual')}
+                  style={{
+                    padding: '3px 9px',
+                    fontSize: '11px',
+                    fontWeight: finTimeframe === 'annual' ? 700 : 500,
+                    borderRadius: '4px',
+                    border: 'none',
+                    background: finTimeframe === 'annual' ? 'var(--blue)' : 'transparent',
+                    color: finTimeframe === 'annual' ? '#fff' : 'inherit',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Tahunan ({companyDetail?.financialsAnnual?.length || 7} FY)
+                </button>
+              </div>
+              <span className="small muted">
+                {finTimeframe === 'annual'
+                  ? `Tahunan · ${fin[0]?.year} — ${latestPeriodLabel}`
+                  : `Kuartalan · ${fin[0]?.year} — ${latestPeriodLabel}`}
+              </span>
+            </div>
           </div>
 
           <div
@@ -1265,12 +1312,14 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
 
               <svg
                 className="fin-chart"
-                viewBox="0 0 340 108"
+                viewBox={`0 0 ${Math.max(340, 24 + fin.length * 44)} 108`}
                 role="img"
-                aria-label="Grafik tren lima periode"
+                aria-label="Grafik tren periode"
               >
                 {fin.map((d: any, i: number) => {
-                  const x = 18 + i * 65;
+                  const chartW = Math.max(340, 24 + fin.length * 44);
+                  const step = (chartW - 28) / Math.max(1, fin.length);
+                  const x = 14 + i * step;
                   return (
                     <g key={i}>
                       {finKeys.map((k, j) => {
@@ -1279,9 +1328,9 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
                         return (
                           <rect
                             key={j}
-                            x={x + j * 17}
+                            x={x + j * 13}
                             y={78 - hVal}
-                            width="12"
+                            width="10"
                             height={hVal}
                             rx="2"
                             fill={rawVal < 0 ? '#d9534f' : j ? '#b8cde8' : '#1a62bf'}
@@ -1289,11 +1338,11 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
                         );
                       })}
                       <text
-                        x={x + 14}
+                        x={x + 11}
                         y="96"
                         textAnchor="middle"
                         fill="#7b8998"
-                        fontSize="9.5"
+                        fontSize="8.5"
                       >
                         {d.year}
                       </text>
@@ -1353,8 +1402,8 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
             <div className="table-note">
               <span>
                 {hasRealFin
-                  ? `Data laporan keuangan kuartalan resmi BEI (${fin[0]?.year}–${latestPeriodLabel}).`
-                  : 'Memuat laporan keuangan kuartalan...'}
+                  ? `Data laporan keuangan ${finTimeframe === 'annual' ? 'tahunan fiskal (hingga 8 tahun)' : 'kuartalan (hingga 8 kuartal)'} resmi BEI (${fin[0]?.year}–${latestPeriodLabel}) tersimpan di SQLite DB.`
+                  : 'Memuat laporan keuangan...'}
               </span>
               <button
                 className="link-btn"

@@ -587,9 +587,10 @@ def _parse_keystat_to_financials(ks_payload: dict) -> list[dict]:
                 return arr[idx]
         return 0.0
 
-    # Kolom dari Invezgo urut dari terbaru (index 0 = Q2 2026) ke terlama.
-    # Kita ambil maksimal 5 periode terbaru, lalu balik urutannya (terlama -> terbaru) agar grafik & tabel rapi.
-    max_periods = min(5, len(cols))
+    # Kolom dari Invezgo urut dari terbaru ke terlama.
+    # Kita ambil maksimal seluruh periode yang tersedia (maksimal 8 periode untuk kuartal maupun tahunan),
+    # lalu balik urutannya (terlama -> terbaru) agar grafik & tabel rapi.
+    max_periods = min(8, len(cols))
     selected_indices = list(range(max_periods - 1, -1, -1))
 
     result = []
@@ -785,6 +786,7 @@ def fetch_company_complete_invezgo(ticker: str, force: bool = False) -> dict:
         if (
             cached.get("profile")
             and cached.get("financials")
+            and cached.get("financials_annual") is not None
             and fund_age < TTL_QUARTERLY_FUNDAMENTALS
         ):
             need_fundamentals = False
@@ -796,6 +798,7 @@ def fetch_company_complete_invezgo(ticker: str, force: bool = False) -> dict:
             "ticker": clean,
             "profile": cached.get("profile"),
             "financials": cached.get("financials") or [],
+            "financialsAnnual": cached.get("financials_annual") or [],
             "shareholders": cached.get("shareholders") or [],
             "disclosures": cached.get("disclosures") or [],
             "fundamentalsUpdatedAt": cached.get("fundamentals_updated_at"),
@@ -806,6 +809,7 @@ def fetch_company_complete_invezgo(ticker: str, force: bool = False) -> dict:
 
     profile = cached.get("profile") if cached else None
     financials = cached.get("financials") if cached else None
+    financials_annual = cached.get("financials_annual") if cached else None
     shareholders = cached.get("shareholders") if cached else None
     disclosures = cached.get("disclosures") if cached else None
     requests_used = 0
@@ -836,12 +840,19 @@ def fetch_company_complete_invezgo(ticker: str, force: bool = False) -> dict:
                 "subsidiaries": info_resp.get("subsidiary") or [],
             }
 
-        # 2. Laporan Keuangan Kuartalan 5 Periode (/analysis/keystat/{code}?type=Q)
-        ks_resp = _request(f"/analysis/keystat/{clean}", params={"type": "Q"}, timeout=15)
+        # 2a. Laporan Keuangan Kuartalan Maksimal 8 Periode (/analysis/keystat/{code}?type=Q&limit=8)
+        ks_resp = _request(f"/analysis/keystat/{clean}", params={"type": "Q", "limit": 8}, timeout=15)
         requests_used += 1
         parsed_fin = _parse_keystat_to_financials(ks_resp)
         if parsed_fin:
             financials = parsed_fin
+
+        # 2b. Laporan Keuangan Tahunan Maksimal 8 Periode (/analysis/keystat/{code}?type=FY&limit=8)
+        ks_fy_resp = _request(f"/analysis/keystat/{clean}", params={"type": "FY", "limit": 8}, timeout=15)
+        requests_used += 1
+        parsed_fin_fy = _parse_keystat_to_financials(ks_fy_resp)
+        if parsed_fin_fy:
+            financials_annual = parsed_fin_fy
 
         # 3. Komposisi Pemegang Saham KSEI (/analysis/shareholder-detail?code={code})
         sh_resp = _request("/analysis/shareholder-detail", params={"code": clean}, timeout=12)
@@ -864,6 +875,7 @@ def fetch_company_complete_invezgo(ticker: str, force: bool = False) -> dict:
         clean,
         profile=profile,
         financials=financials,
+        financials_annual=financials_annual,
         shareholders=shareholders,
         disclosures=disclosures,
     )
@@ -873,6 +885,7 @@ def fetch_company_complete_invezgo(ticker: str, force: bool = False) -> dict:
         "ticker": clean,
         "profile": updated.get("profile") or profile,
         "financials": updated.get("financials") or financials or [],
+        "financialsAnnual": updated.get("financials_annual") or financials_annual or [],
         "shareholders": updated.get("shareholders") or shareholders or [],
         "disclosures": updated.get("disclosures") or disclosures or [],
         "fundamentalsUpdatedAt": updated.get("fundamentals_updated_at") or now,

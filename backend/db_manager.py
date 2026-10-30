@@ -43,12 +43,20 @@ def init_db():
                     ticker TEXT PRIMARY KEY,
                     profile_json TEXT,
                     financials_json TEXT,
+                    financials_annual_json TEXT,
+                    statements_json TEXT,
                     shareholders_json TEXT,
                     disclosures_json TEXT,
                     fundamentals_updated_at REAL DEFAULT 0,
                     disclosures_updated_at REAL DEFAULT 0
                 )
             """)
+            # Migrasi kolom tambahan jika tabel lama belum memilikinya
+            for col in ["financials_annual_json", "statements_json"]:
+                try:
+                    cur.execute(f"ALTER TABLE company_details ADD COLUMN {col} TEXT")
+                except Exception:
+                    pass
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS market_quotes (
                     ticker TEXT PRIMARY KEY,
@@ -84,7 +92,7 @@ init_db()
 
 
 def get_company_detail_db(ticker: str) -> dict | None:
-    """Ambil data lengkap perusahaan (profil, laporan keuangan kuartalan, pemegang saham, keterbukaan informasi) dari SQLite."""
+    """Ambil data lengkap perusahaan (profil, laporan keuangan kuartalan & tahunan, pemegang saham, keterbukaan informasi) dari SQLite."""
     clean = ticker.upper().strip()
     conn = _get_conn()
     try:
@@ -93,14 +101,17 @@ def get_company_detail_db(ticker: str) -> dict | None:
         row = cur.fetchone()
         if not row:
             return None
+        row_dict = dict(row)
         return {
             "ticker": clean,
-            "profile": json.loads(row["profile_json"]) if row["profile_json"] else None,
-            "financials": json.loads(row["financials_json"]) if row["financials_json"] else None,
-            "shareholders": json.loads(row["shareholders_json"]) if row["shareholders_json"] else None,
-            "disclosures": json.loads(row["disclosures_json"]) if row["disclosures_json"] else None,
-            "fundamentals_updated_at": float(row["fundamentals_updated_at"] or 0),
-            "disclosures_updated_at": float(row["disclosures_updated_at"] or 0),
+            "profile": json.loads(row_dict["profile_json"]) if row_dict.get("profile_json") else None,
+            "financials": json.loads(row_dict["financials_json"]) if row_dict.get("financials_json") else None,
+            "financials_annual": json.loads(row_dict["financials_annual_json"]) if row_dict.get("financials_annual_json") else None,
+            "statements": json.loads(row_dict["statements_json"]) if row_dict.get("statements_json") else None,
+            "shareholders": json.loads(row_dict["shareholders_json"]) if row_dict.get("shareholders_json") else None,
+            "disclosures": json.loads(row_dict["disclosures_json"]) if row_dict.get("disclosures_json") else None,
+            "fundamentals_updated_at": float(row_dict.get("fundamentals_updated_at") or 0),
+            "disclosures_updated_at": float(row_dict.get("disclosures_updated_at") or 0),
         }
     except Exception as e:
         print(f"[db_manager] Error reading company_details {clean}: {e}")
@@ -115,20 +126,24 @@ def save_company_detail_db(
     financials: list = None,
     shareholders: list = None,
     disclosures: list = None,
+    financials_annual: list = None,
+    statements: dict = None,
 ):
-    """Simpan atau perbarui data fundamental kuartalan, profil, pemegang saham, dan keterbukaan informasi ke SQLite."""
+    """Simpan atau perbarui data fundamental kuartalan & tahunan (hingga 8 periode), profil, pemegang saham, dan keterbukaan informasi ke SQLite."""
     clean = ticker.upper().strip()
     now = time.time()
     existing = get_company_detail_db(clean) or {}
 
     new_profile = profile if profile is not None else existing.get("profile")
     new_financials = financials if financials is not None else existing.get("financials")
+    new_financials_annual = financials_annual if financials_annual is not None else existing.get("financials_annual")
+    new_statements = statements if statements is not None else existing.get("statements")
     new_shareholders = shareholders if shareholders is not None else existing.get("shareholders")
     new_disclosures = disclosures if disclosures is not None else existing.get("disclosures")
 
     fund_ts = (
         now
-        if ((profile and len(profile) > 0) or (financials and len(financials) > 0))
+        if ((profile and len(profile) > 0) or (financials and len(financials) > 0) or (financials_annual and len(financials_annual) > 0))
         else existing.get("fundamentals_updated_at", 0)
     )
     disc_ts = now if disclosures is not None else existing.get("disclosures_updated_at", 0)
@@ -140,12 +155,14 @@ def save_company_detail_db(
             cur.execute(
                 """
                 INSERT INTO company_details (
-                    ticker, profile_json, financials_json, shareholders_json, disclosures_json,
-                    fundamentals_updated_at, disclosures_updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    ticker, profile_json, financials_json, financials_annual_json, statements_json,
+                    shareholders_json, disclosures_json, fundamentals_updated_at, disclosures_updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(ticker) DO UPDATE SET
                     profile_json = excluded.profile_json,
                     financials_json = excluded.financials_json,
+                    financials_annual_json = excluded.financials_annual_json,
+                    statements_json = excluded.statements_json,
                     shareholders_json = excluded.shareholders_json,
                     disclosures_json = excluded.disclosures_json,
                     fundamentals_updated_at = excluded.fundamentals_updated_at,
@@ -155,6 +172,8 @@ def save_company_detail_db(
                     clean,
                     json.dumps(new_profile, ensure_ascii=False) if new_profile is not None else None,
                     json.dumps(new_financials, ensure_ascii=False) if new_financials is not None else None,
+                    json.dumps(new_financials_annual, ensure_ascii=False) if new_financials_annual is not None else None,
+                    json.dumps(new_statements, ensure_ascii=False) if new_statements is not None else None,
                     json.dumps(new_shareholders, ensure_ascii=False) if new_shareholders is not None else None,
                     json.dumps(new_disclosures, ensure_ascii=False) if new_disclosures is not None else None,
                     fund_ts,

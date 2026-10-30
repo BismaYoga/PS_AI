@@ -44,7 +44,7 @@ KEMAMPUAN ANALISIS & TOOLS YANG TERSEDIA:
 3. Penggerak Pasar & Aliran Dana: `get_market_top_flow` (Top Foreign Flow, Top Bandarmology Accumulation, Top Retail Flow, Top Gainers & Losers).
 4. Kedalaman Pasar & Order Book: `get_order_book` (Bid & Offer depth, antrean lot, support/resistance mikro order book).
 5. Indeks Acuan Pasar: `get_market_ihsg` (Pergerakan IHSG, turnover total bursa, gainers/losers bursa).
-6. Laporan Keuangan Kuartalan: `get_company_financials` (Tren Revenue, Net Profit, Marjin, CFO 5 kuartal).
+6. Laporan Keuangan Kuartalan & Tahunan: `get_company_financials` (Tren Revenue, Net Profit, Marjin, CFO, Rasio hingga 8 kuartal dan 7-8 tahun fiskal).
 7. Rasio Statistik Keuangan Mendalam: `get_key_statistics` (Solvabilitas, Profitabilitas, Valuasi lengkap dari bursa).
 8. Struktur Kepemilikan Saham: `get_shareholders_and_insiders` (Pemegang saham >5% KSEI).
 9. Transaksi Orang Dalam (Insider Trading): `get_insider_transactions` (Pembelian/penjualan saham oleh direksi, komisaris, atau pengendali resmi BEI).
@@ -141,7 +141,7 @@ TOOL_DEFINITIONS = [
     },
     {
         "name": "get_company_financials",
-        "description": "Mengambil data laporan keuangan kuartalan resmi emiten (5 kuartal terakhir): Pendapatan (Revenue), Laba Bersih (Net Profit), Net Profit Margin, EPS, BVPS, ROE, Total Aset, Total Ekuitas, dan Arus Kas Operasi (CFO).",
+        "description": "Mengambil data laporan keuangan resmi emiten dengan rentang maksimal hingga 8 kuartal dan 7-8 tahun fiskal terakhir (tersimpan di database): Pendapatan (Revenue), Laba Bersih (Net Profit), Net Profit Margin, EPS, BVPS, ROE, Total Aset, Total Ekuitas, dan Arus Kas Operasi (CFO).",
         "parameters": {
             "type": "OBJECT",
             "properties": {
@@ -358,38 +358,40 @@ def tool_get_market_ihsg() -> dict:
 
 def tool_get_company_financials(ticker: str) -> dict:
     code = ticker.upper().strip()
+    from invezgo_client import fetch_company_complete_invezgo
+
     cd = get_company_detail_db(code)
-    if not cd or not cd.get("financials"):
-        # Jika belum di cache, coba panggil Invezgo keystat
+    # Jika belum di cache atau belum ada data tahunan (financials_annual), fetch dan simpan ke SQLite DB
+    if not cd or not cd.get("financials") or not cd.get("financials_annual"):
         try:
-            r = requests.get(
-                f"{INVEZGO_BASE_URL}/analysis/keystat/{code}?type=Q",
-                headers=get_auth_headers(),
-                timeout=6
-            )
-            if r.status_code == 200:
-                rows = r.json().get("rows", [])
-                return {
-                    "status": "success",
-                    "ticker": code,
-                    "source": "Invezgo Keystat Live",
-                    "raw_metrics_count": len(rows),
-                    "note": f"Ditemukan {len(rows)} baris metrik keuangan kuartalan untuk {code}."
-                }
-        except Exception:
-            pass
+            fetch_company_complete_invezgo(code)
+            cd = get_company_detail_db(code)
+        except Exception as e:
+            print(f"[tool_get_company_financials error] {e}")
+
+    if not cd or (not cd.get("financials") and not cd.get("financials_annual")):
         return {
             "status": "not_found",
-            "message": f"Laporan keuangan untuk emiten {code} belum diunduh ke cache lokal."
+            "message": f"Laporan keuangan untuk emiten {code} belum berhasil dimuat dari database pasar modal."
         }
 
-    fins = cd.get("financials") or []
+    fins_q = cd.get("financials") or []
+    fins_fy = cd.get("financials_annual") or []
+
     return {
         "status": "success",
         "ticker": code,
         "name": (cd.get("profile") or {}).get("name") or code,
-        "quarters_available": len(fins),
-        "financial_data": fins
+        "quarters_available": len(fins_q),
+        "quarterly_financials": fins_q,
+        "years_available": len(fins_fy),
+        "annual_financials": fins_fy,
+        "coverage": {
+            "quarterly_range": f"{fins_q[0]['year']} s/d {fins_q[-1]['year']}" if fins_q else "—",
+            "annual_range": f"{fins_fy[0]['year']} s/d {fins_fy[-1]['year']}" if fins_fy else "—"
+        },
+        "financial_data": fins_q,  # backward compatibility
+        "note": "Data laporan keuangan lengkap mencakup rentang maksimal hingga 8 kuartal dan 7-8 tahun fiskal historis yang tersimpan permanen di database."
     }
 
 
@@ -1181,29 +1183,37 @@ def tool_get_key_statistics(ticker: str) -> dict:
         return {"status": "error", "message": "Kode saham wajib diisi."}
 
     try:
-        url = f"{INVEZGO_BASE_URL}/analysis/keystat/{code}?type=Q&limit=2"
-        r = requests.get(url, headers=get_auth_headers(), timeout=7)
+        url = f"{INVEZGO_BASE_URL}/analysis/keystat/{code}?type=Q&limit=8"
+        r = requests.get(url, headers=get_auth_headers(), timeout=10)
         if r.status_code == 200:
             js = r.json()
             rows = js.get("rows") or []
-            metrics = {}
-            period_col = "Kuartal Terbaru"
+            cols = js.get("columns") or js.get("column") or []
+            period_labels = [c.get("label") or c.get("col") for c in cols if isinstance(c, dict)]
+
+            latest_metrics = {}
+            history_by_metric = {}
             for row in rows:
                 name = row.get("name")
                 vals = row.get("values") or []
-                if vals:
-                    latest = vals[0]
-                    period_col = latest.get("col", period_col)
-                    amt = latest.get("amount")
-                    if amt is not None:
-                        metrics[name] = amt
+                if name and vals:
+                    first_val = vals[0]
+                    if isinstance(first_val, dict) and first_val.get("amount") is not None:
+                        latest_metrics[name] = first_val.get("amount")
+                    history_by_metric[name] = [
+                        {"period": v.get("col") or v.get("label"), "value": v.get("amount")}
+                        for v in vals if isinstance(v, dict) and v.get("amount") is not None
+                    ]
 
             return {
                 "status": "success",
                 "ticker": code,
-                "period": period_col,
-                "total_metrics_available": len(metrics),
-                "key_statistics": metrics
+                "periods_available": period_labels,
+                "total_periods": len(period_labels),
+                "total_metrics_available": len(latest_metrics),
+                "key_statistics": latest_metrics,
+                "statistics_history_8_periods": history_by_metric,
+                "note": "Statistik rasio keuangan mencakup rentang maksimal hingga 8 periode historis."
             }
     except Exception as e:
         print(f"[tool_get_key_statistics Error] {e}")

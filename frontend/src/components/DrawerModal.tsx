@@ -260,12 +260,12 @@ export const DrawerModal: React.FC<DrawerModalProps> = ({
         const cd = payload.companyDetail;
         if (!s) return null;
         const finList = Array.isArray(cd?.financials) ? cd.financials : [];
+        const finAnnualList = Array.isArray(cd?.financialsAnnual) ? cd.financialsAnnual : [];
         const shList = Array.isArray(cd?.shareholders) ? cd.shareholders : [];
         const prof = cd?.profile;
-        const periodSpan =
-          finList.length >= 2
-            ? `${finList[0].year} – ${finList[finList.length - 1].year} (Resmi BEI)`
-            : 'Kuartalan Resmi BEI (Invezgo)';
+        const periodSpanQ = finList.length >= 2 ? `${finList[0].year}–${finList[finList.length - 1].year} (${finList.length} Kuartal)` : '';
+        const periodSpanFY = finAnnualList.length >= 2 ? `${finAnnualList[0].year}–${finAnnualList[finAnnualList.length - 1].year} (${finAnnualList.length} Tahun)` : '';
+        const periodSpan = [periodSpanQ, periodSpanFY].filter(Boolean).join(' & ') || 'Laporan Keuangan Kuartalan & Tahunan BEI';
 
         return (
           <>
@@ -284,12 +284,12 @@ export const DrawerModal: React.FC<DrawerModalProps> = ({
               <h2>{s.ticker}: sumber data &amp; penyimpanan DB</h2>
               <div className="notice">
                 Seluruh data fundamental, kepemilikan saham KSEI, dan keterbukaan
-                informasi ditarik dari <strong>Invezgo API (BEI Official)</strong>{' '}
-                dan disimpan di database lokal <code>data/pintarsaham.db</code>.
+                informasi ditarik dari <strong>Sistem Pasar Modal Resmi BEI</strong>{' '}
+                dan disimpan permanen di database lokal <code>data/pintarsaham.db</code>.
               </div>
               <div className="detail-pair">
                 <span>Harga Pasar</span>
-                <b>{rp(s.price)} · Invezgo (BEI)</b>
+                <b>{rp(s.price)} · Pasar Modal BEI Realtime</b>
               </div>
               <div className="detail-pair">
                 <span>Laporan Keuangan Historis</span>
@@ -300,7 +300,7 @@ export const DrawerModal: React.FC<DrawerModalProps> = ({
                 <b>
                   {shList.length > 0
                     ? `Data Resmi KSEI (${shList.length} pihak tercatat)`
-                    : 'Data Resmi KSEI · Invezgo'}
+                    : 'Data Resmi KSEI'}
                 </b>
               </div>
               <div className="detail-pair">
