@@ -393,23 +393,53 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
       ? (stock.price * stock.shares) / 1000
       : null;
 
-  // Filter sidebar emiten (Stockbit style)
+  const TRENDING_TICKERS = React.useMemo(() => [
+    'BBCA', 'BBRI', 'BMRI', 'BBNI', 'TLKM',
+    'ASII', 'AMMN', 'ADRO', 'ICBP', 'GOTO'
+  ], []);
+
+  // Filter sidebar emiten: Cukup 10 trending dulu secara default, muat seluruh 900+ emiten saat user mengetik di search bar
   const filteredSidebarStocks = React.useMemo(() => {
-    let list = stocks;
+    // 1. Tab Watchlist
     if (sidebarTab === 'watchlist') {
-      list = list.filter((s) => favorites.has(s.ticker));
+      let list = stocks.filter((s) => favorites.has(s.ticker));
+      if (sidebarSearch.trim()) {
+        const q = sidebarSearch.toLowerCase().trim();
+        list = list.filter(
+          (s) =>
+            s.ticker.toLowerCase().includes(q) ||
+            s.name.toLowerCase().includes(q) ||
+            s.short.toLowerCase().includes(q)
+        );
+      }
+      return list;
     }
+
+    // 2. Tab Semua: Jika user mengetik di kotak search, cari dari seluruh 900+ emiten
     if (sidebarSearch.trim()) {
       const q = sidebarSearch.toLowerCase().trim();
-      list = list.filter(
-        (s) =>
-          s.ticker.toLowerCase().includes(q) ||
-          s.name.toLowerCase().includes(q) ||
-          s.short.toLowerCase().includes(q)
-      );
+      return stocks
+        .filter(
+          (s) =>
+            s.ticker.toLowerCase().includes(q) ||
+            s.name.toLowerCase().includes(q) ||
+            s.short.toLowerCase().includes(q)
+        )
+        .slice(0, 30); // Batasi hasil instan agar DOM tetap ringan
     }
-    return list;
-  }, [stocks, sidebarTab, favorites, sidebarSearch]);
+
+    // 3. Default saat masuk: Cukup 10 emiten trending terpopuler BEI
+    const trendingStocks = TRENDING_TICKERS
+      .map((t) => stocks.find((s) => s.ticker === t))
+      .filter((s): s is StockItem => Boolean(s));
+
+    // Pastikan emiten yang sedang aktif dilihat tetap muncul di list jika di luar 10 trending
+    if (stock && !trendingStocks.some((s) => s.ticker === stock.ticker)) {
+      return [stock, ...trendingStocks];
+    }
+
+    return trendingStocks;
+  }, [stocks, sidebarTab, favorites, sidebarSearch, TRENDING_TICKERS, stock]);
 
   return (
     <>
@@ -464,13 +494,15 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
             </div>
           </div>
 
-          {/* 2. Tabs Switcher: Semua Emiten vs Watchlist */}
+          {/* 2. Tabs Switcher: Trending/Hasil Cari vs Watchlist */}
           <div className="stockbit-tabs">
             <button
               className={`stockbit-tab-btn ${sidebarTab === 'all' ? 'active' : ''}`}
               onClick={() => setSidebarTab('all')}
             >
-              Semua ({stocks.length})
+              {sidebarSearch.trim()
+                ? `Hasil Cari (${filteredSidebarStocks.length})`
+                : `Trending (${Math.min(10, filteredSidebarStocks.length)})`}
             </button>
             <button
               className={`stockbit-tab-btn ${sidebarTab === 'watchlist' ? 'active' : ''}`}
@@ -478,6 +510,33 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
             >
               Watchlist ({favorites.size})
             </button>
+          </div>
+
+          {/* Sub-header info status */}
+          <div
+            style={{
+              padding: '6px 14px',
+              fontSize: '10px',
+              color: 'var(--muted)',
+              background: 'var(--soft)',
+              borderBottom: '1px solid var(--line-light, rgba(226, 232, 240, 0.6))',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
+            <span>
+              {sidebarTab === 'watchlist'
+                ? `${filteredSidebarStocks.length} Saham di Watchlist`
+                : sidebarSearch.trim()
+                ? `Menampilkan ${filteredSidebarStocks.length} emiten`
+                : '10 Saham Paling Banyak Dicari'}
+            </span>
+            {!sidebarSearch && sidebarTab === 'all' && (
+              <span style={{ fontSize: '9px', color: 'var(--blue)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                <Icon name="search" cls="sm" style={{ width: '10px', height: '10px' }} /> Cari 900+ emiten
+              </span>
+            )}
           </div>
 
           {/* 3. Scrollable List of Emitens */}
