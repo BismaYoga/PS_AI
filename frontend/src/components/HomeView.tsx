@@ -86,15 +86,6 @@ export const HomeView: React.FC<HomeViewProps> = ({
         </div>
         <div className="date-block">
           {curDate}
-          {isLive ? (
-            <span className="pill green" style={{ marginTop: '6px' }}>
-              <i className="dot"></i> Live IDX Composite
-            </span>
-          ) : (
-            <span className="demo-session">
-              <i className="dot"></i> Sesi contoh
-            </span>
-          )}
         </div>
       </div>
 
@@ -107,7 +98,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
               {onRefreshInstrument && (
                 <button
                   onClick={async () => {
-                    onNotify('Memperbarui data IHSG real-time...');
+                    onNotify('Memperbarui data IHSG...');
                     const ok = await onRefreshInstrument('IHSG');
                     onNotify(
                       ok
@@ -119,7 +110,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                   style={{ padding: '3px 10px', fontSize: '11px', marginLeft: '8px', gap: '4px' }}
                   title="Perbarui data IHSG"
                 >
-                  <Icon name="refresh" cls="sm" /> Refresh Data Live
+                  <Icon name="refresh" cls="sm" /> Refresh Data
                 </button>
               )}
             </div>
@@ -134,9 +125,6 @@ export const HomeView: React.FC<HomeViewProps> = ({
               >
                 {pct(curChange, 2)} ({fmt(chgAbs, 2)})
               </div>
-              <span className="quote-caption">
-                {isLive ? 'Data pasar real-time' : 'Sesi contoh 22 Sep 2026'}
-              </span>
             </div>
           </div>
 

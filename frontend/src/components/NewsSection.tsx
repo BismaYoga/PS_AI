@@ -93,15 +93,11 @@ export const NewsSection: React.FC<NewsSectionProps> = ({
         <div>
           <div className="flex gap-8 align-center">
             <h2>Kabar Terkini Pasar &amp; Emiten</h2>
-            {loading ? (
+            {loading && (
               <span className="pill blue" id="news-loading-badge">
                 <i className="dot"></i> Memuat Berita...
               </span>
-            ) : triggered ? (
-              <span className="pill green" id="news-live-badge">
-                <i className="dot"></i> Berita Terkini
-              </span>
-            ) : null}
+            )}
           </div>
           <p id="news-subtitle">
             Menampilkan ringkasan berita utama, keterbukaan informasi, dan sentimen pasar terkini untuk {name}.

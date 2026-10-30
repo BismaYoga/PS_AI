@@ -971,12 +971,7 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
           <div className="chart-top">
             <div>
               <div className="instrument">
-                Pergerakan harga {stock.ticker} <span className="pill outline">IDR</span>{' '}
-                {stock.isLive && (
-                  <span className="pill green" style={{ fontSize: '9px' }}>
-                    LIVE DATA
-                  </span>
-                )}
+                Pergerakan harga {stock.ticker} <span className="pill outline">IDR</span>
                 <button
                   onClick={async () => {
                     onNotify(`Memperbarui data ${stock.ticker}...`);
@@ -1157,13 +1152,6 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
             </p>
           </div>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            {companyDetail && (
-              <span className="pill green" style={{ fontSize: '10px' }}>
-                {companyDetail.cachedDb
-                  ? 'Database Lokal (0 Request API)'
-                  : `Baru Disinkronkan (${companyDetail.apiRequestsUsed || 0} Req)`}
-              </span>
-            )}
             <button className="btn small-btn" onClick={handleExportCSV}>
               <Icon name="download" cls="sm" /> Unduh CSV
             </button>

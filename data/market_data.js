@@ -182357,6 +182357,66 @@ window.EMITEN_LIST = [
 ];
 window.CORPORATE_EVENTS = [
   {
+    "id": "earn_ASII_20261030",
+    "ticker": "ASII",
+    "date": "2026-10-30",
+    "type": "Laporan Keuangan",
+    "title": "Rilis Laporan Keuangan ASII",
+    "sub": "Jadwal rilis kinerja kuartalan \u00b7 Est. EPS: Rp178.5",
+    "amount": "Est. EPS Rp178.5",
+    "note": "Perkiraan tanggal rilis laporan keuangan resmi kuartalan untuk PT Astra International Tbk (ASII) berdasarkan kalender resmi Invezgo & IDX Official Feed (BEI)."
+  },
+  {
+    "id": "earn_EMTK_20261030",
+    "ticker": "EMTK",
+    "date": "2026-10-30",
+    "type": "Laporan Keuangan",
+    "title": "Rilis Laporan Keuangan EMTK",
+    "sub": "Jadwal rilis kinerja kuartalan",
+    "amount": "Sesuai publikasi",
+    "note": "Perkiraan tanggal rilis laporan keuangan resmi kuartalan untuk PT Elang Mahkota Teknologi Tbk (EMTK) berdasarkan kalender resmi Invezgo & IDX Official Feed (BEI)."
+  },
+  {
+    "id": "earn_INDF_20261030",
+    "ticker": "INDF",
+    "date": "2026-10-30",
+    "type": "Laporan Keuangan",
+    "title": "Rilis Laporan Keuangan INDF",
+    "sub": "Jadwal rilis kinerja kuartalan",
+    "amount": "Sesuai publikasi",
+    "note": "Perkiraan tanggal rilis laporan keuangan resmi kuartalan untuk PT Indofood Sukses Makmur Tbk (INDF) berdasarkan kalender resmi Invezgo & IDX Official Feed (BEI)."
+  },
+  {
+    "id": "earn_JPFA_20261030",
+    "ticker": "JPFA",
+    "date": "2026-10-30",
+    "type": "Laporan Keuangan",
+    "title": "Rilis Laporan Keuangan JPFA",
+    "sub": "Jadwal rilis kinerja kuartalan",
+    "amount": "Sesuai publikasi",
+    "note": "Perkiraan tanggal rilis laporan keuangan resmi kuartalan untuk PT Japfa Comfeed Indonesia Tbk (JPFA) berdasarkan kalender resmi Invezgo & IDX Official Feed (BEI)."
+  },
+  {
+    "id": "earn_INTP_20261103",
+    "ticker": "INTP",
+    "date": "2026-11-03",
+    "type": "Laporan Keuangan",
+    "title": "Rilis Laporan Keuangan INTP",
+    "sub": "Jadwal rilis kinerja kuartalan \u00b7 Est. EPS: Rp197.8",
+    "amount": "Est. EPS Rp197.8",
+    "note": "Perkiraan tanggal rilis laporan keuangan resmi kuartalan untuk PT Indocement Tunggal Prakarsa Tbk (INTP) berdasarkan kalender resmi Invezgo & IDX Official Feed (BEI)."
+  },
+  {
+    "id": "earn_INKP_20261106",
+    "ticker": "INKP",
+    "date": "2026-11-06",
+    "type": "Laporan Keuangan",
+    "title": "Rilis Laporan Keuangan INKP",
+    "sub": "Jadwal rilis kinerja kuartalan",
+    "amount": "Sesuai publikasi",
+    "note": "Perkiraan tanggal rilis laporan keuangan resmi kuartalan untuk PT Indah Kiat Pulp & Paper Tbk (INKP) berdasarkan kalender resmi Invezgo & IDX Official Feed (BEI)."
+  },
+  {
     "id": "earn_BBRI_20261029",
     "ticker": "BBRI",
     "date": "2026-10-29",
@@ -182435,66 +182495,6 @@ window.CORPORATE_EVENTS = [
     "sub": "Jadwal rilis kinerja kuartalan \u00b7 Est. EPS: Rp2219.4",
     "amount": "Est. EPS Rp2219.4",
     "note": "Perkiraan tanggal rilis laporan keuangan resmi kuartalan untuk PT United Tractors Tbk (UNTR) berdasarkan kalender resmi Invezgo & IDX Official Feed (BEI)."
-  },
-  {
-    "id": "earn_ASII_20261030",
-    "ticker": "ASII",
-    "date": "2026-10-30",
-    "type": "Laporan Keuangan",
-    "title": "Rilis Laporan Keuangan ASII",
-    "sub": "Jadwal rilis kinerja kuartalan \u00b7 Est. EPS: Rp178.5",
-    "amount": "Est. EPS Rp178.5",
-    "note": "Perkiraan tanggal rilis laporan keuangan resmi kuartalan untuk PT Astra International Tbk (ASII) berdasarkan kalender resmi Invezgo & IDX Official Feed (BEI)."
-  },
-  {
-    "id": "earn_EMTK_20261030",
-    "ticker": "EMTK",
-    "date": "2026-10-30",
-    "type": "Laporan Keuangan",
-    "title": "Rilis Laporan Keuangan EMTK",
-    "sub": "Jadwal rilis kinerja kuartalan",
-    "amount": "Sesuai publikasi",
-    "note": "Perkiraan tanggal rilis laporan keuangan resmi kuartalan untuk PT Elang Mahkota Teknologi Tbk (EMTK) berdasarkan kalender resmi Invezgo & IDX Official Feed (BEI)."
-  },
-  {
-    "id": "earn_INDF_20261030",
-    "ticker": "INDF",
-    "date": "2026-10-30",
-    "type": "Laporan Keuangan",
-    "title": "Rilis Laporan Keuangan INDF",
-    "sub": "Jadwal rilis kinerja kuartalan",
-    "amount": "Sesuai publikasi",
-    "note": "Perkiraan tanggal rilis laporan keuangan resmi kuartalan untuk PT Indofood Sukses Makmur Tbk (INDF) berdasarkan kalender resmi Invezgo & IDX Official Feed (BEI)."
-  },
-  {
-    "id": "earn_JPFA_20261030",
-    "ticker": "JPFA",
-    "date": "2026-10-30",
-    "type": "Laporan Keuangan",
-    "title": "Rilis Laporan Keuangan JPFA",
-    "sub": "Jadwal rilis kinerja kuartalan",
-    "amount": "Sesuai publikasi",
-    "note": "Perkiraan tanggal rilis laporan keuangan resmi kuartalan untuk PT Japfa Comfeed Indonesia Tbk (JPFA) berdasarkan kalender resmi Invezgo & IDX Official Feed (BEI)."
-  },
-  {
-    "id": "earn_INTP_20261103",
-    "ticker": "INTP",
-    "date": "2026-11-03",
-    "type": "Laporan Keuangan",
-    "title": "Rilis Laporan Keuangan INTP",
-    "sub": "Jadwal rilis kinerja kuartalan \u00b7 Est. EPS: Rp197.8",
-    "amount": "Est. EPS Rp197.8",
-    "note": "Perkiraan tanggal rilis laporan keuangan resmi kuartalan untuk PT Indocement Tunggal Prakarsa Tbk (INTP) berdasarkan kalender resmi Invezgo & IDX Official Feed (BEI)."
-  },
-  {
-    "id": "earn_INKP_20261106",
-    "ticker": "INKP",
-    "date": "2026-11-06",
-    "type": "Laporan Keuangan",
-    "title": "Rilis Laporan Keuangan INKP",
-    "sub": "Jadwal rilis kinerja kuartalan",
-    "amount": "Sesuai publikasi",
-    "note": "Perkiraan tanggal rilis laporan keuangan resmi kuartalan untuk PT Indah Kiat Pulp & Paper Tbk (INKP) berdasarkan kalender resmi Invezgo & IDX Official Feed (BEI)."
   },
   {
     "id": "earn_ADRO_20261027",
@@ -182577,6 +182577,26 @@ window.CORPORATE_EVENTS = [
     "note": "Perkiraan tanggal rilis laporan keuangan resmi kuartalan untuk PT Bank Mandiri (Persero) Tbk (BMRI) berdasarkan kalender resmi Invezgo & IDX Official Feed (BEI)."
   },
   {
+    "id": "bei_ADCP_20261022_0",
+    "ticker": "ADCP",
+    "date": "2026-10-22",
+    "type": "RUPS",
+    "title": "Penyampaian Bukti Iklan Panggilan RUPS",
+    "sub": "Keterbukaan Informasi Resmi BEI (ADCP)",
+    "amount": "Dokumen Resmi BEI",
+    "note": "Pengumuman resmi Bursa Efek Indonesia untuk ADCP pada 22 Oct 2026: Penyampaian Bukti Iklan Panggilan RUPS."
+  },
+  {
+    "id": "bei_ADCP_20261022_1",
+    "ticker": "ADCP",
+    "date": "2026-10-22",
+    "type": "RUPS",
+    "title": "Pemanggilan Rapat Umum Pemegang Saham Luar Biasa",
+    "sub": "Keterbukaan Informasi Resmi BEI (ADCP)",
+    "amount": "Dokumen Resmi BEI",
+    "note": "Pengumuman resmi Bursa Efek Indonesia untuk ADCP pada 22 Oct 2026: Pemanggilan Rapat Umum Pemegang Saham Luar Biasa."
+  },
+  {
     "id": "earn_BBCA_20261020",
     "ticker": "BBCA",
     "date": "2026-10-20",
@@ -182595,6 +182615,26 @@ window.CORPORATE_EVENTS = [
     "sub": "Keterbukaan Informasi Resmi BEI (UNTR)",
     "amount": "Dokumen Resmi BEI",
     "note": "Pengumuman resmi Bursa Efek Indonesia untuk UNTR pada 16 Oct 2026: Pemanggilan Rapat Umum Pemegang Saham Luar Biasa."
+  },
+  {
+    "id": "bei_ADCP_20261015_2",
+    "ticker": "ADCP",
+    "date": "2026-10-15",
+    "type": "Laporan Keuangan",
+    "title": "Penyampaian Laporan Keuangan Interim Yang Tidak Diaudit",
+    "sub": "Keterbukaan Informasi Resmi BEI (ADCP)",
+    "amount": "Dokumen Resmi BEI",
+    "note": "Pengumuman resmi Bursa Efek Indonesia untuk ADCP pada 15 Oct 2026: Penyampaian Laporan Keuangan Interim Yang Tidak Diaudit."
+  },
+  {
+    "id": "bei_ADCP_20261009_3",
+    "ticker": "ADCP",
+    "date": "2026-10-09",
+    "type": "RUPS",
+    "title": "Penyampaian Bukti Iklan Pemberitahuan RUPS",
+    "sub": "Keterbukaan Informasi Resmi BEI (ADCP)",
+    "amount": "Dokumen Resmi BEI",
+    "note": "Pengumuman resmi Bursa Efek Indonesia untuk ADCP pada 09 Oct 2026: Penyampaian Bukti Iklan Pemberitahuan RUPS."
   },
   {
     "id": "bei_BBRI_20261006_4",

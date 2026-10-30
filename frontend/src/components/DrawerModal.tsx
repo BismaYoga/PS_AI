@@ -382,7 +382,7 @@ export const DrawerModal: React.FC<DrawerModalProps> = ({
           <>
             <div className="drawer-top">
               <span className="drawer-eyebrow">
-                BERITA {n.url ? 'LIVE INVEZGO' : 'PASAR'} · {n.ticker || 'IHSG'}
+                BERITA PASAR · {n.ticker || 'IHSG'}
               </span>
               <button
                 className="icon-btn"

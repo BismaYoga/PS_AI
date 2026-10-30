@@ -536,9 +536,6 @@ export const AIBox: React.FC<AIBoxProps> = ({
           >
             <Icon name="sparkles" cls="sm" /> Ringkasan AI Terpadu · {ticker}
           </span>
-          <span className="pill blue">
-            <i className="dot"></i>Gemini AI Siap
-          </span>
         </div>
 
         <p
