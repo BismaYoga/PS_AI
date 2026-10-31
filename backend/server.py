@@ -18,6 +18,7 @@ from fetch_news import get_news
 from ai_analyst import analyze_market_instrument
 from chatbot_agent import run_chatbot_conversation, analyze_chat_intent_and_estimate
 from invezgo_client import fetch_company_complete_invezgo, fetch_whale_network_invezgo
+from financial_insight_engine import get_or_generate_financial_insight
 from db_manager import (
     save_single_market_quote_db,
     save_market_quotes_bulk_db,
@@ -375,6 +376,38 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 return
             except Exception as e:
                 print(f"[API/company-detail Error] {e}")
+                err_payload = json.dumps({'error': str(e), 'ticker': ticker}).encode('utf-8')
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_header('Content-Length', str(len(err_payload)))
+                self.end_headers()
+                self.wfile.write(err_payload)
+                return
+
+        # 2c-2. API: /api/financial-insight (Smart Financial Summary & Health Insight dengan auto-update on new data)
+        if path == '/api/financial-insight':
+            ticker = 'BBCA'
+            if 'ticker' in query and query['ticker']:
+                ticker = query['ticker'][0].upper().strip()
+            elif 'symbol' in query and query['symbol']:
+                ticker = query['symbol'][0].upper().strip()
+            force = (
+                ('force' in query and query['force'][0].lower() in ('1', 'true', 'yes'))
+                or ('refresh' in query and query['refresh'][0].lower() in ('1', 'true', 'yes'))
+            )
+            try:
+                res = get_or_generate_financial_insight(ticker, force_refresh=force)
+                payload = json.dumps(res, ensure_ascii=False).encode('utf-8')
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_header('Content-Length', str(len(payload)))
+                self.end_headers()
+                self.wfile.write(payload)
+                return
+            except Exception as e:
+                print(f"[API/financial-insight Error] {e}")
                 err_payload = json.dumps({'error': str(e), 'ticker': ticker}).encode('utf-8')
                 self.send_response(500)
                 self.send_header('Content-Type', 'application/json; charset=utf-8')

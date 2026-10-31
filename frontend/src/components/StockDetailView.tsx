@@ -72,6 +72,27 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
   const [companyDetail, setCompanyDetail] = useState<any | null>(null);
   const [loadingDetail, setLoadingDetail] = useState<boolean>(false);
 
+  const [finInsightData, setFinInsightData] = useState<any | null>(null);
+  const [loadingInsight, setLoadingInsight] = useState<boolean>(false);
+  const [showAllInsights, setShowAllInsights] = useState<boolean>(false);
+
+  const fetchFinancialInsight = async (force = false) => {
+    setLoadingInsight(true);
+    try {
+      const res = await fetch(
+        `/api/financial-insight?ticker=${encodeURIComponent(stock.ticker)}${force ? '&force=1' : ''}`
+      );
+      if (res.ok) {
+        const data = await res.json();
+        setFinInsightData(data);
+      }
+    } catch {
+      // fallback
+    } finally {
+      setLoadingInsight(false);
+    }
+  };
+
   const fetchCompanyDetail = async (force = false) => {
     setLoadingDetail(true);
     try {
@@ -82,6 +103,7 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
         const data = await res.json();
         setCompanyDetail(data);
         if (force) {
+          fetchFinancialInsight(true);
           onNotify(`Data fundamental & keterbukaan ${stock.ticker} berhasil diperbarui ke DB!`);
         }
       }
@@ -98,6 +120,7 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
       pb: stock.pb || 2.0,
     });
     fetchCompanyDetail(false);
+    fetchFinancialInsight(false);
   }, [stock.ticker]);
 
   const isFav = favorites.has(stock.ticker);
@@ -1223,6 +1246,203 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
             </button>
           </div>
         </div>
+
+        {/* Smart Financial Summary & Health Insight Card */}
+        {finInsightData?.insight && (
+          <div className="card" style={{ marginBottom: '18px', padding: '18px 22px', border: '1px solid rgba(2, 132, 199, 0.25)', boxShadow: '0 4px 20px rgba(0,0,0,0.04)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-main, #0f172a)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  💡 Rangkuman & Health Insight Keuangan
+                </span>
+                {finInsightData?.health_score && (
+                  <span style={{
+                    background: finInsightData.health_score >= 8 ? 'rgba(16, 185, 129, 0.14)' : finInsightData.health_score >= 6.5 ? 'rgba(2, 132, 199, 0.14)' : 'rgba(245, 158, 11, 0.14)',
+                    color: finInsightData.health_score >= 8 ? '#10b981' : finInsightData.health_score >= 6.5 ? '#0284c7' : '#f59e0b',
+                    border: `1px solid ${finInsightData.health_score >= 8 ? 'rgba(16, 185, 129, 0.35)' : finInsightData.health_score >= 6.5 ? 'rgba(2, 132, 199, 0.35)' : 'rgba(245, 158, 11, 0.35)'}`,
+                    padding: '3px 12px',
+                    borderRadius: '20px',
+                    fontSize: '12.5px',
+                    fontWeight: 700,
+                  }}>
+                    ⭐ Skor Fundamental: {finInsightData.health_score}/10 · {finInsightData.insight.health_status}
+                  </span>
+                )}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '11.5px', color: 'var(--text-muted, #64748b)' }}>
+                  {finInsightData.cached ? '⚡ Tersimpan di SQLite' : '✨ Baru Dianalisis'} ({finInsightData.period_tag?.replace('_', ' · ')})
+                </span>
+                <button
+                  className="btn small-btn"
+                  style={{ padding: '3px 9px', fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                  onClick={() => fetchFinancialInsight(true)}
+                  disabled={loadingInsight}
+                  title="Analisis Ulang Laporan Keuangan"
+                >
+                  {loadingInsight ? 'Menganalisis...' : '↻ Re-analisis'}
+                </button>
+              </div>
+            </div>
+
+            {/* Executive Verdict Banner */}
+            {finInsightData.insight.verdict && (
+              <div style={{
+                background: 'var(--bg-subtle, rgba(2, 132, 199, 0.05))',
+                borderLeft: '4px solid #0284c7',
+                padding: '12px 16px',
+                borderRadius: '4px 8px 8px 4px',
+                marginBottom: '14px',
+                fontSize: '13.5px',
+                lineHeight: '1.6',
+                color: 'var(--text-main, #0f172a)'
+              }}>
+                <div style={{ fontWeight: 700, color: '#0284c7', marginBottom: '3px', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  📌 Executive Verdict
+                </div>
+                <p style={{ margin: 0, fontWeight: 500 }}>{finInsightData.insight.verdict}</p>
+              </div>
+            )}
+
+            {/* Quick Key Metrics Pills */}
+            {finInsightData.insight.key_metrics && (
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '14px' }}>
+                <div style={{ background: 'var(--bg-subtle, #f1f5f9)', padding: '5px 12px', borderRadius: '8px', fontSize: '12px', border: '1px solid var(--border, #e2e8f0)' }}>
+                  DER: <strong style={{ color: '#0284c7' }}>{finInsightData.insight.key_metrics.der}</strong>
+                </div>
+                <div style={{ background: 'var(--bg-subtle, #f1f5f9)', padding: '5px 12px', borderRadius: '8px', fontSize: '12px', border: '1px solid var(--border, #e2e8f0)' }}>
+                  NPM: <strong style={{ color: '#10b981' }}>{finInsightData.insight.key_metrics.npm}</strong>
+                </div>
+                <div style={{ background: 'var(--bg-subtle, #f1f5f9)', padding: '5px 12px', borderRadius: '8px', fontSize: '12px', border: '1px solid var(--border, #e2e8f0)' }}>
+                  ROE: <strong style={{ color: '#0284c7' }}>{finInsightData.insight.key_metrics.roe}</strong>
+                </div>
+                <div style={{ background: 'var(--bg-subtle, #f1f5f9)', padding: '5px 12px', borderRadius: '8px', fontSize: '12px', border: '1px solid var(--border, #e2e8f0)' }}>
+                  CFO / Laba Bersih: <strong style={{ color: '#8b5cf6' }}>{finInsightData.insight.key_metrics.cfo_to_net}</strong>
+                </div>
+                {finInsightData.insight.key_metrics.cagr_rev_3y !== '-' && (
+                  <div style={{ background: 'var(--bg-subtle, #f1f5f9)', padding: '5px 12px', borderRadius: '8px', fontSize: '12px', border: '1px solid var(--border, #e2e8f0)' }}>
+                    CAGR Omzet 3Y: <strong style={{ color: '#0284c7' }}>{finInsightData.insight.key_metrics.cagr_rev_3y}</strong>
+                  </div>
+                )}
+                <div style={{ background: 'var(--bg-subtle, #f1f5f9)', padding: '5px 12px', borderRadius: '8px', fontSize: '12px', border: '1px solid var(--border, #e2e8f0)' }}>
+                  Free Cash Flow: <strong style={{ color: '#10b981' }}>{finInsightData.insight.key_metrics.fcf_t}</strong>
+                </div>
+              </div>
+            )}
+
+            {/* Context-Aware Tab Insight or All Insights Grid */}
+            <div style={{ marginTop: '10px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted, #64748b)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  {showAllInsights ? 'Detail Tiga Pilar Laporan Keuangan' : `Fokus Tab Aktif: ${finTab === 'balance' ? 'Neraca (Balance Sheet)' : finTab === 'cash' ? 'Arus Kas (Cash Flow)' : 'Laba Rugi (Income Statement)'}`}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowAllInsights(!showAllInsights)}
+                  style={{ background: 'none', border: 'none', color: '#0284c7', fontSize: '12px', fontWeight: 600, cursor: 'pointer', textDecoration: 'underline' }}
+                >
+                  {showAllInsights ? '← Tampilkan Sesuai Tab Aktif' : 'Tampilkan Semua Pilar (3 Laporan) →'}
+                </button>
+              </div>
+
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: showAllInsights ? 'repeat(auto-fit, minmax(280px, 1fr))' : '1fr',
+                gap: '12px'
+              }}>
+                {/* 1. Balance Sheet Card */}
+                {(showAllInsights || finTab === 'balance') && finInsightData.insight.balance_sheet && (
+                  <div style={{
+                    background: 'var(--bg-card, #ffffff)',
+                    border: '1px solid var(--border, #e2e8f0)',
+                    borderRadius: '8px',
+                    padding: '14px',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '6px' }}>
+                      <span style={{ fontWeight: 700, fontSize: '13.5px', color: 'var(--text-main, #0f172a)' }}>
+                        🏛️ Neraca & Solvabilitas
+                      </span>
+                      <span style={{ background: 'rgba(2, 132, 199, 0.1)', color: '#0284c7', padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 700 }}>
+                        {finInsightData.insight.balance_sheet.badge}
+                      </span>
+                    </div>
+                    <p style={{ fontSize: '12.5px', color: 'var(--text-sub, #475569)', lineHeight: '1.5', marginBottom: '8px' }}>
+                      {finInsightData.insight.balance_sheet.summary}
+                    </p>
+                    {Array.isArray(finInsightData.insight.balance_sheet.highlights) && (
+                      <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '12px', color: 'var(--text-sub, #64748b)', lineHeight: '1.5' }}>
+                        {finInsightData.insight.balance_sheet.highlights.map((pt: string, idx: number) => (
+                          <li key={idx} style={{ marginBottom: '3px' }}>{pt}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
+
+                {/* 2. Income Statement Card */}
+                {(showAllInsights || finTab === 'income') && finInsightData.insight.income_statement && (
+                  <div style={{
+                    background: 'var(--bg-card, #ffffff)',
+                    border: '1px solid var(--border, #e2e8f0)',
+                    borderRadius: '8px',
+                    padding: '14px',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '6px' }}>
+                      <span style={{ fontWeight: 700, fontSize: '13.5px', color: 'var(--text-main, #0f172a)' }}>
+                        📈 Kinerja Laba Rugi
+                      </span>
+                      <span style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 700 }}>
+                        {finInsightData.insight.income_statement.badge}
+                      </span>
+                    </div>
+                    <p style={{ fontSize: '12.5px', color: 'var(--text-sub, #475569)', lineHeight: '1.5', marginBottom: '8px' }}>
+                      {finInsightData.insight.income_statement.summary}
+                    </p>
+                    {Array.isArray(finInsightData.insight.income_statement.highlights) && (
+                      <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '12px', color: 'var(--text-sub, #64748b)', lineHeight: '1.5' }}>
+                        {finInsightData.insight.income_statement.highlights.map((pt: string, idx: number) => (
+                          <li key={idx} style={{ marginBottom: '3px' }}>{pt}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
+
+                {/* 3. Cash Flow Card */}
+                {(showAllInsights || finTab === 'cash') && finInsightData.insight.cash_flow && (
+                  <div style={{
+                    background: 'var(--bg-card, #ffffff)',
+                    border: '1px solid var(--border, #e2e8f0)',
+                    borderRadius: '8px',
+                    padding: '14px',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '6px' }}>
+                      <span style={{ fontWeight: 700, fontSize: '13.5px', color: 'var(--text-main, #0f172a)' }}>
+                        💵 Realita Arus Kas
+                      </span>
+                      <span style={{ background: 'rgba(139, 92, 246, 0.1)', color: '#8b5cf6', padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 700 }}>
+                        {finInsightData.insight.cash_flow.badge}
+                      </span>
+                    </div>
+                    <p style={{ fontSize: '12.5px', color: 'var(--text-sub, #475569)', lineHeight: '1.5', marginBottom: '8px' }}>
+                      {finInsightData.insight.cash_flow.summary}
+                    </p>
+                    {Array.isArray(finInsightData.insight.cash_flow.highlights) && (
+                      <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '12px', color: 'var(--text-sub, #64748b)', lineHeight: '1.5' }}>
+                        {finInsightData.insight.cash_flow.highlights.map((pt: string, idx: number) => (
+                          <li key={idx} style={{ marginBottom: '3px' }}>{pt}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="card">
           <div className="financial-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>

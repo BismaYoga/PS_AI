@@ -83,6 +83,15 @@ def init_db():
                     updated_at REAL DEFAULT 0
                 )
             """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS financial_insights (
+                    ticker TEXT PRIMARY KEY,
+                    period_tag TEXT,
+                    insight_json TEXT,
+                    health_score REAL DEFAULT 0,
+                    updated_at REAL DEFAULT 0
+                )
+            """)
             conn.commit()
         finally:
             conn.close()
@@ -441,5 +450,63 @@ def save_shareholder_network_db(holder_name: str, holdings: list):
             print(f"[db_manager] Error saving shareholder_networks {clean}: {e}")
         finally:
             conn.close()
+
+
+def get_financial_insight_db(ticker: str) -> dict | None:
+    """Ambil data financial insight dan summary yang tersimpan di SQLite."""
+    clean = ticker.upper().strip()
+    conn = _get_conn()
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM financial_insights WHERE ticker = ?", (clean,))
+        row = cur.fetchone()
+        if not row:
+            return None
+        return {
+            "ticker": clean,
+            "period_tag": row["period_tag"] or "",
+            "insight": json.loads(row["insight_json"]) if row["insight_json"] else {},
+            "health_score": float(row["health_score"] or 0),
+            "updated_at": float(row["updated_at"] or 0),
+        }
+    except Exception as e:
+        print(f"[db_manager] Error reading financial_insights {clean}: {e}")
+        return None
+    finally:
+        conn.close()
+
+
+def save_financial_insight_db(ticker: str, period_tag: str, insight: dict, health_score: float = 0):
+    """Simpan data financial insight dan summary ke SQLite."""
+    clean = ticker.upper().strip()
+    now = time.time()
+    with _db_lock:
+        conn = _get_conn()
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                INSERT INTO financial_insights (ticker, period_tag, insight_json, health_score, updated_at)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(ticker) DO UPDATE SET
+                    period_tag = excluded.period_tag,
+                    insight_json = excluded.insight_json,
+                    health_score = excluded.health_score,
+                    updated_at = excluded.updated_at
+                """,
+                (
+                    clean,
+                    period_tag,
+                    json.dumps(insight, ensure_ascii=False),
+                    health_score,
+                    now,
+                ),
+            )
+            conn.commit()
+        except Exception as e:
+            print(f"[db_manager] Error saving financial_insights {clean}: {e}")
+        finally:
+            conn.close()
+
 
 
