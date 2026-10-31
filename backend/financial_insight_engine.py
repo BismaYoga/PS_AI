@@ -149,7 +149,7 @@ def _build_deterministic_insight(ticker: str, metrics: dict) -> dict:
     # Balance Sheet text
     if der < 0.8:
         bs_status = "Sangat Sehat"
-        bs_badge = f"DER {der}x • Solvabilitas Sangat Aman"
+        bs_badge = f"DER {der}x · Solvabilitas Sangat Aman"
         bs_summary = f"Struktur modal {ticker} sangat kokoh dengan porsi kewajiban yang minim terhadap ekuitas. Risiko gagal bayar utang berada pada tingkat sangat rendah."
         bs_points = [
             f"Rasio utang terhadap ekuitas (DER) tercatat {der}x, berada jauh di bawah batas konservatif 1.0x.",
@@ -158,7 +158,7 @@ def _build_deterministic_insight(ticker: str, metrics: dict) -> dict:
         ]
     elif der < 1.8:
         bs_status = "Terkendali"
-        bs_badge = f"DER {der}x • Utang Wajar"
+        bs_badge = f"DER {der}x · Utang Wajar"
         bs_summary = f"Struktur permodalan {ticker} masih dalam rentang sehat operasional, didukung oleh pengelolaan likuiditas yang disiplin."
         bs_points = [
             f"Rasio DER berada di level {der}x, mencerminkan pemanfaatan leverage modal yang terukur.",
@@ -166,7 +166,7 @@ def _build_deterministic_insight(ticker: str, metrics: dict) -> dict:
         ]
     else:
         bs_status = "Perhatian"
-        bs_badge = f"DER {der}x • Leverage Tinggi"
+        bs_badge = f"DER {der}x · Leverage Tinggi"
         bs_summary = f"Porsi liabilitas {ticker} cukup tinggi terhadap ekuitas. Investor perlu memantau jatuh tempo utang berbunga jangka pendek."
         bs_points = [
             f"Rasio DER {der}x tergolong tinggi, membutuhkan kecukupan laba operasional stabil untuk menutup beban bunga.",
@@ -176,8 +176,8 @@ def _build_deterministic_insight(ticker: str, metrics: dict) -> dict:
     # Income Statement text
     if npm >= 18.0:
         is_status = "Sangat Profitabel"
-        is_badge = f"NPM {npm}% • Pricing Power Kuat"
-        is_summary = f"{ticker} memiliki efisiensi operasional luar biasa dan daya saing tinggi (moat), terbukti dari marjin laba bersih yang sangat tebal."
+        is_badge = f"NPM {npm}% · Pricing Power Kuat"
+        is_summary = f"{ticker} memiliki efisiensi operasional luar biasa dan daya saing tinggi, terbukti dari marjin laba bersih yang sangat tebal."
         is_points = [
             f"Net Profit Margin (NPM) mencapai {npm}%, menunjukkan setiap pendapatan mampu dikonversi menjadi laba bersih secara maksimal.",
             f"Return on Equity (ROE) berada di {roe}%, menandakan efisiensi tinggi manajemen dalam memutar modal pemegang saham.",
@@ -185,7 +185,7 @@ def _build_deterministic_insight(ticker: str, metrics: dict) -> dict:
         ]
     elif npm >= 6.0:
         is_status = "Profitabel Stabil"
-        is_badge = f"NPM {npm}% • Margin Sehat"
+        is_badge = f"NPM {npm}% · Margin Sehat"
         is_summary = f"Kinerja laba rugi {ticker} terjaga baik dengan margin keuntungan yang wajar di sektor industrinya."
         is_points = [
             f"Net Profit Margin tercatat {npm}%, dengan ROE sebesar {roe}%.",
@@ -193,7 +193,7 @@ def _build_deterministic_insight(ticker: str, metrics: dict) -> dict:
         ]
     else:
         is_status = "Marjin Tipis"
-        is_badge = f"NPM {npm}% • Tekanan Beban"
+        is_badge = f"NPM {npm}% · Tekanan Beban"
         is_summary = f"Tingkat profitabilitas {ticker} relatif tipis atau tertekan oleh beban pokok dan operasional."
         is_points = [
             f"Marjin laba bersih berada di level {npm}%, sensitif terhadap kenaikan biaya bahan baku atau bunga.",
@@ -203,7 +203,7 @@ def _build_deterministic_insight(ticker: str, metrics: dict) -> dict:
     # Cash Flow text
     if cfo > 0 and cfo_ratio >= 0.7:
         cf_status = "Arus Kas Solid"
-        cf_badge = f"CFO Rp {cfo:,.2f}T • Kualitas Laba Prima"
+        cf_badge = f"CFO Rp {cfo:,.2f}T · Kualitas Laba Prima"
         cf_summary = f"Kualitas laba {ticker} terkonfirmasi nyata dalam bentuk arus kas masuk operasional tunai, bukan sekadar angka piutang akuntansi."
         cf_points = [
             f"Arus kas dari aktivitas operasi (CFO) positif kuat sebesar Rp {cfo:,.2f} triliun.",
@@ -212,7 +212,7 @@ def _build_deterministic_insight(ticker: str, metrics: dict) -> dict:
         ]
     elif cfo > 0:
         cf_status = "Kas Operasi Positif"
-        cf_badge = f"CFO Rp {cfo:,.2f}T • FCF Terjaga"
+        cf_badge = f"CFO Rp {cfo:,.2f}T · FCF Terjaga"
         cf_summary = f"Arus kas operasional positif menopang kelangsungan bisnis, meski terdapat sebagian kas yang terikat pada modal kerja."
         cf_points = [
             f"CFO positif sebesar Rp {cfo:,.2f} triliun mencukupi kebutuhan operasional harian.",
@@ -227,17 +227,14 @@ def _build_deterministic_insight(ticker: str, metrics: dict) -> dict:
             f"Free Cash Flow berada di level Rp {fcf:,.2f} triliun."
         ]
 
-    # Verdict
+    # Verdict (Murni analisis faktual tanpa skor angka dan tanpa emoji)
     verdict = (
-        f"{ticker} membukukan skor kesehatan fundamental {score}/10 ({status}). "
-        f"Kekuatan utama terletak pada neraca yang {bs_status.lower()} (DER {der}x) "
-        f"serta kemampuan profitabilitas dengan NPM {npm}% dan arus kas operasional Rp {cfo:,.2f}T. "
-        f"Secara umum, fundamental emiten ini mencerminkan struktur bisnis yang berdaya tahan solid."
+        f"{ticker} mencatatkan performa fundamental yang solid dengan struktur neraca yang {bs_status.lower()} (DER {der}x), "
+        f"didukung tingkat profitabilitas dengan Net Profit Margin {npm}% serta arus kas operasional (CFO) mencapai Rp {cfo:,.2f} triliun. "
+        f"Karakteristik keuangan ini mencerminkan struktur bisnis yang berdaya tahan kuat."
     )
 
     return {
-        "health_score": score,
-        "health_status": status,
         "verdict": verdict,
         "balance_sheet": {
             "status": bs_status,
@@ -279,7 +276,7 @@ def _refine_insight_with_gemini(ticker: str, metrics: dict, base_insight: dict) 
     import urllib.request
 
     prompt = f"""Kamu adalah Kepala Analis Fundamental Senior Pasar Modal Indonesia.
-Tuliskan ringkasan insight fundamental eksekutif yang sangat tajam, profesional, dan mudah dipahami untuk saham {ticker} berdasarkan data berikut:
+Tuliskan ringkasan insight fundamental eksekutif yang sangat tajam, objektif, profesional, dan mudah dipahami untuk saham {ticker} berdasarkan data berikut:
 - Periode Data: {metrics['latest_q_period']} (Kuartalan) dan {metrics['latest_fy_period']} (Tahunan)
 - Pendapatan: Rp {metrics['revenue']} Triliun
 - Laba Bersih: Rp {metrics['net_income']} Triliun
@@ -290,11 +287,15 @@ Tuliskan ringkasan insight fundamental eksekutif yang sangat tajam, profesional,
 - Arus Kas Operasional (CFO): Rp {metrics['cfo']} Triliun (Rasio CFO/Laba Bersih: {metrics['cfo_net_ratio']}x)
 - Free Cash Flow (FCF): Rp {metrics['fcf']} Triliun
 - Pertumbuhan CAGR Pendapatan 3Y: {metrics['cagr_rev_3y']}%
-- Skor Fundamental: {metrics['health_score']}/10 ({metrics['health_status']})
+
+ATURAN KETAT:
+1. DILARANG KERAS menggunakan emoji apapun (zero emoji).
+2. DILARANG KERAS menyebutkan nilai skor angka atau rating angka (seperti 8/10, skor kesehatan, dsb).
+3. Fokuskan narasi murni pada analisis substansial neraca, pertumbuhan omzet, efisiensi marjin, dan kualitas arus kas.
 
 Outputkan HANYA format JSON valid tanpa tanda markdown (tanpa ```json) dengan struktur persis berikut:
 {{
-  "verdict": "2-3 kalimat kesimpulan eksekutif yang lugas dan berwibawa...",
+  "verdict": "2-3 kalimat kesimpulan eksekutif yang lugas, faktual, dan berwibawa tanpa skor angka...",
   "balance_sheet_summary": "1-2 kalimat narasi analisis neraca, utang, dan likuiditas...",
   "income_statement_summary": "1-2 kalimat narasi analisis pertumbuhan omzet, efisiensi margin, dan daya saing...",
   "cash_flow_summary": "1-2 kalimat narasi analisis kualitas arus kas operasional (CFO) dan keleluasaan FCF/dividen..."

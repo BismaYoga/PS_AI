@@ -1247,31 +1247,31 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
           </div>
         </div>
 
-        {/* Smart Financial Summary & Health Insight Card */}
+        {/* Smart Financial Summary & Insight Card */}
         {finInsightData?.insight && (
           <div className="card" style={{ marginBottom: '18px', padding: '18px 22px', border: '1px solid rgba(2, 132, 199, 0.25)', boxShadow: '0 4px 20px rgba(0,0,0,0.04)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '12px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                <span style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-main, #0f172a)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  💡 Rangkuman & Health Insight Keuangan
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <Icon name="sparkles" cls="sm" style={{ color: '#0284c7', width: '18px', height: '18px' }} />
+                <span style={{ fontSize: '17px', fontWeight: 800, color: 'var(--text-main, #0f172a)' }}>
+                  Rangkuman & Insight Keuangan
                 </span>
-                {finInsightData?.health_score && (
-                  <span style={{
-                    background: finInsightData.health_score >= 8 ? 'rgba(16, 185, 129, 0.14)' : finInsightData.health_score >= 6.5 ? 'rgba(2, 132, 199, 0.14)' : 'rgba(245, 158, 11, 0.14)',
-                    color: finInsightData.health_score >= 8 ? '#10b981' : finInsightData.health_score >= 6.5 ? '#0284c7' : '#f59e0b',
-                    border: `1px solid ${finInsightData.health_score >= 8 ? 'rgba(16, 185, 129, 0.35)' : finInsightData.health_score >= 6.5 ? 'rgba(2, 132, 199, 0.35)' : 'rgba(245, 158, 11, 0.35)'}`,
-                    padding: '3px 12px',
-                    borderRadius: '20px',
-                    fontSize: '12.5px',
-                    fontWeight: 700,
-                  }}>
-                    ⭐ Skor Fundamental: {finInsightData.health_score}/10 · {finInsightData.insight.health_status}
-                  </span>
-                )}
+                <span style={{
+                  background: 'rgba(2, 132, 199, 0.08)',
+                  color: '#0284c7',
+                  border: '1px solid rgba(2, 132, 199, 0.2)',
+                  padding: '2px 10px',
+                  borderRadius: '12px',
+                  fontSize: '11.5px',
+                  fontWeight: 600,
+                }}>
+                  {finTimeframe === 'annual' ? 'Basis Data Tahunan (YoY)' : 'Basis Data Kuartalan'}
+                </span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '11.5px', color: 'var(--text-muted, #64748b)' }}>
-                  {finInsightData.cached ? '⚡ Tersimpan di SQLite' : '✨ Baru Dianalisis'} ({finInsightData.period_tag?.replace('_', ' · ')})
+                <span style={{ fontSize: '11.5px', color: 'var(--text-muted, #64748b)', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                  <Icon name={finInsightData.cached ? 'zap' : 'sparkles'} cls="sm" style={{ width: '13px', height: '13px', color: '#0284c7' }} />
+                  {finInsightData.cached ? 'Tersimpan di SQLite' : 'Baru Dianalisis'} ({finInsightData.period_tag?.replace('_', ' · ')})
                 </span>
                 <button
                   className="btn small-btn"
@@ -1280,7 +1280,8 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
                   disabled={loadingInsight}
                   title="Analisis Ulang Laporan Keuangan"
                 >
-                  {loadingInsight ? 'Menganalisis...' : '↻ Re-analisis'}
+                  <Icon name="refresh" cls="sm" style={{ width: '11px', height: '11px' }} />
+                  {loadingInsight ? 'Menganalisis...' : 'Update'}
                 </button>
               </div>
             </div>
@@ -1297,8 +1298,9 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
                 lineHeight: '1.6',
                 color: 'var(--text-main, #0f172a)'
               }}>
-                <div style={{ fontWeight: 700, color: '#0284c7', marginBottom: '3px', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  📌 Executive Verdict
+                <div style={{ fontWeight: 700, color: '#0284c7', marginBottom: '3px', fontSize: '11.5px', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <Icon name="info" cls="sm" style={{ width: '14px', height: '14px' }} />
+                  <span>Ringkasan Eksekutif</span>
                 </div>
                 <p style={{ margin: 0, fontWeight: 500 }}>{finInsightData.insight.verdict}</p>
               </div>
@@ -1341,7 +1343,7 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
                   onClick={() => setShowAllInsights(!showAllInsights)}
                   style={{ background: 'none', border: 'none', color: '#0284c7', fontSize: '12px', fontWeight: 600, cursor: 'pointer', textDecoration: 'underline' }}
                 >
-                  {showAllInsights ? '← Tampilkan Sesuai Tab Aktif' : 'Tampilkan Semua Pilar (3 Laporan) →'}
+                  {showAllInsights ? 'Sembunyikan Pilar Lain' : 'Tampilkan Semua Pilar (3 Laporan)'}
                 </button>
               </div>
 
@@ -1360,22 +1362,26 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
                     boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '6px' }}>
-                      <span style={{ fontWeight: 700, fontSize: '13.5px', color: 'var(--text-main, #0f172a)' }}>
-                        🏛️ Neraca & Solvabilitas
+                      <span style={{ fontWeight: 700, fontSize: '13.5px', color: 'var(--text-main, #0f172a)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                        <Icon name="building" cls="sm" style={{ width: '16px', height: '16px', color: '#0284c7' }} />
+                        <span>Neraca & Solvabilitas</span>
                       </span>
                       <span style={{ background: 'rgba(2, 132, 199, 0.1)', color: '#0284c7', padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 700 }}>
                         {finInsightData.insight.balance_sheet.badge}
                       </span>
                     </div>
-                    <p style={{ fontSize: '12.5px', color: 'var(--text-sub, #475569)', lineHeight: '1.5', marginBottom: '8px' }}>
+                    <p style={{ fontSize: '12.5px', color: 'var(--text-sub, #475569)', lineHeight: '1.5', marginBottom: '10px' }}>
                       {finInsightData.insight.balance_sheet.summary}
                     </p>
                     {Array.isArray(finInsightData.insight.balance_sheet.highlights) && (
-                      <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '12px', color: 'var(--text-sub, #64748b)', lineHeight: '1.5' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                         {finInsightData.insight.balance_sheet.highlights.map((pt: string, idx: number) => (
-                          <li key={idx} style={{ marginBottom: '3px' }}>{pt}</li>
+                          <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', fontSize: '12px', color: 'var(--text-sub, #64748b)', lineHeight: '1.45' }}>
+                            <Icon name="check" cls="sm" style={{ width: '13px', height: '13px', color: '#0284c7', flexShrink: 0, marginTop: '2px' }} />
+                            <span>{pt}</span>
+                          </div>
                         ))}
-                      </ul>
+                      </div>
                     )}
                   </div>
                 )}
@@ -1390,22 +1396,26 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
                     boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '6px' }}>
-                      <span style={{ fontWeight: 700, fontSize: '13.5px', color: 'var(--text-main, #0f172a)' }}>
-                        📈 Kinerja Laba Rugi
+                      <span style={{ fontWeight: 700, fontSize: '13.5px', color: 'var(--text-main, #0f172a)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                        <Icon name="chart" cls="sm" style={{ width: '16px', height: '16px', color: '#10b981' }} />
+                        <span>Kinerja Laba Rugi</span>
                       </span>
                       <span style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 700 }}>
                         {finInsightData.insight.income_statement.badge}
                       </span>
                     </div>
-                    <p style={{ fontSize: '12.5px', color: 'var(--text-sub, #475569)', lineHeight: '1.5', marginBottom: '8px' }}>
+                    <p style={{ fontSize: '12.5px', color: 'var(--text-sub, #475569)', lineHeight: '1.5', marginBottom: '10px' }}>
                       {finInsightData.insight.income_statement.summary}
                     </p>
                     {Array.isArray(finInsightData.insight.income_statement.highlights) && (
-                      <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '12px', color: 'var(--text-sub, #64748b)', lineHeight: '1.5' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                         {finInsightData.insight.income_statement.highlights.map((pt: string, idx: number) => (
-                          <li key={idx} style={{ marginBottom: '3px' }}>{pt}</li>
+                          <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', fontSize: '12px', color: 'var(--text-sub, #64748b)', lineHeight: '1.45' }}>
+                            <Icon name="check" cls="sm" style={{ width: '13px', height: '13px', color: '#10b981', flexShrink: 0, marginTop: '2px' }} />
+                            <span>{pt}</span>
+                          </div>
                         ))}
-                      </ul>
+                      </div>
                     )}
                   </div>
                 )}
@@ -1420,22 +1430,26 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
                     boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '6px' }}>
-                      <span style={{ fontWeight: 700, fontSize: '13.5px', color: 'var(--text-main, #0f172a)' }}>
-                        💵 Realita Arus Kas
+                      <span style={{ fontWeight: 700, fontSize: '13.5px', color: 'var(--text-main, #0f172a)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                        <Icon name="coins" cls="sm" style={{ width: '16px', height: '16px', color: '#8b5cf6' }} />
+                        <span>Realita Arus Kas</span>
                       </span>
                       <span style={{ background: 'rgba(139, 92, 246, 0.1)', color: '#8b5cf6', padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 700 }}>
                         {finInsightData.insight.cash_flow.badge}
                       </span>
                     </div>
-                    <p style={{ fontSize: '12.5px', color: 'var(--text-sub, #475569)', lineHeight: '1.5', marginBottom: '8px' }}>
+                    <p style={{ fontSize: '12.5px', color: 'var(--text-sub, #475569)', lineHeight: '1.5', marginBottom: '10px' }}>
                       {finInsightData.insight.cash_flow.summary}
                     </p>
                     {Array.isArray(finInsightData.insight.cash_flow.highlights) && (
-                      <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '12px', color: 'var(--text-sub, #64748b)', lineHeight: '1.5' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                         {finInsightData.insight.cash_flow.highlights.map((pt: string, idx: number) => (
-                          <li key={idx} style={{ marginBottom: '3px' }}>{pt}</li>
+                          <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', fontSize: '12px', color: 'var(--text-sub, #64748b)', lineHeight: '1.45' }}>
+                            <Icon name="check" cls="sm" style={{ width: '13px', height: '13px', color: '#8b5cf6', flexShrink: 0, marginTop: '2px' }} />
+                            <span>{pt}</span>
+                          </div>
                         ))}
-                      </ul>
+                      </div>
                     )}
                   </div>
                 )}
