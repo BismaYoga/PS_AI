@@ -167,11 +167,6 @@ Format output HANYA sebuah valid JSON murni tanpa markdown:
   "technical_insight": "Ulasan tren teknikal indeks IHSG: posisi terhadap MA20/MA50, RSI 14 ({rsi_val}), serta zona support {support} dan resistance {resistance}.",
   "catalyst_insight": "Ulasan sentimen makro & katalis pasar dari {total_news_count} berita Invezgo terkini: arus modal, kebijakan suku bunga, inflasi, dan sentimen bursa regional.",
   "actionable_plan": "Strategi investor di pasar saat ini: apakah mulai cicil beli bertahap (DCA) pada sektor defensif, melakukan rebalancing, atau memperbesar porsi kas.",
-  "asset_allocation": {{
-    "equity_weight": "Persentase ideal alokasi saham, misal: 60% - 70%",
-    "cash_weight": "Persentase ideal alokasi dana kas/pasar uang, misal: 30% - 40%",
-    "strategy_focus": "Fokus strategi pasar, misal: Akumulasi Saham Berkapitalisasi Besar / Defensif"
-  }},
   "key_levels": {{
     "support": "{support}",
     "resistance": "{resistance}",
@@ -312,12 +307,7 @@ def _fallback_analysis(ticker: str, tech: dict, news_items: list) -> dict:
             "executive_summary": f"Indeks Harga Saham Gabungan (IHSG) saat ini berada di level {price} ({sentiment.lower()}). Secara keseluruhan iklim pasar dinilai '{market_status}'. Di tengah katalis pasar '{news_title}', pergerakan indeks menguji batas support {support} dan resistance {resistance}.",
             "technical_insight": f"Tren teknikal indeks IHSG mencatatkan RSI 14 di {rsi_val:.1f} dengan posisi {'di atas' if above20 else 'di bawah'} MA20 dan {'di atas' if above50 else 'di bawah'} MA50. Waspadai konfirmasi volume pada resistance {resistance}.",
             "catalyst_insight": "Sentimen makroekonomi domestik dan pergerakan arus modal asing (foreign flow) menjadi penggerak utama likuiditas bursa.",
-            "actionable_plan": f"Strategi pasar: {market_status}. Disarankan disiplin alokasi aset dan akumulasi bertahap pada saham bluechip defensif di area support {support}.",
-            "asset_allocation": {
-                "equity_weight": "65% Saham",
-                "cash_weight": "35% Kas / Pasar Uang",
-                "strategy_focus": "Selektif Saham Defensif & Bluechip Berkinerja Solid"
-            },
+            "actionable_plan": f"Strategi pasar: {market_status}. Disarankan disiplin dan akumulasi bertahap pada saham bluechip defensif di area support {support}.",
             "key_levels": {
                 "support": f"{support}",
                 "resistance": f"{resistance}",

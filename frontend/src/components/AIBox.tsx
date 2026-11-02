@@ -185,24 +185,26 @@ export const AIBox: React.FC<AIBoxProps> = ({
               </span>
             </div>
             <div className="flex gap-6">
-              <div className="segmented" style={{ padding: '2px', background: 'var(--soft)', borderRadius: '6px' }}>
-                <button
-                  type="button"
-                  className={viewMode === 'ringkas' ? 'active' : ''}
-                  onClick={() => setViewMode('ringkas')}
-                  style={{ fontSize: '10px', padding: '3px 8px' }}
-                >
-                  Taktis
-                </button>
-                <button
-                  type="button"
-                  className={viewMode === 'lengkap' ? 'active' : ''}
-                  onClick={() => setViewMode('lengkap')}
-                  style={{ fontSize: '10px', padding: '3px 8px' }}
-                >
-                  Mendalam
-                </button>
-              </div>
+              {isStock && (
+                <div className="segmented" style={{ padding: '2px', background: 'var(--soft)', borderRadius: '6px' }}>
+                  <button
+                    type="button"
+                    className={viewMode === 'ringkas' ? 'active' : ''}
+                    onClick={() => setViewMode('ringkas')}
+                    style={{ fontSize: '10px', padding: '3px 8px' }}
+                  >
+                    Taktis
+                  </button>
+                  <button
+                    type="button"
+                    className={viewMode === 'lengkap' ? 'active' : ''}
+                    onClick={() => setViewMode('lengkap')}
+                    style={{ fontSize: '10px', padding: '3px 8px' }}
+                  >
+                    Mendalam
+                  </button>
+                </div>
+              )}
               <button
                 className="btn small-btn"
                 onClick={() => generateAIAnalysis(true)}
@@ -293,105 +295,65 @@ export const AIBox: React.FC<AIBoxProps> = ({
             </div>
           )}
 
-          {/* Mode 1: Ringkasan Taktis (Alokasi Aset untuk IHSG vs Trading Plan untuk Emiten) */}
-          {viewMode === 'ringkas' ? (
+          {/* Mode 1: Ringkasan Trading Plan Taktis (Hanya untuk Emiten Saham) */}
+          {isStock && viewMode === 'ringkas' ? (
             <div style={{ marginBottom: '14px' }}>
-              {(ticker === 'IHSG' || analysis.is_index) ? (
-                /* Alokasi Portofolio Makro IHSG */
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-                    gap: '10px',
-                    marginBottom: '10px',
-                  }}
-                >
-                  <div style={{ background: 'var(--soft)', border: '1px solid var(--line)', borderRadius: '8px', padding: '10px 12px' }}>
-                    <span style={{ fontSize: '10px', color: 'var(--muted)', display: 'block', textTransform: 'uppercase', fontWeight: 700 }}>
-                      Porsi Alokasi Saham
-                    </span>
-                    <strong style={{ fontSize: '14px', color: 'var(--green)' }}>
-                      {analysis.asset_allocation?.equity_weight || '30% - 40% Saham'}
-                    </strong>
-                  </div>
-
-                  <div style={{ background: 'var(--soft)', border: '1px solid var(--line)', borderRadius: '8px', padding: '10px 12px' }}>
-                    <span style={{ fontSize: '10px', color: 'var(--muted)', display: 'block', textTransform: 'uppercase', fontWeight: 700 }}>
-                      Porsi Alokasi Kas / Pasar Uang
-                    </span>
-                    <strong style={{ fontSize: '14px', color: 'var(--blue)' }}>
-                      {analysis.asset_allocation?.cash_weight || '60% - 70% Kas'}
-                    </strong>
-                  </div>
-
-                  <div style={{ background: 'var(--soft)', border: '1px solid var(--line)', borderRadius: '8px', padding: '10px 12px', gridColumn: 'span 2' }}>
-                    <span style={{ fontSize: '10px', color: 'var(--muted)', display: 'block', textTransform: 'uppercase', fontWeight: 700 }}>
-                      Fokus Strategi Pasar
-                    </span>
-                    <strong style={{ fontSize: '12px', color: 'var(--ink)' }}>
-                      {analysis.asset_allocation?.strategy_focus || 'Fokus Saham Defensif / Wait and See'}
-                    </strong>
-                  </div>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+                  gap: '8px',
+                  marginBottom: '10px',
+                }}
+              >
+                <div style={{ background: 'var(--soft)', border: '1px solid var(--line)', borderRadius: '8px', padding: '8px 10px' }}>
+                  <span style={{ fontSize: '9px', color: 'var(--muted)', display: 'block', textTransform: 'uppercase', fontWeight: 600 }}>
+                    Area Beli (Entry)
+                  </span>
+                  <strong style={{ fontSize: '12px', color: 'var(--ink)' }}>
+                    {analysis.trading_plan?.entry_zone || `Rp${val(S)} - Rp${fmt(stockOrIndex.price, isStock ? 0 : 2)}`}
+                  </strong>
                 </div>
-              ) : (
-                /* Trading Plan Emiten Saham Individual */
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
-                    gap: '8px',
-                    marginBottom: '10px',
-                  }}
-                >
-                  <div style={{ background: 'var(--soft)', border: '1px solid var(--line)', borderRadius: '8px', padding: '8px 10px' }}>
-                    <span style={{ fontSize: '9px', color: 'var(--muted)', display: 'block', textTransform: 'uppercase', fontWeight: 600 }}>
-                      Area Beli (Entry)
-                    </span>
-                    <strong style={{ fontSize: '12px', color: 'var(--ink)' }}>
-                      {analysis.trading_plan?.entry_zone || `Rp${val(S)} - Rp${fmt(stockOrIndex.price, isStock ? 0 : 2)}`}
-                    </strong>
-                  </div>
 
-                  <div style={{ background: 'var(--soft)', border: '1px solid var(--line)', borderRadius: '8px', padding: '8px 10px' }}>
-                    <span style={{ fontSize: '9px', color: 'var(--muted)', display: 'block', textTransform: 'uppercase', fontWeight: 600 }}>
-                      Target 1 (TP1)
-                    </span>
-                    <strong style={{ fontSize: '12px', color: 'var(--green)' }}>
-                      {analysis.trading_plan?.target_price_1 || `Rp${val(R)}`}
-                    </strong>
-                  </div>
-
-                  <div style={{ background: 'var(--soft)', border: '1px solid var(--line)', borderRadius: '8px', padding: '8px 10px' }}>
-                    <span style={{ fontSize: '9px', color: 'var(--muted)', display: 'block', textTransform: 'uppercase', fontWeight: 600 }}>
-                      Target 2 (TP2)
-                    </span>
-                    <strong style={{ fontSize: '12px', color: 'var(--blue)' }}>
-                      {analysis.trading_plan?.target_price_2 || 'Trailing Breakout'}
-                    </strong>
-                  </div>
-
-                  <div style={{ background: 'var(--soft)', border: '1px solid var(--line)', borderRadius: '8px', padding: '8px 10px' }}>
-                    <span style={{ fontSize: '9px', color: 'var(--muted)', display: 'block', textTransform: 'uppercase', fontWeight: 600 }}>
-                      Stop Loss (SL)
-                    </span>
-                    <strong style={{ fontSize: '12px', color: 'var(--red)' }}>
-                      {analysis.trading_plan?.stop_loss || `Bawah Rp${val(S)}`}
-                    </strong>
-                  </div>
-
-                  <div style={{ background: 'var(--soft)', border: '1px solid var(--line)', borderRadius: '8px', padding: '8px 10px' }}>
-                    <span style={{ fontSize: '9px', color: 'var(--muted)', display: 'block', textTransform: 'uppercase', fontWeight: 600 }}>
-                      Risk / Reward
-                    </span>
-                    <strong style={{ fontSize: '12px', color: 'var(--navy)' }}>
-                      {analysis.trading_plan?.risk_reward_ratio || '1 : 2.5'}
-                    </strong>
-                  </div>
+                <div style={{ background: 'var(--soft)', border: '1px solid var(--line)', borderRadius: '8px', padding: '8px 10px' }}>
+                  <span style={{ fontSize: '9px', color: 'var(--muted)', display: 'block', textTransform: 'uppercase', fontWeight: 600 }}>
+                    Target 1 (TP1)
+                  </span>
+                  <strong style={{ fontSize: '12px', color: 'var(--green)' }}>
+                    {analysis.trading_plan?.target_price_1 || `Rp${val(R)}`}
+                  </strong>
                 </div>
-              )}
+
+                <div style={{ background: 'var(--soft)', border: '1px solid var(--line)', borderRadius: '8px', padding: '8px 10px' }}>
+                  <span style={{ fontSize: '9px', color: 'var(--muted)', display: 'block', textTransform: 'uppercase', fontWeight: 600 }}>
+                    Target 2 (TP2)
+                  </span>
+                  <strong style={{ fontSize: '12px', color: 'var(--blue)' }}>
+                    {analysis.trading_plan?.target_price_2 || 'Trailing Breakout'}
+                  </strong>
+                </div>
+
+                <div style={{ background: 'var(--soft)', border: '1px solid var(--line)', borderRadius: '8px', padding: '8px 10px' }}>
+                  <span style={{ fontSize: '9px', color: 'var(--muted)', display: 'block', textTransform: 'uppercase', fontWeight: 600 }}>
+                    Stop Loss (SL)
+                  </span>
+                  <strong style={{ fontSize: '12px', color: 'var(--red)' }}>
+                    {analysis.trading_plan?.stop_loss || `Bawah Rp${val(S)}`}
+                  </strong>
+                </div>
+
+                <div style={{ background: 'var(--soft)', border: '1px solid var(--line)', borderRadius: '8px', padding: '8px 10px' }}>
+                  <span style={{ fontSize: '9px', color: 'var(--muted)', display: 'block', textTransform: 'uppercase', fontWeight: 600 }}>
+                    Risk / Reward
+                  </span>
+                  <strong style={{ fontSize: '12px', color: 'var(--navy)' }}>
+                    {analysis.trading_plan?.risk_reward_ratio || '1 : 2.5'}
+                  </strong>
+                </div>
+              </div>
             </div>
           ) : (
-            /* Mode 2: Analisis Mendalam (Teknikal & Berita) */
+            /* Mode 2: Analisis Mendalam (Teknikal & Berita) - Tampil untuk IHSG atau saat mode mendalam */
             <div
               style={{
                 display: 'grid',
