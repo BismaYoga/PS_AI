@@ -206290,7 +206290,22 @@
       "title": "Perubahan Internal Audit",
       "sub": "Keterbukaan Informasi Resmi BEI (TLKM)",
       "amount": "Dokumen Resmi BEI",
-      "note": "Pengumuman resmi Bursa Efek Indonesia untuk TLKM pada 02 Oct 2026: Perubahan Internal Audit."
+      "note": "Pengumuman resmi Bursa Efek Indonesia untuk TLKM pada 02 Oct 2026: Perubahan Internal Audit.",
+      "url": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202610/4fe66b4ab1_0ec68201be.pdf",
+      "attachments": [
+        {
+          "name": "20261002_TLKM_Perubahan Corsec Komite Audit Alamat NPWP Internal Audit_32162922.pdf",
+          "url": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202610/4fe66b4ab1_0ec68201be.pdf"
+        },
+        {
+          "name": "20261002_TLKM_Perubahan Corsec Komite Audit Alamat NPWP Internal Audit_32162922_lamp2.pdf",
+          "url": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202610/65405ae8aa_729be1d673.pdf"
+        },
+        {
+          "name": "20261002_TLKM_Perubahan Corsec Komite Audit Alamat NPWP Internal Audit_32162922_lamp1.pdf",
+          "url": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202610/aca8f1bb4a_182575df93.pdf"
+        }
+      ]
     },
     {
       "id": "bei_APIC_20261001_2",
@@ -207475,7 +207490,10 @@
       "title": "Cum/Ex Date Dividen Tunai HMSP",
       "sub": "Dividen Rp56.20 per lembar saham",
       "amount": "Rp56.20 per saham",
-      "note": "Distribusi dividen tunai riil untuk pemegang saham PT H.M. Sampoerna Tbk (HMSP) sebesar Rp56.20 per lembar saham."
+      "note": "Distribusi dividen tunai riil untuk pemegang saham PT H.M. Sampoerna Tbk (HMSP) sebesar Rp56.20 per lembar saham.",
+      "ai_summary": "PT H.M. Sampoerna Tbk (HMSP) mengumumkan pembagian dividen tunai tahun buku sebesar Rp56.20 per lembar saham yang dijadwalkan pada Juni 2025. Di tengah tantangan industri tembakau dan tekanan daya beli, keputusan ini mencerminkan komitmen emiten konsumer non-siklikal ini untuk tetap memberikan imbal hasil kas yang solid bagi para pemegang sahamnya.",
+      "ai_sentiment": "Positif",
+      "ai_impact": "Pengumuman dividen ini memberikan kepastian *cash yield* yang menarik bagi investor jangka panjang, yang berpotensi menjadi katalis positif penopang harga saham di tengah volatilitas sektor manufaktur rokok."
     },
     {
       "id": "div_TLKM_20250611",
@@ -207485,7 +207503,10 @@
       "title": "Cum/Ex Date Dividen Tunai TLKM",
       "sub": "Dividen Rp212.47 per lembar saham",
       "amount": "Rp212.47 per saham",
-      "note": "Distribusi dividen tunai riil untuk pemegang saham PT Telkom Indonesia (Persero) Tbk (TLKM) sebesar Rp212.47 per lembar saham."
+      "note": "Distribusi dividen tunai riil untuk pemegang saham PT Telkom Indonesia (Persero) Tbk (TLKM) sebesar Rp212.47 per lembar saham.",
+      "ai_summary": "PT Telkom Indonesia (Persero) Tbk (TLKM) mengumumkan distribusi dividen tunai sebesar Rp212,47 per lembar saham yang dijadwalkan pada 11 Juni 2025. Kebijakan ini mencerminkan komitmen emiten telekomunikasi pelat merah tersebut dalam memberikan imbal hasil kas yang menarik bagi pemegang saham di tengah strategi transformasi digital yang sedang berjalan.",
+      "ai_sentiment": "Positif",
+      "ai_impact": "Pembagian dividen dengan nominal yang kompetitif ini menjadi katalis jangka pendek yang menopang daya tarik yield saham TLKM, meskipun pelaku pasar tetap perlu memperhatikan potensi penyesuaian harga saham (dividend drop) pasca tanggal ex-date."
     },
     {
       "id": "div_AMRT_20250604",
@@ -207495,7 +207516,10 @@
       "title": "Cum/Ex Date Dividen Tunai AMRT",
       "sub": "Dividen Rp34.11 per lembar saham",
       "amount": "Rp34.11 per saham",
-      "note": "Distribusi dividen tunai riil untuk pemegang saham PT Sumber Alfaria Trijaya Tbk (AMRT) sebesar Rp34.11 per lembar saham."
+      "note": "Distribusi dividen tunai riil untuk pemegang saham PT Sumber Alfaria Trijaya Tbk (AMRT) sebesar Rp34.11 per lembar saham.",
+      "ai_summary": "AMRT mendistribusikan dividen tunai sebesar Rp34,11 per saham, mencerminkan pertumbuhan profitabilitas dan arus kas yang kuat di sektor ritel minimarket. Agenda ini menegaskan posisi AMRT sebagai emiten defensif yang konsisten memberikan nilai tambah bagi pemegang saham di tengah ekspansi bisnis yang berkelanjutan.",
+      "ai_sentiment": "Positif",
+      "ai_impact": "Pembagian dividen ini memperkuat daya tarik saham AMRT sebagai aset investasi jangka panjang dengan potensi pertumbuhan dividen yang stabil seiring peningkatan laba bersih."
     },
     {
       "id": "div_ELSA_20250604",
@@ -207505,7 +207529,10 @@
       "title": "Cum/Ex Date Dividen Tunai ELSA",
       "sub": "Dividen Rp39.11 per lembar saham",
       "amount": "Rp39.11 per saham",
-      "note": "Distribusi dividen tunai riil untuk pemegang saham PT Elnusa Tbk (ELSA) sebesar Rp39.11 per lembar saham."
+      "note": "Distribusi dividen tunai riil untuk pemegang saham PT Elnusa Tbk (ELSA) sebesar Rp39.11 per lembar saham.",
+      "ai_summary": "PT Elnusa Tbk (ELSA) menjadwalkan pembagian dividen tunai sebesar Rp39,11 per saham sebagai bentuk apresiasi atas kinerja laba bersih perseroan di sektor jasa penunjang migas. Langkah ini menegaskan fundamental ELSA yang solid dan arus kas yang kuat, menjadikannya opsi menarik bagi investor pemburu dividen di sektor energi.",
+      "ai_sentiment": "Positif",
+      "ai_impact": "Dividen ini menawarkan yield yang kompetitif dan diprediksi menjadi katalis penggerak harga saham ELSA mendekati tanggal cum-date."
     },
     {
       "id": "div_KLBF_20250604",
@@ -207515,7 +207542,10 @@
       "title": "Cum/Ex Date Dividen Tunai KLBF",
       "sub": "Dividen Rp36 per lembar saham",
       "amount": "Rp36 per saham",
-      "note": "Distribusi dividen tunai riil untuk pemegang saham PT Kalbe Farma Tbk (KLBF) sebesar Rp36 per lembar saham."
+      "note": "Distribusi dividen tunai riil untuk pemegang saham PT Kalbe Farma Tbk (KLBF) sebesar Rp36 per lembar saham.",
+      "ai_summary": "PT Kalbe Farma Tbk (KLBF) mengumumkan pembagian dividen tunai sebesar Rp36 per saham, yang mencerminkan stabilitas arus kas dan komitmen perseroan dalam memberikan imbal hasil rutin kepada pemegang saham. Langkah ini didukung oleh fundamental sektor farmasi yang defensif, menjadikannya agenda penting bagi investor yang mengutamakan kepastian pendapatan pasif.",
+      "ai_sentiment": "Positif",
+      "ai_impact": "Pembagian dividen ini memberikan kepastian yield bagi investor dan berpotensi menjaga stabilitas harga saham KLBF melalui daya tarik aliran kas masuk menjelang tanggal cum-dividend."
     },
     {
       "id": "div_CPIN_20250603",
@@ -207538,7 +207568,10 @@
       "title": "Cum/Ex Date Dividen Tunai INTP",
       "sub": "Dividen Rp259 per lembar saham",
       "amount": "Rp259 per saham",
-      "note": "Distribusi dividen tunai riil untuk pemegang saham PT Indocement Tunggal Prakarsa Tbk (INTP) sebesar Rp259 per lembar saham."
+      "note": "Distribusi dividen tunai riil untuk pemegang saham PT Indocement Tunggal Prakarsa Tbk (INTP) sebesar Rp259 per lembar saham.",
+      "ai_summary": "PT Indocement Tunggal Prakarsa Tbk (INTP) menjadwalkan pembagian dividen tunai sebesar Rp259 per saham, yang mencerminkan komitmen perseroan dalam mendistribusikan laba bersih kepada pemegang saham di tengah dinamika industri semen nasional. Aksi korporasi ini memperkuat posisi INTP sebagai emiten dengan fundamental keuangan yang sehat dan arus kas yang stabil bagi para investor.",
+      "ai_sentiment": "Positif",
+      "ai_impact": "Besaran dividen ini memberikan yield yang kompetitif dan berpotensi memicu aksi beli menjelang cum-date guna mengamankan hak distribusi laba."
     },
     {
       "id": "div_INCO_20250527",

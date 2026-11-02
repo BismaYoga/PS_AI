@@ -180,3 +180,19 @@ export interface UserProfile {
   createdAt?: string;
 }
 
+export interface ApprovalPlan {
+  needs_approval: boolean;
+  action_type?: string;
+  title?: string;
+  description?: string;
+  methodology?: string;
+  estimated_quota?: number;
+  quota_label?: string;
+  continue_label?: string;
+  cancel_label?: string;
+  execution_plan?: string;
+  originalText?: string;
+  isApproved?: boolean;
+}
+
+

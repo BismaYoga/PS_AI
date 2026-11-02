@@ -1423,6 +1423,22 @@ def analyze_chat_intent_and_estimate(user_text: str) -> dict:
             "estimated_quota": 0
         }
 
+    # Hitung nilai riil token / kuota Invezgo data pasar yang terpakai
+    tokens_found = set(re.findall(r'\b[A-Z]{4}\b', user_text.upper()))
+    try:
+        all_quotes = load_all_market_quotes_db()
+        valid_tickers = [t for t in tokens_found if t in all_quotes] if all_quotes else list(tokens_found)
+    except Exception:
+        valid_tickers = list(tokens_found)
+
+    # Skrining, makro pasar, atau 1 emiten butuh 1 token Invezgo; komparasi multi-emiten butuh N token
+    if len(valid_tickers) > 1:
+        real_quota = min(len(valid_tickers), 4)
+    else:
+        real_quota = 1
+
+    real_quota_label = f"Pesan ini akan menggunakan {real_quota} Kuota Data Pasar Bursa"
+
     # 2. Panggil AI Planner (Gemini) untuk menganalisis kebutuhan tools dan menyusun rancangan secara dinamis
     tools_summary = "\n".join([f"- {t['name']}: {t['description']}" for t in TOOL_DEFINITIONS])
 
@@ -1488,6 +1504,9 @@ KEMBALIKAN HANYA FORMAT JSON MURNI:
                             txt = re.sub(r'\s*```$', '', txt).strip()
                             plan = json.loads(txt)
                             if isinstance(plan, dict) and "needs_approval" in plan:
+                                if plan.get("needs_approval"):
+                                    plan["estimated_quota"] = real_quota
+                                    plan["quota_label"] = real_quota_label
                                 return plan
             except Exception as e:
                 print(f"[AI Planner Error {model}] {e}")
@@ -1500,8 +1519,8 @@ KEMBALIKAN HANYA FORMAT JSON MURNI:
         "title": "Rencana Analisis Data Pasar Modal BEI",
         "description": "Sistem PintarSaham akan memproses permintaan Anda dengan memindai basis data pasar modal Bursa Efek Indonesia.",
         "methodology": "Penarikan data pasar modal bursa resmi dan kalkulasi analitis terkait",
-        "estimated_quota": 1,
-        "quota_label": "Pesan ini akan menggunakan 1 Kuota Data Pasar Bursa",
+        "estimated_quota": real_quota,
+        "quota_label": real_quota_label,
         "continue_label": "Lanjutkan Analisis",
         "cancel_label": "Batal",
         "execution_plan": "Panggil tools data bursa yang relevan untuk menjawab permintaan pengguna secara komprehensif."
