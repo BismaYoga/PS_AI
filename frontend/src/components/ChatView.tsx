@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { StockItem, ApprovalPlan } from '../types';
 import { Icon } from './Icon';
 import { FormattedMessage } from './FormattedMessage';
@@ -19,13 +19,65 @@ interface ChatMessage {
   time: string;
 }
 
-const QUICK_PROMPTS = [
-  'Bagaimana analisis teknikal dan tren pergerakan BBCA saat ini?',
-  'Sentimen makro apa yang paling mempengaruhi IHSG dan saham perbankan (MSCI, BI-Rate)?',
-  'Sebutkan 3 saham dengan proyeksi dividen yield menarik dan fundamental sehat.',
-  'Bandingkan valuasi dan margin laba ASII vs UNTR.',
-  'Bagaimana ringkasan kinerja laporan keuangan kuartalan terbaru INTP?',
+export interface ChatSession {
+  id: string;
+  title: string;
+  createdAt: number;
+  updatedAt: number;
+  messages: ChatMessage[];
+}
+
+const STORAGE_SESSIONS_KEY = 'ps_chat_sessions_v2';
+const STORAGE_ACTIVE_ID_KEY = 'ps_chat_active_session_id_v2';
+
+const PROMPT_SUGGESTION_CARDS = [
+  {
+    category: 'Analisis Teknikal',
+    icon: 'chart',
+    title: 'Tren Harga & Support Resistance BBCA',
+    desc: 'Kaji posisi Relative Strength Index (RSI 14), Moving Average 20/50, serta level pantulan harga.',
+    query: 'Bagaimana analisis teknikal dan tren pergerakan BBCA saat ini?',
+  },
+  {
+    category: 'Sentimen Makro',
+    icon: 'globe',
+    title: 'Sentimen Rebalancing MSCI & BI-Rate',
+    desc: 'Ulas arah kebijakan suku bunga dan potensi rebalancing indeks global terhadap saham perbankan.',
+    query: 'Sentimen makro apa yang paling mempengaruhi IHSG dan saham perbankan (MSCI, BI-Rate)?',
+  },
+  {
+    category: 'Skrining Dividen',
+    icon: 'coins',
+    title: 'Saham Prospek Yield Dividen Tinggi',
+    desc: 'Temukan 3 saham dengan proyeksi dividen menarik, payout ratio sehat, dan fundamental solid.',
+    query: 'Sebutkan 3 saham dengan proyeksi dividen yield menarik dan fundamental sehat.',
+  },
+  {
+    category: 'Komparasi Valuasi',
+    icon: 'layers',
+    title: 'Komparasi Valuasi ASII vs UNTR',
+    desc: 'Bandingkan rasio PER, PBV, ROE, dan margin laba bersih antar dua emiten konglomerasi.',
+    query: 'Bandingkan valuasi dan margin laba ASII vs UNTR.',
+  },
 ];
+
+const createInitialSession = (): ChatSession => {
+  const id = `sess_${Date.now()}`;
+  return {
+    id,
+    title: 'Sesi Baru',
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    messages: [
+      {
+        id: `welcome-${id}`,
+        role: 'model',
+        text: 'Halo! Saya Asisten Analis Pasar Modal PintarSaham. Anda bisa menanyakan analisis teknikal chart (MA20/50, RSI, Support/Resistance), valuasi harga wajar, kinerja laporan keuangan resmi BEI, perbandingan emiten, hingga dampak isu makro seperti rebalancing MSCI dan kebijakan suku bunga. Ada yang ingin Anda diskusikan?',
+        time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+      },
+    ],
+  };
+};
 
 export const ChatView: React.FC<ChatViewProps> = ({
   stocks: _stocks,
@@ -33,27 +85,155 @@ export const ChatView: React.FC<ChatViewProps> = ({
   onNotify,
   onNavigateHome,
 }) => {
-  const [messages, setMessages] = useState<ChatMessage[]>(() => [
-    {
-      id: 'welcome-1',
-      role: 'model',
-      text: 'Halo! Saya Asisten Analis Pasar Modal PintarSaham. Anda bisa menanyakan analisis teknikal chart (MA20/50, RSI, Support/Resistance), valuasi harga wajar, kinerja laporan keuangan resmi BEI, perbandingan emiten, hingga dampak isu makro seperti rebalancing MSCI dan kebijakan suku bunga. Ada yang ingin Anda diskusikan?',
-      time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
-    },
-  ]);
-  const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  // 1. Session Management State
+  const [sessions, setSessions] = useState<ChatSession[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_SESSIONS_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch (e) {
+      console.warn('Gagal memuat riwayat sesi chat:', e);
+    }
+    return [createInitialSession()];
+  });
+
+  const [activeSessionId, setActiveSessionId] = useState<string>(() => {
+    try {
+      const savedId = localStorage.getItem(STORAGE_ACTIVE_ID_KEY);
+      if (savedId) return savedId;
+    } catch {}
+    return '';
+  });
+
+  const [sidebarOpen, setSidebarOpen] = useState<boolean>(() => {
+    return typeof window !== 'undefined' ? window.innerWidth > 850 : true;
+  });
+
+  const [searchSession, setSearchSession] = useState<string>('');
+  const [input, setInput] = useState<string>('');
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Sync activeSessionId
+  useEffect(() => {
+    if (!activeSessionId || !sessions.some((s) => s.id === activeSessionId)) {
+      if (sessions.length > 0) {
+        setActiveSessionId(sessions[0].id);
+      } else {
+        const fresh = createInitialSession();
+        setSessions([fresh]);
+        setActiveSessionId(fresh.id);
+      }
+    }
+  }, [sessions, activeSessionId]);
+
+  // Save sessions to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_SESSIONS_KEY, JSON.stringify(sessions));
+      if (activeSessionId) {
+        localStorage.setItem(STORAGE_ACTIVE_ID_KEY, activeSessionId);
+      }
+    } catch (e) {
+      console.error('Gagal menyimpan sesi chat ke localStorage:', e);
+    }
+  }, [sessions, activeSessionId]);
+
+  // Active Session
+  const activeSession = useMemo(() => {
+    return sessions.find((s) => s.id === activeSessionId) || sessions[0] || createInitialSession();
+  }, [sessions, activeSessionId]);
+
+  const messages = activeSession.messages;
+
+  // Auto scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isLoading]);
 
   useEffect(() => {
     inputRef.current?.focus();
-  }, []);
+  }, [activeSessionId]);
 
+  // Create New Session
+  const handleCreateNewSession = () => {
+    const newSess = createInitialSession();
+    setSessions((prev) => [newSess, ...prev]);
+    setActiveSessionId(newSess.id);
+    setInput('');
+    onNotify('Sesi obrolan baru dimulai');
+    if (window.innerWidth <= 850) {
+      setSidebarOpen(false);
+    }
+  };
+
+  // Delete Session
+  const handleDeleteSession = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    setSessions((prev) => {
+      const filtered = prev.filter((s) => s.id !== id);
+      if (filtered.length === 0) {
+        const fresh = createInitialSession();
+        setActiveSessionId(fresh.id);
+        return [fresh];
+      }
+      if (id === activeSessionId) {
+        setActiveSessionId(filtered[0].id);
+      }
+      return filtered;
+    });
+    onNotify('Sesi obrolan dihapus');
+  };
+
+  // Clear All Sessions
+  const handleClearAllSessions = () => {
+    if (window.confirm('Bersihkan seluruh riwayat sesi chat PintarSaham?')) {
+      const fresh = createInitialSession();
+      setSessions([fresh]);
+      setActiveSessionId(fresh.id);
+      onNotify('Seluruh riwayat obrolan dibersihkan');
+    }
+  };
+
+  // Filtered Sessions for Sidebar
+  const filteredSessions = useMemo(() => {
+    const q = searchSession.trim().toLowerCase();
+    if (!q) return sessions;
+    return sessions.filter((s) => s.title.toLowerCase().includes(q));
+  }, [sessions, searchSession]);
+
+  // Update Messages Helper for Active Session
+  const updateActiveSessionMessages = (
+    updater: (prevMessages: ChatMessage[]) => ChatMessage[],
+    customTitle?: string
+  ) => {
+    setSessions((prevSessions) =>
+      prevSessions.map((s) => {
+        if (s.id === activeSessionId) {
+          const nextMessages = updater(s.messages);
+          let title = s.title;
+          if (customTitle && (s.title === 'Sesi Baru' || s.title === 'Chat Baru')) {
+            title = customTitle;
+          }
+          return {
+            ...s,
+            title,
+            updatedAt: Date.now(),
+            messages: nextMessages,
+          };
+        }
+        return s;
+      })
+    );
+  };
+
+  // Handle Send
   const handleSend = async (textToSend?: string) => {
     const q = (textToSend || input).trim();
     if (!q || isLoading) return;
@@ -65,8 +245,11 @@ export const ChatView: React.FC<ChatViewProps> = ({
       time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
     };
 
+    // Auto generate session title from user query if still generic
+    const autoTitle = q.length > 34 ? `${q.slice(0, 32)}...` : q;
     const newHistory = [...messages, userMsg];
-    setMessages(newHistory);
+
+    updateActiveSessionMessages(() => newHistory, autoTitle);
     setInput('');
     setIsLoading(true);
 
@@ -93,7 +276,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
           },
           time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
         };
-        setMessages((prev) => [...prev, confirmMsg]);
+        updateActiveSessionMessages((prev) => [...prev, confirmMsg]);
         setIsLoading(false);
         return;
       }
@@ -107,7 +290,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
         text: `Maaf, terjadi kendala saat menganalisis permintaan: ${err.message || 'Koneksi gagal'}`,
         time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
       };
-      setMessages((prev) => [...prev, errorMsg]);
+      updateActiveSessionMessages((prev) => [...prev, errorMsg]);
       setIsLoading(false);
     }
   };
@@ -141,7 +324,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
         time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
       };
 
-      setMessages((prev) => [...prev, botMsg]);
+      updateActiveSessionMessages((prev) => [...prev, botMsg]);
     } catch (err: any) {
       const errorMsg: ChatMessage = {
         id: (Date.now() + 1).toString(),
@@ -149,14 +332,14 @@ export const ChatView: React.FC<ChatViewProps> = ({
         text: `Maaf, terjadi kendala saat memproses jawaban: ${err.message || 'Koneksi gagal'}`,
         time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
       };
-      setMessages((prev) => [...prev, errorMsg]);
+      updateActiveSessionMessages((prev) => [...prev, errorMsg]);
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleApprovePlan = (plan: ApprovalPlan, messageId: string) => {
-    setMessages((prev) =>
+    updateActiveSessionMessages((prev) =>
       prev.map((m) =>
         m.id === messageId && m.approvalPlan
           ? { ...m, approvalPlan: { ...m.approvalPlan, isApproved: true } }
@@ -170,7 +353,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
     const queryWithPlan = plan.execution_plan
       ? `${plan.originalText}\n[Instruksi Rencana Analisis: ${plan.execution_plan}]`
-      : (plan.originalText || '');
+      : plan.originalText || '';
 
     if (!historyForApi.some((m) => m.text === queryWithPlan || m.text === plan.originalText)) {
       historyForApi.push({ role: 'user', text: queryWithPlan });
@@ -201,7 +384,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
         time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
       };
 
-      setMessages((prev) => [...prev, botMsg]);
+      updateActiveSessionMessages((prev) => [...prev, botMsg]);
     } catch (err: any) {
       const errorMsg: ChatMessage = {
         id: (Date.now() + 1).toString(),
@@ -209,14 +392,14 @@ export const ChatView: React.FC<ChatViewProps> = ({
         text: `Maaf, terjadi kendala saat memproses jawaban: ${err.message || 'Koneksi gagal'}`,
         time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
       };
-      setMessages((prev) => [...prev, errorMsg]);
+      updateActiveSessionMessages((prev) => [...prev, errorMsg]);
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleCancelPlan = (messageId: string) => {
-    setMessages((prev) =>
+    updateActiveSessionMessages((prev) =>
       prev.map((m) =>
         m.id === messageId
           ? {
@@ -236,22 +419,12 @@ export const ChatView: React.FC<ChatViewProps> = ({
     }
   };
 
-  const handleClearChat = () => {
-    setMessages([
-      {
-        id: 'welcome-reset',
-        role: 'model',
-        text: 'Riwayat obrolan telah dibersihkan. Silakan tanyakan analisis saham atau pasar modal lainnya.',
-        time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
-      },
-    ]);
-    onNotify('Riwayat chat berhasil dibersihkan');
-  };
+  const isOnlyGreeting = messages.length <= 1;
 
   return (
-    <main className="main" style={{ maxWidth: '980px', margin: '0 auto', padding: '24px 20px 80px' }}>
-      {/* Breadcrumb */}
-      <div className="breadcrumb" style={{ marginBottom: '16px' }}>
+    <div style={{ maxWidth: '1240px', margin: '0 auto', padding: '10px 16px 40px' }}>
+      {/* Top Breadcrumb */}
+      <div className="breadcrumb" style={{ marginBottom: '14px' }}>
         <a
           href="#home"
           onClick={(e) => {
@@ -265,284 +438,368 @@ export const ChatView: React.FC<ChatViewProps> = ({
         <span className="breadcrumb-current">Chat AI Asisten Pasar Modal</span>
       </div>
 
-      {/* Header */}
-      <div className="section-head" style={{ marginBottom: '20px', flexWrap: 'wrap', gap: '14px' }}>
-        <div>
-          <h1 style={{ fontSize: '26px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Icon name="sparkles" cls="lg" style={{ color: 'var(--blue)' }} /> Chat AI Asisten Pasar Modal
-          </h1>
-          <p style={{ marginTop: '6px', color: 'var(--muted)', fontSize: '13px', lineHeight: 1.6 }}>
-            Konsultasikan analisis teknikal, valuasi harga wajar, kinerja lapkeu resmi BEI, serta sentimen makro (MSCI &amp; Suku Bunga) secara interaktif.
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <button className="btn small-btn" onClick={handleClearChat} title="Mulai percakapan baru">
-            <Icon name="refresh" cls="sm" /> Bersihkan Chat
-          </button>
-        </div>
-      </div>
-
-      {/* Suggestion Chips */}
-      <div style={{ marginBottom: '16px', overflowX: 'auto', paddingBottom: '4px' }}>
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'nowrap' }}>
-          {QUICK_PROMPTS.map((prompt, pIdx) => (
+      {/* Main Studio Frame */}
+      <div className="ps-chat-studio">
+        {/* Left Sidebar: Session Management */}
+        <aside className={`ps-chat-sidebar ${sidebarOpen ? '' : 'collapsed'}`}>
+          <div className="sidebar-header">
             <button
-              key={pIdx}
               type="button"
-              className="btn small-btn"
-              onClick={() => handleSend(prompt)}
-              style={{
-                fontSize: '11px',
-                borderRadius: '16px',
-                whiteSpace: 'nowrap',
-                background: 'var(--soft)',
-                border: '1px solid var(--line)',
-                color: 'var(--ink)',
-              }}
+              className="btn-new-chat"
+              onClick={handleCreateNewSession}
+              title="Mulai sesi obrolan baru"
             >
-              <Icon name="sparkles" cls="sm" style={{ color: 'var(--blue)' }} /> {prompt}
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              <span>Sesi Baru</span>
             </button>
-          ))}
-        </div>
-      </div>
 
-      {/* Main Chat Box Container */}
-      <div
-        className="card"
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          height: '650px',
-          maxHeight: 'calc(100vh - 280px)',
-          borderRadius: '16px',
-          boxShadow: '0 4px 24px rgba(14, 52, 101, 0.06)',
-          overflow: 'hidden',
-          border: '1px solid var(--line)',
-        }}
-      >
-        {/* Messages Stream */}
-        <div
-          style={{
-            flex: 1,
-            overflowY: 'auto',
-            padding: '24px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '16px',
-          }}
-        >
-          {messages.map((m) => {
-            const isUser = m.role === 'user';
-            return (
-              <div
-                key={m.id}
-                style={{
-                  display: 'flex',
-                  justifyContent: isUser ? 'flex-end' : 'flex-start',
-                  width: '100%',
-                }}
+            <div className="sidebar-search">
+              <svg
+                className="sidebar-search-icon"
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
               >
-                <div
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input
+                type="text"
+                value={searchSession}
+                onChange={(e) => setSearchSession(e.target.value)}
+                placeholder="Cari riwayat sesi..."
+              />
+            </div>
+          </div>
+
+          {/* Session List */}
+          <div className="sidebar-sessions-list">
+            {filteredSessions.length === 0 ? (
+              <div style={{ padding: '20px 10px', textAlign: 'center', color: 'var(--muted)', fontSize: '11.5px' }}>
+                Tidak ada sesi yang cocok.
+              </div>
+            ) : (
+              filteredSessions.map((s) => {
+                const isActive = s.id === activeSessionId;
+                return (
+                  <div
+                    key={s.id}
+                    className={`session-item ${isActive ? 'active' : ''}`}
+                    onClick={() => {
+                      setActiveSessionId(s.id);
+                      if (window.innerWidth <= 850) setSidebarOpen(false);
+                    }}
+                    title={s.title}
+                  >
+                    <div className="session-info">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0, color: isActive ? 'var(--blue)' : 'var(--muted)' }}>
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                      </svg>
+                      <span className="session-title">{s.title}</span>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="session-del-btn"
+                      onClick={(e) => handleDeleteSession(e, s.id)}
+                      title="Hapus sesi ini"
+                    >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="3 6 5 6 21 6"></polyline>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                      </svg>
+                    </button>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Sidebar Footer */}
+          <div className="sidebar-footer">
+            <span>{sessions.length} Sesi Tersimpan</span>
+            <button
+              type="button"
+              className="link-btn"
+              onClick={handleClearAllSessions}
+              style={{ fontSize: '11px', color: 'var(--muted)' }}
+              title="Bersihkan semua sesi"
+            >
+              Hapus Semua
+            </button>
+          </div>
+        </aside>
+
+        {/* Right Canvas: Chat Stream & Input */}
+        <div className="ps-chat-canvas">
+          {/* Header Bar */}
+          <div className="chat-canvas-header">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+              <button
+                type="button"
+                className="icon-btn"
+                onClick={() => setSidebarOpen((v) => !v)}
+                title={sidebarOpen ? 'Tutup sidebar riwayat' : 'Buka sidebar riwayat'}
+                style={{ width: '32px', height: '32px' }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="9" y1="3" x2="9" y2="21"></line>
+                </svg>
+              </button>
+
+              <div style={{ minWidth: 0 }}>
+                <h3
                   style={{
-                    maxWidth: isUser ? '85%' : '92%',
-                    minWidth: '120px',
-                    padding: '14px 18px',
-                    borderRadius: isUser ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                    background: isUser ? 'var(--navy)' : '#f8fafc',
-                    color: isUser ? '#ffffff' : 'var(--ink)',
-                    border: isUser ? 'none' : '1px solid var(--line)',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
-                    wordBreak: 'break-word',
-                    overflowWrap: 'anywhere',
+                    fontSize: '14px',
+                    fontWeight: 700,
+                    margin: 0,
+                    color: 'var(--ink)',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
                   }}
                 >
-                  {/* Approval Confirmation Card */}
-                  {m.approvalPlan ? (
-                    <div className="approval-card" style={{ maxWidth: '100%', margin: '0' }}>
-                      <div className="approval-badge">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                          <circle cx="12" cy="12" r="10"></circle>
-                          <line x1="12" y1="16" x2="12" y2="12"></line>
-                          <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                        </svg>
-                        <span>Konfirmasi Rencana Analisis</span>
-                      </div>
-                      <h5 className="approval-title">{m.approvalPlan.title}</h5>
-                      <p className="approval-desc">{m.approvalPlan.description}</p>
-                      <div className="approval-method">
-                        <strong>Metodologi:</strong> {m.approvalPlan.methodology}
-                      </div>
-                      <div className="approval-quota-info">
-                        <span className="quota-tag">
-                          <svg
-                            width="12"
-                            height="12"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2.5"
-                            style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '5px' }}
-                          >
-                            <line x1="18" y1="20" x2="18" y2="10"></line>
-                            <line x1="12" y1="20" x2="12" y2="4"></line>
-                            <line x1="6" y1="20" x2="6" y2="14"></line>
-                          </svg>
-                          <strong>Estimasi:</strong> {m.approvalPlan.quota_label}
-                        </span>
-                      </div>
-                      {m.approvalPlan.isApproved ? (
-                        <div className="approval-confirmed-bar">
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                            <polyline points="20 6 9 17 4 12"></polyline>
-                          </svg>
-                          <span>Permintaan Telah Disetujui ({m.approvalPlan.quota_label})</span>
-                        </div>
-                      ) : (
-                        <div className="approval-actions">
-                          <button
-                            type="button"
-                            className="btn-approve"
-                            onClick={() => handleApprovePlan(m.approvalPlan!, m.id)}
-                            disabled={isLoading}
-                          >
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                              <polyline points="20 6 9 17 4 12"></polyline>
-                            </svg>
-                            <span>{m.approvalPlan.continue_label}</span>
-                          </button>
-                          <button
-                            type="button"
-                            className="btn-cancel"
-                            onClick={() => handleCancelPlan(m.id)}
-                            disabled={isLoading}
-                          >
-                            {m.approvalPlan.cancel_label}
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <>
-                      {/* Tool chips */}
-                      {m.toolCalls && m.toolCalls.length > 0 && (
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
-                          {m.toolCalls.map((tc, tcIdx) => (
-                            <span
-                              key={tcIdx}
-                              className="pill green"
-                              style={{ fontSize: '10px', padding: '2px 8px', fontWeight: 600 }}
-                            >
-                              <Icon name="check" cls="sm" /> Sumber: {tc.name.replace(/_/g, ' ')}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Body Text */}
-                      <FormattedMessage content={m.text} />
-                    </>
-                  )}
-
-                  {/* Timestamp */}
-                  <div
-                    style={{
-                      marginTop: '6px',
-                      fontSize: '10.5px',
-                      textAlign: isUser ? 'right' : 'left',
-                      color: isUser ? 'rgba(255,255,255,0.7)' : 'var(--muted)',
-                    }}
-                  >
-                    {m.time}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-
-          {/* Loading Indicator */}
-          {isLoading && (
-            <div style={{ display: 'flex', justifyContent: 'flex-start', width: '100%' }}>
-              <div
-                style={{
-                  padding: '14px 20px',
-                  borderRadius: '16px 16px 16px 4px',
-                  background: '#f8fafc',
-                  border: '1px solid var(--line)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                  color: 'var(--navy)',
-                  fontWeight: 600,
-                  fontSize: '13px',
-                }}
-              >
-                <svg
-                  className="spin-animation"
-                  style={{ width: '18px', height: '18px', color: 'var(--blue)' }}
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                >
-                  <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-                </svg>
-                <span>Sedang menganalisis data pasar modal &amp; menyusun jawaban...</span>
+                  {activeSession.title}
+                </h3>
+                <span style={{ fontSize: '10.5px', color: 'var(--muted)', display: 'block' }}>
+                  Model Riset: PintarSaham Intelligence BEI
+                </span>
               </div>
             </div>
-          )}
 
-          <div ref={messagesEndRef} />
-        </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button
+                type="button"
+                className="btn small-btn"
+                onClick={handleCreateNewSession}
+                title="Mulai sesi baru"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                <span>Sesi Baru</span>
+              </button>
+            </div>
+          </div>
 
-        {/* Input Bar */}
-        <div
-          style={{
-            padding: '14px 20px',
-            borderTop: '1px solid var(--line)',
-            background: '#ffffff',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-          }}
-        >
-          <input
-            ref={inputRef}
-            type="text"
-            className="input"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Tanyakan analisis saham, rasio valuasi, atau sentimen pasar BEI..."
-            disabled={isLoading}
-            style={{
-              flex: 1,
-              padding: '12px 16px',
-              borderRadius: '10px',
-              border: '1px solid var(--line)',
-              fontSize: '13.5px',
-              outline: 'none',
-              background: '#fcfdfe',
-            }}
-          />
-          <button
-            type="button"
-            className="btn primary"
-            onClick={() => handleSend()}
-            disabled={isLoading || !input.trim()}
-            style={{
-              padding: '12px 20px',
-              borderRadius: '10px',
-              fontWeight: 650,
-              fontSize: '13.5px',
-            }}
-          >
-            <Icon name="sparkles" cls="sm" /> Kirim
-          </button>
+          {/* Messages Stream */}
+          <div className="chat-canvas-messages">
+            {isOnlyGreeting ? (
+              /* Welcoming Hero Screen (Gemini / Claude style) */
+              <div className="chat-welcome-hero">
+                <div className="hero-avatar-wrap">
+                  <Icon name="sparkles" cls="lg" />
+                </div>
+                <h2>Asisten Analis Pasar Modal PintarSaham</h2>
+                <p>
+                  Konsultasikan data teknikal chart, rasio valuasi fundamental laporan keuangan resmi BEI,
+                  analisis bandarmologi, hingga sentimen makro pasar secara langsung tanpa halusinasi.
+                </p>
+
+                {/* Prompt Cards Grid */}
+                <div className="prompt-cards-grid">
+                  {PROMPT_SUGGESTION_CARDS.map((card, idx) => (
+                    <div
+                      key={idx}
+                      className="prompt-card"
+                      onClick={() => handleSend(card.query)}
+                      role="button"
+                      tabIndex={0}
+                    >
+                      <div className="prompt-card-top">
+                        <Icon name={card.icon} cls="sm" />
+                        <span>{card.category}</span>
+                      </div>
+                      <div className="prompt-card-title">{card.title}</div>
+                      <div className="prompt-card-desc">{card.desc}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {/* Render Existing Message Turns */}
+            {messages.map((m) => {
+              const isUser = m.role === 'user';
+              return (
+                <div key={m.id} className={`chat-turn ${isUser ? 'user' : 'model'}`}>
+                  {!isUser && (
+                    <div className="turn-avatar model" title="PintarSaham Analyst AI">
+                      <Icon name="sparkles" cls="sm" />
+                    </div>
+                  )}
+
+                  <div className="turn-bubble">
+                    {/* Approval Card */}
+                    {m.approvalPlan ? (
+                      <div className="approval-card" style={{ maxWidth: '100%', margin: '0' }}>
+                        <div className="approval-badge">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="16" x2="12" y2="12"></line>
+                            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                          </svg>
+                          <span>Konfirmasi Rencana Analisis</span>
+                        </div>
+                        <h5 className="approval-title">{m.approvalPlan.title}</h5>
+                        <p className="approval-desc">{m.approvalPlan.description}</p>
+                        <div className="approval-method">
+                          <strong>Metodologi:</strong> {m.approvalPlan.methodology}
+                        </div>
+                        <div className="approval-quota-info">
+                          <span className="quota-tag">
+                            <svg
+                              width="12"
+                              height="12"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2.5"
+                              style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '5px' }}
+                            >
+                              <line x1="18" y1="20" x2="18" y2="10"></line>
+                              <line x1="12" y1="20" x2="12" y2="4"></line>
+                              <line x1="6" y1="20" x2="6" y2="14"></line>
+                            </svg>
+                            <strong>Estimasi:</strong> {m.approvalPlan.quota_label}
+                          </span>
+                        </div>
+                        {m.approvalPlan.isApproved ? (
+                          <div className="approval-confirmed-bar">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                              <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                            <span>Permintaan Telah Disetujui ({m.approvalPlan.quota_label})</span>
+                          </div>
+                        ) : (
+                          <div className="approval-actions">
+                            <button
+                              type="button"
+                              className="btn-approve"
+                              onClick={() => handleApprovePlan(m.approvalPlan!, m.id)}
+                              disabled={isLoading}
+                            >
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                              </svg>
+                              <span>{m.approvalPlan.continue_label}</span>
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-cancel"
+                              onClick={() => handleCancelPlan(m.id)}
+                              disabled={isLoading}
+                            >
+                              {m.approvalPlan.cancel_label}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <>
+                        {/* Tool chips */}
+                        {m.toolCalls && m.toolCalls.length > 0 && (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
+                            {m.toolCalls.map((tc, tcIdx) => (
+                              <span
+                                key={tcIdx}
+                                className="pill green"
+                                style={{ fontSize: '10px', padding: '2px 8px', fontWeight: 600 }}
+                              >
+                                <Icon name="check" cls="sm" /> Sumber: {tc.name.replace(/_/g, ' ')}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Formatted Markdown */}
+                        <FormattedMessage content={m.text} />
+                      </>
+                    )}
+
+                    {/* Turn Meta Timestamp */}
+                    <div className="turn-meta">
+                      <span>{m.time}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Loading Indicator */}
+            {isLoading && (
+              <div className="chat-turn model">
+                <div className="turn-avatar model">
+                  <Icon name="sparkles" cls="sm" />
+                </div>
+                <div
+                  className="turn-bubble"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    color: 'var(--navy)',
+                    fontWeight: 600,
+                    fontSize: '13px',
+                  }}
+                >
+                  <svg
+                    className="spin-animation"
+                    style={{ width: '18px', height: '18px', color: 'var(--blue)' }}
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                  >
+                    <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                  </svg>
+                  <span>Sedang menganalisis data pasar modal &amp; menyusun jawaban...</span>
+                </div>
+              </div>
+            )}
+
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Floating Input Box */}
+          <div className="chat-canvas-input-wrap">
+            <div className="chat-input-box">
+              <input
+                ref={inputRef}
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Tanyakan analisis saham, rasio valuasi, atau sentimen pasar BEI..."
+                disabled={isLoading}
+              />
+              <button
+                type="button"
+                className="btn-chat-send"
+                onClick={() => handleSend()}
+                disabled={isLoading || !input.trim()}
+                title="Kirim pesan"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <line x1="22" y1="2" x2="11" y2="13"></line>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+              </button>
+            </div>
+            <div style={{ marginTop: '7px', textAlign: 'center', fontSize: '10.5px', color: 'var(--muted)' }}>
+              Data bersumber resmi dari Bursa Efek Indonesia (IDX). Selalu lakukan riset mandiri sebelum mengambil keputusan investasi.
+            </div>
+          </div>
         </div>
       </div>
-      <div style={{ marginTop: '12px', textAlign: 'center', fontSize: '11px', color: 'var(--muted)' }}>
-        Analisis berbasis data riil Bursa Efek Indonesia (BEI). Selalu lakukan riset mandiri sebelum mengambil keputusan investasi.
-      </div>
-    </main>
+    </div>
   );
 };
