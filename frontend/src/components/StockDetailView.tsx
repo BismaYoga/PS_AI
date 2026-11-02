@@ -32,7 +32,6 @@ interface StockDetailViewProps {
   onOpenAbout: () => void;
   onNavigateHome: () => void;
   onNotify: (msg: string) => void;
-  onOpenCompare?: (tickerA?: string) => void;
 }
 
 export const StockDetailView: React.FC<StockDetailViewProps> = ({
@@ -49,7 +48,6 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
   onOpenAbout,
   onNavigateHome,
   onNotify,
-  onOpenCompare,
 }) => {
   const [period, setPeriod] = useState<Timeframe>('3M');
   const [chartType, setChartType] = useState<ChartType>('line');
@@ -783,15 +781,6 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
               >
                 <Icon name="file" cls="sm" /> Sumber &amp; profil
               </button>
-              {onOpenCompare && (
-                <button
-                  className="btn"
-                  onClick={() => onOpenCompare(stock.ticker)}
-                  title={`Bandingkan ${stock.ticker} dengan emiten lain`}
-                >
-                  <Icon name="compare" cls="sm" /> Bandingkan
-                </button>
-              )}
               <button
                 className={`btn ${isFav ? '' : 'primary'}`}
                 id="detail-favorite"

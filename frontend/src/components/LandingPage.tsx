@@ -206,10 +206,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </button>
             <button
               className="btn"
-              onClick={onOpenCompare}
+              onClick={() => { window.location.hash = '#chat'; }}
               style={{ padding: '12px 20px', fontSize: '14px', fontWeight: 600, borderRadius: '10px' }}
             >
-              <Icon name="compare" cls="sm" /> Bandingkan Saham
+              <Icon name="sparkles" cls="sm" style={{ color: 'var(--blue)' }} /> Chat AI Asisten
             </button>
             {!user && (
               <button

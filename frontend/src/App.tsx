@@ -514,7 +514,6 @@ export default function App() {
             onOpenAbout={() => setDrawerPayload({ type: 'about' })}
             onNavigateHome={() => handleNavigate('home')}
             onNotify={notify}
-            onOpenCompare={(tA) => handleOpenCompare(tA)}
           />
         )}
       </main>
