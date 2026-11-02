@@ -27,6 +27,8 @@ export interface CorporateEvent {
   ai_summary?: string;
   ai_sentiment?: string; // 'Positif' | 'Netral' | 'Waspada'
   ai_impact?: string;
+  url?: string;
+  attachments?: { name?: string; url: string }[];
 }
 
 export interface NewsItem {

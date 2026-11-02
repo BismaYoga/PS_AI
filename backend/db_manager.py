@@ -229,6 +229,8 @@ def save_company_detail_db(
                 "sub": f"Keterbukaan Informasi Resmi BEI ({clean})",
                 "amount": "Dokumen Resmi BEI",
                 "note": f"Pengumuman resmi Bursa Efek Indonesia untuk {clean} pada {d.get('date', raw_date)}: {title}.",
+                "url": d.get("url") or "",
+                "attachments": d.get("attachments") or [],
             })
         if cal_events:
             save_corporate_events_db(cal_events)

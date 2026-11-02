@@ -453,6 +453,10 @@ export const DrawerModal: React.FC<DrawerModalProps> = ({
         const e = payload.eventItem;
         if (!e) return null;
         const isEarn = e.type === 'Laporan Keuangan';
+        const officialDocUrl =
+          e.url ||
+          (Array.isArray(e.attachments) && e.attachments.length > 0 ? e.attachments[0].url : '') ||
+          `https://www.idx.co.id/id/perusahaan-tercatat/keterbukaan-informasi/`;
 
         return (
           <>
@@ -560,6 +564,61 @@ export const DrawerModal: React.FC<DrawerModalProps> = ({
                   ? 'Tanggal rilis kinerja keuangan merupakan proyeksi resmi bursa dan dapat berubah sesuai jadwal audit independen perusahaan.'
                   : 'Dividen tunai hanya berhak diperoleh bagi pemegang saham yang tercatat sebelum Cum Date berakhir di pasar reguler.'}
               </p>
+
+              <div style={{ marginTop: '22px', marginBottom: '8px' }}>
+                <a
+                  href={officialDocUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '9px',
+                    width: '100%',
+                    padding: '12px 16px',
+                    borderRadius: '10px',
+                    background: '#f0f5fc',
+                    color: 'var(--navy)',
+                    border: '1px solid #c9dff7',
+                    fontWeight: 650,
+                    fontSize: '13px',
+                    textDecoration: 'none',
+                    boxShadow: '0 1px 3px rgba(14,52,101,0.06)',
+                  }}
+                >
+                  <Icon name="file" cls="sm" style={{ color: 'var(--blue)' }} />
+                  <span>Buka Dokumen Resmi (PDF/BEI)</span>
+                  <Icon name="arrow-up-right" cls="sm" style={{ color: 'var(--blue)', marginLeft: 'auto' }} />
+                </a>
+                <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '6px', textAlign: 'center' }}>
+                  {e.url || (Array.isArray(e.attachments) && e.attachments.length > 0)
+                    ? 'Tautan langsung ke file PDF / keterbukaan informasi bursa.'
+                    : `Verifikasi keterbukaan informasi dan prospektus resmi PT ${e.ticker} Tbk di portal BEI.`}
+                </div>
+              </div>
+
+              {Array.isArray(e.attachments) && e.attachments.length > 1 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '8px' }}>
+                  {e.attachments.map((att: any, idx: number) => (
+                    <a
+                      key={idx}
+                      href={att.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn small-btn"
+                      style={{ justifyContent: 'space-between', fontSize: '11px' }}
+                    >
+                      <span>
+                        <Icon name="file" cls="sm" /> {att.name || `Lampiran_${idx + 1}.pdf`}
+                      </span>
+                      <Icon name="arrow-up-right" cls="sm" />
+                    </a>
+                  ))}
+                </div>
+              )}
+
               {onNavigateToStock && (
                 <button
                   className="btn primary"
@@ -567,7 +626,7 @@ export const DrawerModal: React.FC<DrawerModalProps> = ({
                     onClose();
                     onNavigateToStock(e.ticker);
                   }}
-                  style={{ marginTop: '24px' }}
+                  style={{ marginTop: '12px', width: '100%' }}
                 >
                   Buka profil &amp; valuasi {e.ticker}{' '}
                   <Icon name="right" cls="sm" />
