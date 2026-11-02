@@ -50,6 +50,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
 }) => {
   const [period, setPeriod] = useState<Timeframe>('3M');
   const [chartType, setChartType] = useState<ChartType>('line');
+  const [showMA, setShowMA] = useState<boolean>(true);
+  const [showVolume, setShowVolume] = useState<boolean>(true);
 
   // Dashboard berfokus secara eksklusif pada instrumen acuan pasar: IHSG
   const activeInstrument = 'IHSG';
@@ -199,18 +201,36 @@ export const HomeView: React.FC<HomeViewProps> = ({
           isStock={!isIHSG}
           period={period}
           chartType={chartType}
+          showMA={showMA}
+          showVolume={showVolume}
           marketCache={marketCache}
           onChartCalculated={(c) => setChartCalc(c)}
         />
 
         <div className="chart-foot">
           <div className="chart-legend">
-            <span className="legend-item">
+            <label
+              className={`legend-item legend-toggle ${!showMA ? 'is-off' : ''}`}
+              title="Klik untuk tampilkan / sembunyikan MA 20 sesi"
+            >
+              <input
+                type="checkbox"
+                checked={showMA}
+                onChange={(e) => setShowMA(e.target.checked)}
+              />
               <span className="legend-line ma"></span> MA 20 sesi
-            </span>
-            <span className="legend-item">
+            </label>
+            <label
+              className={`legend-item legend-toggle ${!showVolume ? 'is-off' : ''}`}
+              title="Klik untuk tampilkan / sembunyikan Volume harian"
+            >
+              <input
+                type="checkbox"
+                checked={showVolume}
+                onChange={(e) => setShowVolume(e.target.checked)}
+              />
               <span className="legend-bar"></span> Volume harian
-            </span>
+            </label>
           </div>
           <span className="chart-source">
             Sumber: Bursa Efek Indonesia (IDX)

@@ -54,6 +54,8 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
   const [period, setPeriod] = useState<Timeframe>('3M');
   const [chartType, setChartType] = useState<ChartType>('line');
   const [showFib, setShowFib] = useState<boolean>(true);
+  const [showMA, setShowMA] = useState<boolean>(true);
+  const [showVolume, setShowVolume] = useState<boolean>(true);
   const [finTab, setFinTab] = useState<'income' | 'balance' | 'cash'>('income');
   const [finTimeframe, setFinTimeframe] = useState<'quarterly' | 'annual'>('annual');
   const [showYoY, setShowYoY] = useState<boolean>(true);
@@ -1180,27 +1182,6 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
                 <Icon name="candles" cls="sm" />
               </button>
             </div>
-
-            <label
-              className="fib-toggle"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                fontSize: '11px',
-                color: 'var(--muted)',
-                cursor: 'pointer',
-                marginLeft: 'auto',
-              }}
-            >
-              <input
-                type="checkbox"
-                id="fib-toggle"
-                checked={showFib}
-                onChange={(e) => setShowFib(e.target.checked)}
-              />{' '}
-              Tampilkan Fibonacci
-            </label>
           </div>
 
           <MainChart
@@ -1211,6 +1192,8 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
             period={period}
             chartType={chartType}
             showFib={showFib}
+            showMA={showMA}
+            showVolume={showVolume}
             marketCache={marketCache}
             onChartCalculated={(c) => setChartCalc(c)}
           />
@@ -1220,9 +1203,40 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
               <span className="legend-item">
                 <i className="legend-line"></i> {stock.ticker}
               </span>
-              <span className="legend-item">
-                <i className="legend-line ma"></i> MA 20
-              </span>
+              <label
+                className={`legend-item legend-toggle ${!showMA ? 'is-off' : ''}`}
+                title="Klik untuk tampilkan / sembunyikan MA 20 sesi"
+              >
+                <input
+                  type="checkbox"
+                  checked={showMA}
+                  onChange={(e) => setShowMA(e.target.checked)}
+                />
+                <i className="legend-line ma"></i> MA 20 sesi
+              </label>
+              <label
+                className={`legend-item legend-toggle ${!showVolume ? 'is-off' : ''}`}
+                title="Klik untuk tampilkan / sembunyikan Volume harian"
+              >
+                <input
+                  type="checkbox"
+                  checked={showVolume}
+                  onChange={(e) => setShowVolume(e.target.checked)}
+                />
+                <i className="legend-bar"></i> Volume harian
+              </label>
+              <label
+                className={`legend-item legend-toggle ${!showFib ? 'is-off' : ''}`}
+                title="Klik untuk tampilkan / sembunyikan Fibonacci"
+              >
+                <input
+                  type="checkbox"
+                  id="fib-toggle"
+                  checked={showFib}
+                  onChange={(e) => setShowFib(e.target.checked)}
+                />
+                <i className="legend-line fib"></i> Fibonacci
+              </label>
             </div>
             <span className="chart-source">Sumber: Data Resmi Bursa Efek Indonesia (IDX)</span>
           </div>

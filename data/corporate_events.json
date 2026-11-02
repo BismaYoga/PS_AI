@@ -1775,7 +1775,10 @@
     "title": "Cum/Ex Date Dividen Tunai CPIN",
     "sub": "Dividen Rp108 per lembar saham",
     "amount": "Rp108 per saham",
-    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Charoen Pokphand Indonesia Tbk (CPIN) sebesar Rp108 per lembar saham."
+    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Charoen Pokphand Indonesia Tbk (CPIN) sebesar Rp108 per lembar saham.",
+    "ai_summary": "PT Charoen Pokphand Indonesia Tbk (CPIN) menjadwalkan pembagian dividen tunai sebesar Rp108 per saham, yang mencerminkan stabilitas arus kas dan komitmen perseroan dalam memberikan nilai tambah bagi pemegang saham. Sebagai pemimpin pasar di sektor perunggasan terintegrasi, aksi korporasi ini menegaskan fundamental emiten yang tetap solid di tengah dinamika operasional industri konsumer non-siklikal.",
+    "ai_sentiment": "Positif",
+    "ai_impact": "Distribusi dividen ini memberikan kepastian imbal hasil (yield) bagi investor dan menjadi katalis positif yang berpotensi menjaga stabilitas harga saham menjelang tanggal cum-dividend."
   },
   {
     "id": "div_INTP_20250603",
@@ -1795,7 +1798,10 @@
     "title": "Cum/Ex Date Dividen Tunai INCO",
     "sub": "Dividen Rp53.40 per lembar saham",
     "amount": "Rp53.40 per saham",
-    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Vale Indonesia Tbk (INCO) sebesar Rp53.40 per lembar saham."
+    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Vale Indonesia Tbk (INCO) sebesar Rp53.40 per lembar saham.",
+    "ai_summary": "PT Vale Indonesia Tbk (INCO) menjadwalkan pembagian dividen tunai sebesar Rp53,40 per saham sebagai bentuk apresiasi kepada pemegang saham di tengah komitmen ekspansi proyek strategis. Langkah ini mencerminkan kondisi arus kas yang terjaga meskipun emiten sektor nikel ini sedang dalam fase investasi intensif.",
+    "ai_sentiment": "Positif",
+    "ai_impact": "Distribusi dividen ini menjadi katalis positif jangka pendek bagi daya tarik saham INCO dan memberikan kepastian yield bagi investor di tengah fluktuasi harga nikel global."
   },
   {
     "id": "div_JSMR_20250520",
@@ -1805,7 +1811,10 @@
     "title": "Cum/Ex Date Dividen Tunai JSMR",
     "sub": "Dividen Rp156.23 per lembar saham",
     "amount": "Rp156.23 per saham",
-    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Jasa Marga (Persero) Tbk (JSMR) sebesar Rp156.23 per lembar saham."
+    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Jasa Marga (Persero) Tbk (JSMR) sebesar Rp156.23 per lembar saham.",
+    "ai_summary": "JSMR mengumumkan pembagian dividen tunai sebesar Rp156,23 per saham, mencerminkan kinerja keuangan yang solid dan stabilitas arus kas sebagai operator jalan tol dominan di Indonesia. Agenda ini menegaskan komitmen emiten dalam mendistribusikan laba kepada pemegang saham di tengah upaya penguatan struktur permodalan dan ekspansi aset.",
+    "ai_sentiment": "Positif",
+    "ai_impact": "Distribusi dividen ini memberikan kepastian yield bagi investor dan menjadi katalis positif yang memperkuat daya tarik valuasi saham JSMR di sektor infrastruktur."
   },
   {
     "id": "div_HEAL_20250505",

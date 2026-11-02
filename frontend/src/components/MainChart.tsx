@@ -18,6 +18,8 @@ interface MainChartProps {
   period: Timeframe;
   chartType: ChartType;
   showFib?: boolean;
+  showMA?: boolean;
+  showVolume?: boolean;
   marketCache?: Record<string, any>;
   onChartCalculated?: (c: ChartCalculatedData) => void;
 }
@@ -32,6 +34,8 @@ export const MainChart: React.FC<MainChartProps> = ({
   period,
   chartType,
   showFib = false,
+  showMA = true,
+  showVolume = true,
   marketCache,
   onChartCalculated,
 }) => {
@@ -286,7 +290,7 @@ export const MainChart: React.FC<MainChartProps> = ({
         </defs>
 
         {gridLines}
-        {volumeBars}
+        {showVolume && volumeBars}
 
         <g clipPath="url(#plot-clip)">
           {chartType === 'line' ? (
@@ -332,7 +336,7 @@ export const MainChart: React.FC<MainChartProps> = ({
             })
           )}
 
-          {maPath && (
+          {showMA && maPath && (
             <path
               d={maPath}
               fill="none"
@@ -448,10 +452,12 @@ export const MainChart: React.FC<MainChartProps> = ({
               <b>{fmt(Number(val), isStock ? 0 : 2)}</b>
             </div>
           ))}
-          <div className="tip-row">
-            <span>Volume</span>
-            <b>{fmt(hoveredPoint.volume / 1e6, 1)} jt</b>
-          </div>
+          {showVolume && (
+            <div className="tip-row">
+              <span>Volume</span>
+              <b>{fmt(hoveredPoint.volume / 1e6, 1)} jt</b>
+            </div>
+          )}
         </div>
       )}
     </div>
