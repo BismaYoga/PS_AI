@@ -94,10 +94,11 @@ PENTING: Keluarkan HANYA string JSON murni tanpa pembuka/penutup markdown backti
 
     # Model fallback: gemini-3-flash-preview terbukti paling cepat dan andal
     models_to_try = [
-        "gemini-3-flash-preview",
         "gemini-3.5-flash-lite",
+        "gemini-flash-lite-latest",
+        "gemini-3.5-flash",
         "gemma-4-26b-a4b-it",
-        "gemini-flash-latest"
+        "gemini-3-flash-preview"
     ]
 
     for model in models_to_try:

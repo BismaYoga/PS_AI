@@ -53,7 +53,12 @@ export const getStockLogoUrl = (ticker: string): string => {
   if (clean === 'IHSG' || clean === '^JKSE' || clean === 'COMPOSITE') {
     return '/logo-emiten/IHSG.svg';
   }
-  return `https://storage.invezgo.com/icon/${clean}.png`;
+  // 1. Jika logo resmi lokal tersedia (75 emiten utama), gunakan file lokal (instant 0 latency)
+  if (TV_LOGOS[clean]) {
+    return `/logo-emiten/${clean}.svg`;
+  }
+  // 2. Untuk seluruh emiten bursa lainnya, gunakan Stockbit CloudFront CDN yang lengkap & super cepat di Indonesia
+  return `https://assets.stockbit.com/logos/companies/${clean}.png`;
 };
 
 // Deterministic Pseudo-Random Number Generator for smooth simulated OHLC

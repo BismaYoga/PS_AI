@@ -29,26 +29,15 @@ export const StockLogo: React.FC<StockLogoProps> = ({
 
   const handleError = () => {
     if (fallbackStep === 0) {
-      // Step 1: Coba logo SVG lokal (/logo-emiten/)
       setFallbackStep(1);
-      setImgSrc(`/logo-emiten/${cleanTicker}.svg`);
-    } else if (fallbackStep === 1) {
-      // Step 2: Coba TradingView jika ada pemetaan
-      setFallbackStep(2);
-      const tvId = TV_LOGOS[cleanTicker];
-      if (tvId) {
-        setImgSrc(`https://s3-symbol-logo.tradingview.com/${tvId}--big.svg`);
-      } else {
-        setImgSrc(`https://assets.stockbit.com/logos/companies/${cleanTicker}.png`);
+      // Fallback 1: Jika Stockbit CDN belum memiliki logo emiten ini, coba Invezgo icon
+      if (!imgSrc?.includes('storage.invezgo.com')) {
+        setImgSrc(`https://storage.invezgo.com/icon/${cleanTicker}.png`);
+        return;
       }
-    } else if (fallbackStep === 2) {
-      // Step 3: Coba Stockbit CDN
-      setFallbackStep(3);
-      setImgSrc(`https://assets.stockbit.com/logos/companies/${cleanTicker}.png`);
-    } else {
-      // Fallback terakhir: Sembunyikan gambar dan tampilkan teks monogram
-      setImgSrc(null);
     }
+    // Fallback terakhir: Sembunyikan gambar dan tampilkan teks inisial monogram
+    setImgSrc(null);
   };
 
   return (
@@ -64,6 +53,7 @@ export const StockLogo: React.FC<StockLogoProps> = ({
           src={imgSrc}
           alt={cleanTicker}
           className="stock-logo-img"
+          loading="lazy"
           style={{ opacity: loaded ? 1 : 0, transition: 'opacity 0.2s' }}
           onLoad={() => setLoaded(true)}
           onError={handleError}

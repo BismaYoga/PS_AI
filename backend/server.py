@@ -575,7 +575,37 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 self.wfile.write(content)
                 return
 
-        # 7. Fallback for SPA routing: if route (no file extension) doesn't exist, serve frontend/dist/index.html
+        # 7. Penanganan logo-emiten dengan cache-header dan pencegahan spam log 404
+        if path.startswith('/logo-emiten/'):
+            logo_subpath = path.lstrip('/')
+            found_logo = None
+            for candidate_dir in (FRONTEND_DIST, os.path.join(BASE_DIR, 'frontend', 'public'), BASE_DIR):
+                cand = os.path.join(candidate_dir, logo_subpath)
+                if os.path.exists(cand) and os.path.isfile(cand):
+                    found_logo = cand
+                    break
+            if found_logo:
+                try:
+                    with open(found_logo, 'rb') as lf:
+                        content = lf.read()
+                    self.send_response(200)
+                    self.send_header('Content-Type', 'image/svg+xml' if path.endswith('.svg') else 'image/png')
+                    self.send_header('Cache-Control', 'public, max-age=604800, immutable')
+                    self.send_header('Content-Length', str(len(content)))
+                    self.end_headers()
+                    self.wfile.write(content)
+                    return
+                except Exception:
+                    pass
+            # Respons 404 ringan & di-cache oleh browser agar browser tidak membanjiri request berulang
+            self.send_response(404)
+            self.send_header('Content-Type', 'text/plain')
+            self.send_header('Cache-Control', 'public, max-age=86400')
+            self.send_header('Content-Length', '0')
+            self.end_headers()
+            return
+
+        # 8. Fallback for SPA routing: if route (no file extension) doesn't exist, serve frontend/dist/index.html
         static_dir = FRONTEND_DIST if os.path.exists(FRONTEND_DIST) else BASE_DIR
         local_path = os.path.normpath(os.path.join(static_dir, path.lstrip('/')))
         _, ext = os.path.splitext(path)

@@ -230,7 +230,38 @@
     "title": "Penyampaian Laporan Keuangan Interim Yang Tidak Diaudit",
     "sub": "Keterbukaan Informasi Resmi BEI (ASII)",
     "amount": "Dokumen Resmi BEI",
-    "note": "Pengumuman resmi Bursa Efek Indonesia untuk ASII pada 28 Oct 2026: Penyampaian Laporan Keuangan Interim Yang Tidak Diaudit."
+    "note": "Pengumuman resmi Bursa Efek Indonesia untuk ASII pada 28 Oct 2026: Penyampaian Laporan Keuangan Interim Yang Tidak Diaudit.",
+    "url": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202610/20261028161458-64480-0/FinancialStatement-2026-III-ASII.pdf",
+    "attachments": [
+      {
+        "name": "FinancialStatement-2026-III-ASII.pdf",
+        "url": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202610/20261028161458-64480-0/FinancialStatement-2026-III-ASII.pdf"
+      },
+      {
+        "name": "Astra Account September 2026.pdf",
+        "url": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202610/20261028161458-64480-0/Astra Account September 2026.pdf"
+      },
+      {
+        "name": "FinancialStatement-2026-III-ASII.xlsx",
+        "url": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202610/20261028161458-64480-0/FinancialStatement-2026-III-ASII.xlsx"
+      },
+      {
+        "name": "inlineXBRL.zip",
+        "url": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202610/20261028161458-64480-0/inlineXBRL.zip"
+      },
+      {
+        "name": "instance.zip",
+        "url": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202610/20261028161458-64480-0/instance.zip"
+      },
+      {
+        "name": "LACC- 300 - Report to OJK 0926.pdf",
+        "url": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202610/20261028161458-64480-0/LACC- 300 - Report to OJK 0926.pdf"
+      },
+      {
+        "name": "LACC- 301 - Report to BEI 0926.pdf",
+        "url": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202610/20261028161458-64480-0/LACC- 301 - Report to BEI 0926.pdf"
+      }
+    ]
   },
   {
     "id": "bei_ALII_20261028_0",
@@ -241,6 +272,44 @@
     "sub": "Keterbukaan Informasi Resmi BEI (ALII)",
     "amount": "Dokumen Resmi BEI",
     "note": "Pengumuman resmi Bursa Efek Indonesia untuk ALII pada 28 Oct 2026: Penyampaian Laporan Keuangan Interim Yang Tidak Diaudit."
+  },
+  {
+    "id": "bei_UNTR_20261028_1",
+    "ticker": "UNTR",
+    "date": "2026-10-28",
+    "type": "Dividen",
+    "title": "Jadwal Dividen Tunai Interim (KOREKSI)",
+    "sub": "Keterbukaan Informasi Resmi BEI (UNTR)",
+    "amount": "Dokumen Resmi BEI",
+    "note": "Pengumuman resmi Bursa Efek Indonesia untuk UNTR pada 28 Oct 2026: Jadwal Dividen Tunai Interim (KOREKSI).",
+    "url": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202610/68428e7480_6a23576b8e.pdf",
+    "attachments": [
+      {
+        "name": "20261027_UNTR_Jadwal Aksi Korporasi (Khusus Penyampaian Dividen Interim)_32169556.pdf",
+        "url": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202610/68428e7480_6a23576b8e.pdf"
+      }
+    ]
+  },
+  {
+    "id": "bei_UNTR_20261028_2",
+    "ticker": "UNTR",
+    "date": "2026-10-28",
+    "type": "Dividen",
+    "title": "Pembagian dividen interim",
+    "sub": "Keterbukaan Informasi Resmi BEI (UNTR)",
+    "amount": "Dokumen Resmi BEI",
+    "note": "Pengumuman resmi Bursa Efek Indonesia untuk UNTR pada 28 Oct 2026: Pembagian dividen interim.",
+    "url": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202610/ff2f9d9fd8_41baa3f0ff.pdf",
+    "attachments": [
+      {
+        "name": "20261028_UNTR_Laporan Informasi dan Fakta Material_32169623.pdf",
+        "url": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202610/ff2f9d9fd8_41baa3f0ff.pdf"
+      },
+      {
+        "name": "20261028_UNTR_Laporan Informasi dan Fakta Material_32169623_lamp1.pdf",
+        "url": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202610/f4d1eda604_e5db5ea08a.pdf"
+      }
+    ]
   },
   {
     "id": "earn_ADRO_20261027",
@@ -351,6 +420,43 @@
     "sub": "Keterbukaan Informasi Resmi BEI (BMRI)",
     "amount": "Dokumen Resmi BEI",
     "note": "Pengumuman resmi Bursa Efek Indonesia untuk BMRI pada 26 Oct 2026: Penyampaian Bukti Iklan Informasi Laporan Keuangan Interim."
+  },
+  {
+    "id": "bei_UNTR_20261026_4",
+    "ticker": "UNTR",
+    "date": "2026-10-26",
+    "type": "Laporan Keuangan",
+    "title": "Penyampaian Laporan Keuangan Interim Yang Tidak Diaudit",
+    "sub": "Keterbukaan Informasi Resmi BEI (UNTR)",
+    "amount": "Dokumen Resmi BEI",
+    "note": "Pengumuman resmi Bursa Efek Indonesia untuk UNTR pada 26 Oct 2026: Penyampaian Laporan Keuangan Interim Yang Tidak Diaudit.",
+    "url": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202610/20261026180824-64722-0/FinancialStatement-2026-III-UNTR.pdf",
+    "attachments": [
+      {
+        "name": "FinancialStatement-2026-III-UNTR.pdf",
+        "url": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202610/20261026180824-64722-0/FinancialStatement-2026-III-UNTR.pdf"
+      },
+      {
+        "name": "FinancialStatement-2026-III-UNTR.xlsx",
+        "url": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202610/20261026180824-64722-0/FinancialStatement-2026-III-UNTR.xlsx"
+      },
+      {
+        "name": "FS UNTR 0926.pdf",
+        "url": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202610/20261026180824-64722-0/FS UNTR 0926.pdf"
+      },
+      {
+        "name": "inlineXBRL.zip",
+        "url": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202610/20261026180824-64722-0/inlineXBRL.zip"
+      },
+      {
+        "name": "instance.zip",
+        "url": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202610/20261026180824-64722-0/instance.zip"
+      },
+      {
+        "name": "Lap Perkembangan Usaha 3Q 2026.pdf",
+        "url": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202610/20261026180824-64722-0/Lap Perkembangan Usaha 3Q 2026.pdf"
+      }
+    ]
   },
   {
     "id": "earn_BBNI_20261022",
@@ -530,7 +636,18 @@
     "title": "Pembagian dividen interim",
     "sub": "Keterbukaan Informasi Resmi BEI (ASII)",
     "amount": "Dokumen Resmi BEI",
-    "note": "Pengumuman resmi Bursa Efek Indonesia untuk ASII pada 02 Oct 2026: Pembagian dividen interim."
+    "note": "Pengumuman resmi Bursa Efek Indonesia untuk ASII pada 02 Oct 2026: Pembagian dividen interim.",
+    "url": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202610/281fda42f7_2d5f48f253.pdf",
+    "attachments": [
+      {
+        "name": "20261002_ASII_Laporan Informasi dan Fakta Material_32162625.pdf",
+        "url": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202610/281fda42f7_2d5f48f253.pdf"
+      },
+      {
+        "name": "20261002_ASII_Laporan Informasi dan Fakta Material_32162625_lamp1.pdf",
+        "url": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202610/c29d0079cf_39a86d7f98.pdf"
+      }
+    ]
   },
   {
     "id": "bei_TLKM_20261002_4",
@@ -1490,7 +1607,10 @@
     "title": "Cum/Ex Date Dividen Tunai ASII",
     "sub": "Dividen Rp98 per lembar saham",
     "amount": "Rp98 per saham",
-    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Astra International Tbk (ASII) sebesar Rp98 per lembar saham."
+    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Astra International Tbk (ASII) sebesar Rp98 per lembar saham.",
+    "ai_summary": "PT Astra International Tbk (ASII) membagikan dividen tunai sebesar Rp98 per saham dengan jadwal pelaksanaan pada 14 Oktober 2025. Langkah ini menegaskan komitmen emiten dalam memberikan kepastian imbal hasil kepada investor yang didukung oleh arus kas operasional solid dari lini bisnis otomotif, jasa keuangan, dan alat berat. Aksi korporasi ini memperkuat daya tarik ASII sebagai emiten konglomerasi berfundamental kuat yang konsisten mengapresiasi pemegang saham.",
+    "ai_sentiment": "Positif",
+    "ai_impact": "Pembagian dividen tunai Rp98 per saham ini menjadi katalis positif jangka pendek yang memperkuat daya tarik *dividend yield* dan menopang harga saham ASII."
   },
   {
     "id": "div_UNTR_20251008",
@@ -1500,7 +1620,10 @@
     "title": "Cum/Ex Date Dividen Tunai UNTR",
     "sub": "Dividen Rp567 per lembar saham",
     "amount": "Rp567 per saham",
-    "note": "Distribusi dividen tunai riil untuk pemegang saham PT United Tractors Tbk (UNTR) sebesar Rp567 per lembar saham."
+    "note": "Distribusi dividen tunai riil untuk pemegang saham PT United Tractors Tbk (UNTR) sebesar Rp567 per lembar saham.",
+    "ai_summary": "PT United Tractors Tbk (UNTR) menjadwalkan tanggal cum dividen tunai sebesar Rp567 per saham pada 8 Oktober 2025. Pembagian ini menegaskan rekam jejak emiten yang konsisten dalam membagikan arus kas operasionalnya kepada pemegang saham di tengah kinerja solid sektor alat berat dan kontraktor pertambangan. Agenda ini menjadi sinyal positif yang memperkuat daya tarik kas emiten bagi investor berorientasi pemupukan nilai jangka panjang.",
+    "ai_sentiment": "Positif",
+    "ai_impact": "Distribusi dividen Rp567 per saham memberikan sentimen positif penopang harga saham menjelang cum-date serta memperkuat imbal hasil dividen (dividend yield) berkala emiten."
   },
   {
     "id": "div_MAPA_20250709",
@@ -1510,7 +1633,10 @@
     "title": "Cum/Ex Date Dividen Tunai MAPA",
     "sub": "Dividen Rp4 per lembar saham",
     "amount": "Rp4 per saham",
-    "note": "Distribusi dividen tunai riil untuk pemegang saham PT MAP Aktif Adiperkasa Tbk (MAPA) sebesar Rp4 per lembar saham."
+    "note": "Distribusi dividen tunai riil untuk pemegang saham PT MAP Aktif Adiperkasa Tbk (MAPA) sebesar Rp4 per lembar saham.",
+    "ai_summary": "PT MAP Aktif Adiperkasa Tbk (MAPA) mengumumkan jadwal cum/ex date pembagian dividen tunai sebesar Rp4 per lembar saham pada 9 Juli 2025. Pembagian alokasi laba ini mencerminkan komitmen perseroan dalam memberikan imbal hasil berkala kepada pemegang saham di tengah kinerja sektor ritel gaya hidup yang aktif. Nilai pembagian ini mengindikasikan emiten masih memprioritaskan retenal laba untuk ekspansi gerai dibanding payout ratio tinggi.",
+    "ai_sentiment": "Netral",
+    "ai_impact": "Dampak terhadap fluktuasi harga saham diproyeksikan relatif minim mengingat estimasi dividend yield yang tergolong kecil, sehingga katalis pergerakan saham tetap berpatokan pada pertumbuhan kinerja penjualan bulanan."
   },
   {
     "id": "div_MAPI_20250709",
@@ -1530,7 +1656,10 @@
     "title": "Cum/Ex Date Dividen Tunai KIJA",
     "sub": "Dividen Rp1.77 per lembar saham",
     "amount": "Rp1.77 per saham",
-    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Kawasan Industri Jababeka Tbk (KIJA) sebesar Rp1.77 per lembar saham."
+    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Kawasan Industri Jababeka Tbk (KIJA) sebesar Rp1.77 per lembar saham.",
+    "ai_summary": "PT Kawasan Industri Jababeka Tbk (KIJA) menjadwalkan pembagian dividen tunai sebesar Rp1,77 per saham untuk tahun buku yang bersangkutan dengan cum date pada 7 Juli 2025. Langkah ini menunjukkan komitmen perseroan dalam memberikan imbal hasil berkala kepada pemegang saham di tengah dinamika penjualan lahan industri. Kendati demikian, besaran nominal dividen yang dibagikan tergolong relatif kecil terhadap harga pasar saham saat ini.",
+    "ai_sentiment": "Netral",
+    "ai_impact": "Pembagian dividen sebesar Rp1,77 per saham diperkirakan memberikan dampak terbatas terhadap pergerakan harga KIJA karena estimasi yield yang cenderung minim."
   },
   {
     "id": "div_PWON_20250707",
@@ -1540,7 +1669,10 @@
     "title": "Cum/Ex Date Dividen Tunai PWON",
     "sub": "Dividen Rp13 per lembar saham",
     "amount": "Rp13 per saham",
-    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Pakuwon Jati Tbk (PWON) sebesar Rp13 per lembar saham."
+    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Pakuwon Jati Tbk (PWON) sebesar Rp13 per lembar saham.",
+    "ai_summary": "PT Pakuwon Jati Tbk (PWON) mengumumkan distribusi dividen tunai sebesar Rp13 per lembar saham yang dijadwalkan pada Juli 2025. Kebijakan ini mencerminkan komitmen manajemen dalam menjaga imbal hasil bagi pemegang saham, didukung oleh arus kas yang sehat dari bisnis berulang (recurring income) pusat perbelanjaan dan portofolio properti komersial.",
+    "ai_sentiment": "Positif",
+    "ai_impact": "Pembagian dividen tunai ini berfungsi sebagai katalis jangka pendek yang memperkuat kepercayaan investor terhadap likuiditas perusahaan sekaligus memberikan tambahan yield di tengah volatilitas sektor properti."
   },
   {
     "id": "div_ICBP_20250702",
@@ -1550,7 +1682,10 @@
     "title": "Cum/Ex Date Dividen Tunai ICBP",
     "sub": "Dividen Rp250 per lembar saham",
     "amount": "Rp250 per saham",
-    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Indofood CBP Sukses Makmur Tbk (ICBP) sebesar Rp250 per lembar saham."
+    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Indofood CBP Sukses Makmur Tbk (ICBP) sebesar Rp250 per lembar saham.",
+    "ai_summary": "PT Indofood CBP Sukses Makmur Tbk (ICBP) merealisasikan pembagian dividen tunai sebesar Rp250 per lembar saham dengan tanggal cum dividen pada 2 Juli 2025. Aksi korporasi ini mempertegas fundamental perseroan yang solid dan defensif di sektor barang konsumen primer berkat dominasi pangsa pasar Indomie. Pengumuman ini memberikan kepastian arus kas serta imbal hasil nyata bagi para pemegang saham secara konsisten.",
+    "ai_sentiment": "Positif",
+    "ai_impact": "Pembagian dividen Rp250 per saham menjadi katalis positif yang memperkuat imbal hasil pemegang saham dan menegaskan status ICBP sebagai saham pilihan defensif berisiko rendah."
   },
   {
     "id": "div_INDF_20250702",
@@ -1560,7 +1695,10 @@
     "title": "Cum/Ex Date Dividen Tunai INDF",
     "sub": "Dividen Rp280 per lembar saham",
     "amount": "Rp280 per saham",
-    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Indofood Sukses Makmur Tbk (INDF) sebesar Rp280 per lembar saham."
+    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Indofood Sukses Makmur Tbk (INDF) sebesar Rp280 per lembar saham.",
+    "ai_summary": "PT Indofood Sukses Makmur Tbk (INDF) menjadwalkan pembagian dividen tunai sebesar Rp280 per lembar saham dengan tanggal pelaksanaan pada 2 Juli 2025. Aksi korporasi ini mencerminkan stabilitas arus kas serta komitmen emiten holding pangan terintegrasi ini dalam memberikan imbal hasil konsisten kepada pemegang saham. Pembayaran dividen ini memperkuat daya tarik INDF sebagai saham defensif yang solid di sektor konsumer.",
+    "ai_sentiment": "Positif",
+    "ai_impact": "Pembagian dividen tunai Rp280 per saham menjadi katalis positif jangka pendek yang berpotensi menopang pergerakan harga saham INDF dan memberikan pemanis imbal hasil bagi investor."
   },
   {
     "id": "div_ACES_20250626",
@@ -1570,7 +1708,10 @@
     "title": "Cum/Ex Date Dividen Tunai ACES",
     "sub": "Dividen Rp33.87 per lembar saham",
     "amount": "Rp33.87 per saham",
-    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Aspirasi Hidup Indonesia Tbk (ACES) sebesar Rp33.87 per lembar saham."
+    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Aspirasi Hidup Indonesia Tbk (ACES) sebesar Rp33.87 per lembar saham.",
+    "ai_summary": "PT Aspirasi Hidup Indonesia Tbk (ACES) membagikan dividen tunai sebesar Rp33,87 per saham yang dijadwalkan pada 26 Juni 2025. Aksi korporasi ini menunjukkan komitmen perseroan dalam memberikan imbal hasil yang konsisten kepada pemegang saham di tengah kinerja ritel perbaikan rumah yang solid. Investor dapat mencermati tanggal cum date untuk mendapatkan hak atas dividen tunai tersebut.",
+    "ai_sentiment": "Positif",
+    "ai_impact": "Pembagian dividen tunai sebesar Rp33,87 per saham menjadi katalis positif jangka pendek yang berpotensi menjaga apresiasi harga saham ACES menjelang tanggal cum dividen."
   },
   {
     "id": "div_CTRA_20250626",
@@ -1580,7 +1721,10 @@
     "title": "Cum/Ex Date Dividen Tunai CTRA",
     "sub": "Dividen Rp24 per lembar saham",
     "amount": "Rp24 per saham",
-    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Ciputra Development Tbk (CTRA) sebesar Rp24 per lembar saham."
+    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Ciputra Development Tbk (CTRA) sebesar Rp24 per lembar saham.",
+    "ai_summary": "PT Ciputra Development Tbk (CTRA) menjadwalkan cum date dividen tunai sebesar Rp24 per saham pada 26 Juni 2025. Pembagian dividen ini menegaskan ketahanan arus kas dan komitmen emiten dalam memberikan imbal hasil berkala kepada pemegang saham di tengah kinerja sektor properti yang stabil. Diversifikasi portofolio proyek kota mandiri menjadi penopang utama keberlanjutan arus kas operasi perseroan.",
+    "ai_sentiment": "Positif",
+    "ai_impact": "Pembagian dividen ini memberikan kepastian imbal hasil yang menopang stabilitas harga saham CTRA serta memperkuat daya tarik valuasinya bagi investor institusi maupun ritel."
   },
   {
     "id": "div_INKP_20250625",
@@ -1590,7 +1734,10 @@
     "title": "Cum/Ex Date Dividen Tunai INKP",
     "sub": "Dividen Rp50 per lembar saham",
     "amount": "Rp50 per saham",
-    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Indah Kiat Pulp & Paper Tbk (INKP) sebesar Rp50 per lembar saham."
+    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Indah Kiat Pulp & Paper Tbk (INKP) sebesar Rp50 per lembar saham.",
+    "ai_summary": "PT Indah Kiat Pulp & Paper Tbk (INKP) mengumumkan pembagian dividen tunai tahun buku berjalan sebesar Rp50 per lembar saham yang dijadwalkan pada 25 Juni 2025. Kebijakan ini mencerminkan komitmen manajemen dalam memberikan imbal hasil kas bagi pemegang saham di tengah dinamika sektor bahan baku dan manufaktur kertas global. Langkah ini juga menunjukkan kesehatan arus kas perusahaan meskipun dihadapkan pada fluktuasi harga komoditas pulp dan kertas dunia.",
+    "ai_sentiment": "Netral",
+    "ai_impact": "Besaran dividen tunai Rp50 per saham memberikan tambahan yield kas jangka pendek, namun pergerakan harga saham selanjutnya akan lebih dipengaruhi oleh pemulihan permintaan global dan tren harga komoditas pulp."
   },
   {
     "id": "div_ANTM_20250623",
@@ -1600,7 +1747,10 @@
     "title": "Cum/Ex Date Dividen Tunai ANTM",
     "sub": "Dividen Rp151.77 per lembar saham",
     "amount": "Rp151.77 per saham",
-    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Aneka Tambang Tbk (ANTM) sebesar Rp151.77 per lembar saham."
+    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Aneka Tambang Tbk (ANTM) sebesar Rp151.77 per lembar saham.",
+    "ai_summary": "PT Aneka Tambang Tbk (ANTM) mengumumkan distribusi dividen tunai sebesar Rp151.77 per lembar saham yang dijadwalkan pada 23 Juni 2025. Kebijakan ini mencerminkan komitmen emiten dalam memberikan nilai tambah bagi pemegang saham di tengah kinerja sektor pertambangan logam mulia dan nikel. Pembagian dividen ini menjadi katalis penting bagi investor yang mengincar pendapatan pasif dari emiten berkapitalisasi besar di sektor bahan baku.",
+    "ai_sentiment": "Positif",
+    "ai_impact": "Pembagian dividen tunai yang atraktif berpotensi mendorong aksi beli jelang cum date dan memberikan dukungan harga jangka pendek sebelum terjadinya penyesuaian harga (ex-dividend date)."
   },
   {
     "id": "div_HRTA_20250623",
@@ -1610,7 +1760,10 @@
     "title": "Cum/Ex Date Dividen Tunai HRTA",
     "sub": "Dividen Rp21 per lembar saham",
     "amount": "Rp21 per saham",
-    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Hartadinata Abadi Tbk (HRTA) sebesar Rp21 per lembar saham."
+    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Hartadinata Abadi Tbk (HRTA) sebesar Rp21 per lembar saham.",
+    "ai_summary": "PT Hartadinata Abadi Tbk (HRTA) mengumumkan distribusi dividen tunai sebesar Rp21 per lembar saham yang dijadwalkan pada 23 Juni 2025. Kebijakan ini mencerminkan komitmen emiten sektor konsumer siklikal dan ritel perhiasan emas ini dalam memberikan imbal hasil kas yang menarik bagi pemegang saham di tengah kinerja bisnis yang stabil.",
+    "ai_sentiment": "Positif",
+    "ai_impact": "Pembagian dividen tunai ini memberikan katalis positif bagi daya tarik saham HRTA dan berpotensi memicu aksi beli jangka pendek menjelang tanggal cum date."
   },
   {
     "id": "div_PTBA_20250623",
@@ -1620,7 +1773,10 @@
     "title": "Cum/Ex Date Dividen Tunai PTBA",
     "sub": "Dividen Rp332.44 per lembar saham",
     "amount": "Rp332.44 per saham",
-    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Bukit Asam Tbk (PTBA) sebesar Rp332.44 per lembar saham."
+    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Bukit Asam Tbk (PTBA) sebesar Rp332.44 per lembar saham.",
+    "ai_summary": "PT Bukit Asam Tbk (PTBA) mengumumkan pembagian dividen tunai tahun buku berjalan sebesar Rp332,44 per lembar saham yang mencerminkan komitmen kuat BUMN batubara ini dalam memberikan imbal hasil kas yang menarik bagi pemegang saham. Kebijakan ini didukung oleh posisi kas yang solid serta kedisiplinan alokasi modal di tengah fluktuasi harga komoditas energi global.",
+    "ai_sentiment": "Positif",
+    "ai_impact": "Besaran dividen ini menawarkan dividend yield yang kompetitif di sektornya, yang berpotensi menjadi katalis positif jangka pendek untuk menjaga momentum harga saham menjelang tanggal cum date."
   },
   {
     "id": "div_WIFI_20250623",
@@ -1630,7 +1786,10 @@
     "title": "Cum/Ex Date Dividen Tunai WIFI",
     "sub": "Dividen Rp2 per lembar saham",
     "amount": "Rp2 per saham",
-    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Solusi Sinergi Digital Tbk (WIFI) sebesar Rp2 per lembar saham."
+    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Solusi Sinergi Digital Tbk (WIFI) sebesar Rp2 per lembar saham.",
+    "ai_summary": "PT Solusi Sinergi Digital Tbk (WIFI) mengumumkan pembagian dividen tunai tahun buku berjalan sebesar Rp2 per lembar saham. Kebijakan ini mencerminkan komitmen manajemen Surge dalam memberikan nilai tambah bagi pemegang saham di tengah ekspansi masif bisnis konektivitas internet dan ekosistem digital.",
+    "ai_sentiment": "Netral",
+    "ai_impact": "Besaran dividen Rp2 per saham memberikan dividend yield yang relatif kecil terhadap harga pasar saat ini, sehingga dampaknya lebih sebagai sentimen psikologis positif terhadap arus kas emiten ketimbang penggerak utama valuasi jangka pendek."
   },
   {
     "id": "div_SMRA_20250623",
@@ -1640,7 +1799,10 @@
     "title": "Cum/Ex Date Dividen Tunai SMRA",
     "sub": "Dividen Rp9 per lembar saham",
     "amount": "Rp9 per saham",
-    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Summarecon Agung Tbk (SMRA) sebesar Rp9 per lembar saham."
+    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Summarecon Agung Tbk (SMRA) sebesar Rp9 per lembar saham.",
+    "ai_summary": "PT Summarecon Agung Tbk (SMRA) mengumumkan pembagian dividen tunai tahun buku berjalan sebesar Rp9 per lembar saham yang dijadwalkan pada Juni 2025. Langkah ini mencerminkan komitmen emiten properti pengembang kota mandiri ini dalam memberikan imbal hasil kas kepada pemegang saham di tengah dinamika sektor properti domestik.",
+    "ai_sentiment": "Netral",
+    "ai_impact": "Besaran dividen Rp9 per saham merefleksikan yield yang relatif konservatif dan berdampak terbatas pada pergerakan harga saham jangka pendek, dengan fokus pasar tetap tertuju pada realisasi pra-penjualan (marketing sales) serta pelonggaran suku bunga."
   },
   {
     "id": "div_ERAA_20250619",
@@ -1650,7 +1812,10 @@
     "title": "Cum/Ex Date Dividen Tunai ERAA",
     "sub": "Dividen Rp19 per lembar saham",
     "amount": "Rp19 per saham",
-    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Erajaya Swasembada Tbk (ERAA) sebesar Rp19 per lembar saham."
+    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Erajaya Swasembada Tbk (ERAA) sebesar Rp19 per lembar saham.",
+    "ai_summary": "PT Erajaya Swasembada Tbk (ERAA) mengumumkan distribusi dividen tunai tahun buku berjalan sebesar Rp19 per lembar saham yang akan dibayarkan pada 19 Juni 2025. Kebijakan ini mencerminkan komitmen manajemen dalam memberikan imbal hasil kas secara rutin kepada pemegang saham di tengah dinamika sektor ritel gadget dan elektronik.",
+    "ai_sentiment": "Positif",
+    "ai_impact": "Pembagian dividen tunai memberikan tambahan imbal hasil (dividend yield) langsung bagi pemegang saham, yang dapat menjadi katalis penopang likuiditas jangka pendek menjelang tanggal cum date."
   },
   {
     "id": "div_MYOR_20250619",
@@ -1660,7 +1825,10 @@
     "title": "Cum/Ex Date Dividen Tunai MYOR",
     "sub": "Dividen Rp55 per lembar saham",
     "amount": "Rp55 per saham",
-    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Mayora Indah Tbk (MYOR) sebesar Rp55 per lembar saham."
+    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Mayora Indah Tbk (MYOR) sebesar Rp55 per lembar saham.",
+    "ai_summary": "PT Mayora Indah Tbk (MYOR) mengumumkan distribusi dividen tunai sebesar Rp55 per lembar saham yang dijadwalkan pada 19 Juni 2025. Keputusan ini mencerminkan komitmen emiten sektor konsumer non-siklikal ini dalam memberikan imbal hasil kas yang stabil bagi pemegang saham di tengah ketahanan permintaan domestik dan ekspor produk makanan olahan unggulannya.",
+    "ai_sentiment": "Positif",
+    "ai_impact": "Pembagian dividen tunai ini berfungsi sebagai katalis positif yang memperkuat kepercayaan investor jangka panjang dan menjaga daya tarik yield saham MYOR di pasar."
   },
   {
     "id": "div_DSNG_20250618",
@@ -1670,7 +1838,10 @@
     "title": "Cum/Ex Date Dividen Tunai DSNG",
     "sub": "Dividen Rp24 per lembar saham",
     "amount": "Rp24 per saham",
-    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Dharma Satya Nusantara Tbk (DSNG) sebesar Rp24 per lembar saham."
+    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Dharma Satya Nusantara Tbk (DSNG) sebesar Rp24 per lembar saham.",
+    "ai_summary": "PT Dharma Satya Nusantara Tbk (DSNG) mengumumkan distribusi dividen tunai sebesar Rp24 per lembar saham yang dijadwalkan pada 18 Juni 2025. Kebijakan ini mencerminkan komitmen emiten perkebunan sawit dan kayu olahan tersebut dalam memberikan imbal hasil kas secara konsisten kepada pemegang saham di tengah dinamika harga komoditas global.",
+    "ai_sentiment": "Positif",
+    "ai_impact": "Pembagian dividen tunai ini berfungsi sebagai katalis jangka pendek yang menjaga attractiveness saham DSNG bagi investor berbasis pendapatan (income investing) menjelang tanggal cum-date."
   },
   {
     "id": "div_MIKA_20250617",

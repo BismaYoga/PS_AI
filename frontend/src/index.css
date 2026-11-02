@@ -2203,7 +2203,10 @@
 }
 
 .spin-animation {
-  animation: spin 1s linear infinite !important;
+  animation: spin 0.85s linear infinite !important;
+  transform-origin: center !important;
+  display: inline-block !important;
+  vertical-align: middle;
 }
 
 /* ========================================================

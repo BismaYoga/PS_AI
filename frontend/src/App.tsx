@@ -19,6 +19,23 @@ import { Toast } from './components/Toast';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { AIChatWidget } from './components/AIChatWidget';
 
+// Nilai acuan penutupan terakhir resmi BEI dari database lokal SQLite (mencegah loncatan angka lawas 6277 saat delay request awal)
+const DEFAULT_IHSG_DATA = {
+  ticker: 'IHSG',
+  name: 'Indeks Harga Saham Gabungan',
+  price: 5096.83,
+  previousClose: 5057.05,
+  change: 39.78,
+  changePct: 0.79,
+  date: '02 Nov 2026',
+  rawDate: '2026-11-02',
+  turnover: 'Rp12,42 T',
+  volume: '34,6 miliar',
+  gainers: 365,
+  losers: 341,
+  isLive: true,
+};
+
 export default function App() {
   // Theme state: dark / light
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -123,8 +140,19 @@ export default function App() {
   const [drawerPayload, setDrawerPayload] = useState<DrawerPayload | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Market & Events data
-  const [marketBundle, setMarketBundle] = useState<Record<string, any>>({});
+  // Market & Events data (dimuat dari cache lokal / data penutupan terakhir DB agar tidak ada loncatan angka lawas 6277)
+  const [marketBundle, setMarketBundle] = useState<Record<string, any>>(() => {
+    try {
+      const saved = localStorage.getItem('ps_market_bundle_cache');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object' && parsed.IHSG && parsed.IHSG.price) {
+          return parsed;
+        }
+      }
+    } catch {}
+    return { IHSG: DEFAULT_IHSG_DATA };
+  });
   const [corporateEvents, setCorporateEvents] = useState<CorporateEvent[]>(INITIAL_EVENTS);
   const [allEmitens, setAllEmitens] = useState<any[]>(INITIAL_EMITENS);
 
@@ -160,7 +188,13 @@ export default function App() {
       if (res.ok) {
         const data = await res.json();
         if (data && !data.error) {
-          setMarketBundle((prev) => ({ ...prev, [clean]: data }));
+          setMarketBundle((prev) => {
+            const next = { ...prev, [clean]: data };
+            try {
+              localStorage.setItem('ps_market_bundle_cache', JSON.stringify(next));
+            } catch {}
+            return next;
+          });
           return true;
         }
       }
@@ -197,7 +231,12 @@ export default function App() {
         const res = await fetch('/api/market-data');
         if (res.ok) {
           const bundle = await res.json();
-          if (bundle.market) setMarketBundle(bundle.market);
+          if (bundle.market) {
+            setMarketBundle(bundle.market);
+            try {
+              localStorage.setItem('ps_market_bundle_cache', JSON.stringify(bundle.market));
+            } catch {}
+          }
           if (bundle.events && bundle.events.length) setCorporateEvents(bundle.events);
           if (bundle.emitens && bundle.emitens.length) setAllEmitens(bundle.emitens);
           setBundleLoaded(true);
@@ -325,19 +364,19 @@ export default function App() {
 
   // Construct IndexItem (IHSG)
   const indexData: IndexItem = useMemo(() => {
-    const live = marketBundle['IHSG'] || {};
+    const live = marketBundle['IHSG'] || DEFAULT_IHSG_DATA;
     return {
       ticker: 'IHSG',
       name: 'Indeks Harga Saham Gabungan',
-      price: live.price != null ? live.price : 6277.62,
-      previousClose: live.previousClose != null ? live.previousClose : 6384.77,
-      change: live.changePct != null ? live.changePct : -1.68,
-      changeAbs: live.change != null ? live.change : -107.15,
-      date: live.date || '22 Sep 2026',
-      turnover: live.turnover || 'Rp11,75 T',
-      volume: live.volume || '18,4 miliar',
-      gainers: live.gainers || 285,
-      losers: live.losers || 264,
+      price: live.price != null ? live.price : DEFAULT_IHSG_DATA.price,
+      previousClose: live.previousClose != null ? live.previousClose : DEFAULT_IHSG_DATA.previousClose,
+      change: live.changePct != null ? live.changePct : DEFAULT_IHSG_DATA.changePct,
+      changeAbs: live.change != null ? live.change : DEFAULT_IHSG_DATA.change,
+      date: live.date || DEFAULT_IHSG_DATA.date,
+      turnover: live.turnover || DEFAULT_IHSG_DATA.turnover,
+      volume: live.volume || DEFAULT_IHSG_DATA.volume,
+      gainers: live.gainers != null ? live.gainers : DEFAULT_IHSG_DATA.gainers,
+      losers: live.losers != null ? live.losers : DEFAULT_IHSG_DATA.losers,
       isLive: !!(live.ohlc && live.ohlc.length),
     };
   }, [marketBundle]);

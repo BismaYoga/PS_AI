@@ -1240,6 +1240,7 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
           )}
 
           <AIBox
+            key={stock.ticker}
             stockOrIndex={stock}
             isStock={true}
             chartCalc={chartCalc}
@@ -1324,32 +1325,6 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
                   <span>Ringkasan Eksekutif</span>
                 </div>
                 <p style={{ margin: 0, fontWeight: 500 }}>{finInsightData.insight.verdict}</p>
-              </div>
-            )}
-
-            {/* Quick Key Metrics Pills */}
-            {finInsightData.insight.key_metrics && (
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '14px' }}>
-                <div style={{ background: 'var(--bg-subtle, #f1f5f9)', padding: '5px 12px', borderRadius: '8px', fontSize: '12px', border: '1px solid var(--border, #e2e8f0)' }}>
-                  DER: <strong style={{ color: '#0284c7' }}>{finInsightData.insight.key_metrics.der}</strong>
-                </div>
-                <div style={{ background: 'var(--bg-subtle, #f1f5f9)', padding: '5px 12px', borderRadius: '8px', fontSize: '12px', border: '1px solid var(--border, #e2e8f0)' }}>
-                  NPM: <strong style={{ color: '#10b981' }}>{finInsightData.insight.key_metrics.npm}</strong>
-                </div>
-                <div style={{ background: 'var(--bg-subtle, #f1f5f9)', padding: '5px 12px', borderRadius: '8px', fontSize: '12px', border: '1px solid var(--border, #e2e8f0)' }}>
-                  ROE: <strong style={{ color: '#0284c7' }}>{finInsightData.insight.key_metrics.roe}</strong>
-                </div>
-                <div style={{ background: 'var(--bg-subtle, #f1f5f9)', padding: '5px 12px', borderRadius: '8px', fontSize: '12px', border: '1px solid var(--border, #e2e8f0)' }}>
-                  CFO / Laba Bersih: <strong style={{ color: '#8b5cf6' }}>{finInsightData.insight.key_metrics.cfo_to_net}</strong>
-                </div>
-                {finInsightData.insight.key_metrics.cagr_rev_3y !== '-' && (
-                  <div style={{ background: 'var(--bg-subtle, #f1f5f9)', padding: '5px 12px', borderRadius: '8px', fontSize: '12px', border: '1px solid var(--border, #e2e8f0)' }}>
-                    CAGR Omzet 3Y: <strong style={{ color: '#0284c7' }}>{finInsightData.insight.key_metrics.cagr_rev_3y}</strong>
-                  </div>
-                )}
-                <div style={{ background: 'var(--bg-subtle, #f1f5f9)', padding: '5px 12px', borderRadius: '8px', fontSize: '12px', border: '1px solid var(--border, #e2e8f0)' }}>
-                  Free Cash Flow: <strong style={{ color: '#10b981' }}>{finInsightData.insight.key_metrics.fcf_t}</strong>
-                </div>
               </div>
             )}
 

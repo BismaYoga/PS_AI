@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="id">
 <head>
 <meta charset="UTF-8">
@@ -78,15 +78,15 @@ const LIVE = (MD && MD['IHSG']) ? MD['IHSG'] : ((typeof window !== 'undefined' &
 const INDEX = {
   ticker: 'IHSG',
   name: 'Indeks Harga Saham Gabungan',
-  price: LIVE.price != null ? LIVE.price : 6277.62,
-  previousClose: LIVE.previousClose != null ? LIVE.previousClose : 6384.77,
-  change: LIVE.changePct != null ? LIVE.changePct : -1.68,
-  changeAbs: LIVE.change != null ? LIVE.change : -107.15,
-  date: LIVE.date || '22 Sep 2026',
-  turnover: LIVE.turnover || 'Rp11,75 T',
-  volume: LIVE.volume || '18,4 miliar',
-  gainers: LIVE.gainers || 285,
-  losers: LIVE.losers || 264,
+  price: LIVE.price != null ? LIVE.price : 5096.83,
+  previousClose: LIVE.previousClose != null ? LIVE.previousClose : 5057.05,
+  change: LIVE.changePct != null ? LIVE.changePct : 0.79,
+  changeAbs: LIVE.change != null ? LIVE.change : 39.78,
+  date: LIVE.date || '02 Nov 2026',
+  turnover: LIVE.turnover || 'Rp12,42 T',
+  volume: LIVE.volume || '34,6 miliar',
+  gainers: LIVE.gainers || 365,
+  losers: LIVE.losers || 341,
   isLive: !!(LIVE.ohlc && LIVE.ohlc.length)
 };
 

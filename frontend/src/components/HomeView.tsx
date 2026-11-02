@@ -238,6 +238,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
         </div>
 
         <AIBox
+          key={indexData.ticker}
           stockOrIndex={indexData}
           isStock={false}
           chartCalc={chartCalc}

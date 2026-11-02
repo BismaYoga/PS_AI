@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StockItem, IndexItem, AIAnalysisResult } from '../types';
 import { ChartCalculatedData, fmt, movingAverage, rsi } from '../utils';
 import { Icon } from './Icon';
@@ -28,6 +28,13 @@ export const AIBox: React.FC<AIBoxProps> = ({
   const [analysis, setAnalysis] = useState<AIAnalysisResult | null>(
     aiCache[ticker] || null
   );
+
+  // Reset / sinkronkan state analisis setiap kali pengguna beralih emiten
+  useEffect(() => {
+    setAnalysis(aiCache[ticker] || null);
+    setAnalyzing(false);
+    setViewMode('ringkas');
+  }, [ticker]);
 
   const ma20 = movingAverage(chartCalc.full, 20, chartCalc.full.length - 1);
   const ma50 = movingAverage(chartCalc.full, 50, chartCalc.full.length - 1);
@@ -161,8 +168,8 @@ export const AIBox: React.FC<AIBoxProps> = ({
     );
   }
 
-  // 2. Result state
-  if (analysis && analysis.executive_summary) {
+  // 2. Result state (hanya tampil jika analisis cocok dengan emiten yang sedang aktif)
+  if (analysis && analysis.ticker === ticker && analysis.executive_summary) {
     const bias = analysis.sentiment_bias || 'netral';
     const biasColor =
       bias === 'positif' ? 'green' : bias === 'negatif' ? 'red' : 'blue';

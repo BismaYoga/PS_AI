@@ -234,11 +234,11 @@ Format output HANYA sebuah valid JSON murni tanpa markdown wrapper:
 """
 
     models_to_try = [
-        "gemini-3-flash-preview",
         "gemini-3.5-flash-lite",
-        "gemini-3.8-flash",
+        "gemini-flash-lite-latest",
+        "gemini-3.5-flash",
         "gemma-4-26b-a4b-it",
-        "gemini-flash-latest"
+        "gemini-3-flash-preview"
     ]
 
     for model_name in models_to_try:
