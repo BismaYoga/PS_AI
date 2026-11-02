@@ -62,41 +62,31 @@ export const DrawerModal: React.FC<DrawerModalProps> = ({
               </button>
             </div>
             <div id="drawer-content">
-              <h2>Riset saham terstruktur dengan data riil BEI &amp; AI.</h2>
+              <h2>Riset saham terstruktur dengan data riil bursa &amp; kecerdasan analitik.</h2>
               <p>
                 PintarSaham Intelligence menghubungkan data pasar real-time Bursa
-                Efek Indonesia (BEI / IDX) melalui <strong>Invezgo API</strong>,
-                penyimpanan lokal <strong>SQLite Database</strong> yang hemat
-                kuota request, serta analisis cerdas <strong>Gemini AI</strong>.
+                Efek Indonesia (BEI / IDX), rangkuman kinerja laporan keuangan emiten,
+                keterbukaan informasi resmi, serta analisis pasar cerdas untuk membantu
+                pengambilan keputusan investasi yang objektif.
               </p>
               <div className="notice">
-                <strong>Terhubung Penuh ke Data Resmi BEI (Invezgo API).</strong>
+                <strong>Terhubung ke Data Resmi Pasar Modal Indonesia.</strong>
                 <br />
-                Seluruh 909 emiten aktif BEI, grafik harian &amp; intraday 1 hari,
-                rasio valuasi (EPS, BVPS, PER, PBV, ROE, MOS), laporan keuangan 5
-                kuartal terakhir, komposisi pemegang saham KSEI, berita pasar, dan
-                dokumen PDF Keterbukaan Informasi BEI menggunakan data riil.
+                Seluruh 900+ emiten aktif BEI, grafik harga harian &amp; tren pergerakan,
+                rasio valuasi (EPS, BVPS, PER, PBV, ROE, MOS), laporan keuangan berkala,
+                komposisi pemegang saham pengendali KSEI, berita pasar, dan
+                dokumen resmi Keterbukaan Informasi BEI disajikan secara komprehensif.
               </div>
-              <h3>Arsitektur Hemat Request (SQLite DB Lokal)</h3>
+              <h3>Pembaruan Data &amp; Kecepatan Akses</h3>
               <p>
-                Untuk menghemat kuota request Invezgo API yang berbayar per
-                request, seluruh data yang bersifat periodik disimpan otomatis di{' '}
-                <code>data/pintarsaham.db</code>:
-                <br />• <strong>Laporan Keuangan Kuartalan, Profil, &amp; KSEI</strong>:
-                Disimpan selama 90 hari (1 kuartal) — kunjungan berikutnya memakai{' '}
-                <strong>0 request API</strong>.
-                <br />• <strong>Keterbukaan Informasi BEI (PDF)</strong>: Disimpan
-                selama 7 hari per emiten.
-                <br />• <strong>Berita Pasar &amp; Emiten</strong>: Ditarik 1 kali
-                request (50 berita terkurasi) saat tombol ditekan, menampilkan Top
-                3 di layar dan mengirimkan seluruh 50 berita ke Gemini AI.
+                Sistem mengoptimalkan penyajian data pasar secara instan tanpa jeda,
+                memastikan investor dapat meninjau grafik, rasio fundamental, dan ringkasan
+                analisis dengan performa optimal di setiap sesi perdagangan.
               </p>
               <h3>Penyimpanan Watchlist &amp; Privasi</h3>
               <p>
-                Watchlist Anda disimpan secara lokal di browser
-                (<code>localStorage</code>) sedangkan cache fundamental dan
-                dokumen BEI tersimpan di database SQLite lokal pada perangkat server
-                Anda.
+                Daftar pantau (Watchlist) dan preferensi analisis Anda tersimpan
+                secara aman pada perangkat Anda, menjaga privasi riset investasi Anda.
               </p>
               <h3>Pintasan Navigasi</h3>
               <p>
@@ -204,8 +194,8 @@ export const DrawerModal: React.FC<DrawerModalProps> = ({
               <h2>Indikator teknikal dari data pasar riil BEI.</h2>
               <div className="notice">
                 Data candlestick harian (OHLC) dan pergerakan intraday 1 hari
-                ditarik langsung dari <strong>Invezgo API (BEI Official)</strong>{' '}
-                dan disimpan di cache SQLite lokal untuk efisiensi request.
+                ditarik langsung dari sumber resmi Bursa Efek Indonesia (BEI)
+                dan diverifikasi secara berkala.
               </div>
               <div className="detail-pair">
                 <span>Instrumen / periode</span>
@@ -312,12 +302,8 @@ export const DrawerModal: React.FC<DrawerModalProps> = ({
                 </b>
               </div>
               <div className="detail-pair">
-                <span>Status Cache Database</span>
-                <b>
-                  {cd?.cachedDb
-                    ? 'Tersimpan di SQLite DB (0 Request API)'
-                    : 'Disinkronkan ke SQLite DB (TTL 90 Hari)'}
-                </b>
+                <span>Status Verifikasi</span>
+                <b>Terverifikasi Resmi BEI</b>
               </div>
 
               {prof?.address && (
@@ -669,8 +655,8 @@ export const DrawerModal: React.FC<DrawerModalProps> = ({
               <div className="notice">
                 <strong>Dokumen Resmi Bursa Efek Indonesia ({s ? s.ticker : 'IDX'}).</strong>
                 <br />
-                Pengumuman ini ditarik dari feed Keterbukaan Informasi BEI melalui
-                Invezgo API dan disimpan di database SQLite lokal.
+                Pengumuman ini ditarik dari feed Keterbukaan Informasi resmi BEI
+                dan tersimpan pada arsip dokumen perusahaan.
               </div>
               <h3>Ringkasan Dokumen</h3>
               <p>{d.body}</p>

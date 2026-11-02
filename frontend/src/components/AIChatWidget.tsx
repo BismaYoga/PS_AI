@@ -250,6 +250,7 @@ export const AIChatWidget: React.FC = () => {
     return DEFAULT_POS;
   });
 
+  const [isWide, setIsWide] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [isReturning, setIsReturning] = useState(false);
   const snapTimerRef = useRef<any>(null);
@@ -582,10 +583,12 @@ export const AIChatWidget: React.FC = () => {
       {/* 2. Interactive Popup Chat Window */}
       {isOpen && (
         <div
-          className="ps-chat-modal"
+          className={`ps-chat-modal ${isWide ? 'is-wide' : ''}`}
           style={{
-            right: `${Math.min(pos.x, window.innerWidth - 390)}px`,
+            width: isWide ? 'min(640px, calc(100vw - 32px))' : 'min(390px, calc(100vw - 32px))',
+            right: `${Math.min(pos.x, window.innerWidth - (isWide ? 660 : 410))}px`,
             bottom: `${pos.y + 68}px`,
+            transition: 'width 0.2s ease, right 0.2s ease',
           }}
         >
           {/* Header */}
@@ -605,17 +608,28 @@ export const AIChatWidget: React.FC = () => {
                 </div>
               </div>
             </div>
-            <button
-              type="button"
-              className="close-btn"
-              onClick={() => setIsOpen(false)}
-              title="Tutup Obrolan"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-              </svg>
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <button
+                type="button"
+                className="close-btn"
+                onClick={() => setIsWide((prev) => !prev)}
+                title={isWide ? 'Perkecil Ukuran' : 'Perlebar Jendela Chat'}
+                style={{ fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 8px', borderRadius: '6px' }}
+              >
+                <span style={{ fontSize: '11px', fontWeight: 600 }}>{isWide ? 'Normal' : 'Lebar'}</span>
+              </button>
+              <button
+                type="button"
+                className="close-btn"
+                onClick={() => setIsOpen(false)}
+                title="Tutup Obrolan"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
           </div>
 
           {/* Messages Body */}

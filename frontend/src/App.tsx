@@ -11,6 +11,7 @@ import { HomeView } from './components/HomeView';
 import { WatchlistView } from './components/WatchlistView';
 import { StockDetailView } from './components/StockDetailView';
 import { CompareView } from './components/CompareView';
+import { ChatView } from './components/ChatView';
 import { AdminView } from './components/AdminView';
 import { LoginModal } from './components/LoginModal';
 import { DrawerModal, DrawerPayload } from './components/DrawerModal';
@@ -83,8 +84,8 @@ export default function App() {
   // Parse initial route from URL hash
   const parseHash = (): { route: Route; ticker: string } => {
     const hash = window.location.hash || '#home';
-    if (hash === '#compare') {
-      return { route: 'compare', ticker: 'BBCA' };
+    if (hash === '#chat' || hash === '#compare') {
+      return { route: 'chat', ticker: 'BBCA' };
     }
     if (hash === '#admin') {
       return { route: 'admin', ticker: 'BBCA' };
@@ -270,8 +271,8 @@ export default function App() {
       document.title = `${selectedStockTicker} — PintarSaham Intelligence`;
     } else if (route === 'watchlist') {
       document.title = 'Watchlist — PintarSaham Intelligence';
-    } else if (route === 'compare') {
-      document.title = 'Komparasi Emiten Head-to-Head — PintarSaham Intelligence';
+    } else if (route === 'chat' || route === 'compare') {
+      document.title = 'Chat AI — PintarSaham Intelligence';
     } else if (route === 'admin') {
       document.title = 'Admin Console — PintarSaham Intelligence';
     } else {
@@ -348,8 +349,8 @@ export default function App() {
       window.location.hash = `#stock/${targetTicker}`;
     } else if (newRoute === 'watchlist') {
       window.location.hash = '#watchlist';
-    } else if (newRoute === 'compare') {
-      window.location.hash = '#compare';
+    } else if (newRoute === 'chat' || newRoute === 'compare') {
+      window.location.hash = '#chat';
     } else if (newRoute === 'admin') {
       if (user?.role !== 'admin') {
         notify('Akses Admin terbatas: Silakan masuk sebagai akun Super Admin.');
@@ -455,14 +456,12 @@ export default function App() {
           />
         )}
 
-        {route === 'compare' && (
-          <CompareView
+        {(route === 'chat' || route === 'compare') && (
+          <ChatView
             stocks={stocks}
-            defaultTickerA={compareTickerA}
-            defaultTickerB={compareTickerB}
-            onSelectStockDetail={(sym) => handleNavigate('stock', sym)}
-            onOpenMethod={() => setDrawerPayload({ type: 'method' })}
-            onOpenAbout={() => setDrawerPayload({ type: 'about' })}
+            onSelectStock={(sym) => handleNavigate('stock', sym)}
+            onNotify={notify}
+            onNavigateHome={() => handleNavigate('home')}
           />
         )}
 

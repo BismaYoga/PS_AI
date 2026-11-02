@@ -78,7 +78,7 @@ export const AIBox: React.FC<AIBoxProps> = ({
 
       aiCache[ticker] = data;
       setAnalysis(data);
-      onNotify(`Analisis Gemini AI untuk ${ticker} berhasil digenerate!`);
+      onNotify(`Analisis cerdas untuk ${ticker} berhasil disiapkan!`);
     } catch (err: any) {
       console.warn('[AI Analysis] Error or fallback:', err);
       // Fallback local rule generation
@@ -137,6 +137,7 @@ export const AIBox: React.FC<AIBoxProps> = ({
               }}
             >
               <svg
+                className="spin-animation"
                 style={{
                   width: '20px',
                   height: '20px',
@@ -149,10 +150,10 @@ export const AIBox: React.FC<AIBoxProps> = ({
               >
                 <path d="M21 12a9 9 0 1 1-6.219-8.56" />
               </svg>
-              Gemini AI sedang menganalisis teknikal chart ({ticker}) &amp; sentimen pasar terkini...
+              Sistem sedang menganalisis teknikal chart ({ticker}) &amp; sentimen pasar terkini...
             </div>
             <p className="small muted" style={{ marginTop: '6px' }}>
-              Memadukan MA20, MA50, RSI 14, Support/Resistance, dan ringkasan berita pasar terkini.
+              Memadukan MA20, MA50, RSI 14, Support/Resistance, serta sentimen makro dan berita terkini.
             </p>
           </div>
         </div>
@@ -166,7 +167,6 @@ export const AIBox: React.FC<AIBoxProps> = ({
     const biasColor =
       bias === 'positif' ? 'green' : bias === 'negatif' ? 'red' : 'blue';
     const sentiment = analysis.sentiment || 'Analisis Pasar';
-    const newsCount = (analysis as any).news_count || (analysis as any).news_used?.length || 0;
 
     return (
       <div id="ai-summary">
@@ -181,7 +181,7 @@ export const AIBox: React.FC<AIBoxProps> = ({
                 {sentiment}
               </span>
               <span className="pill outline" style={{ fontSize: '9px' }}>
-                Gemini AI · {newsCount > 0 ? `${newsCount} Berita` : 'Analisis Terpadu'}
+                Analisis Pasar Terpadu
               </span>
             </div>
             <div className="flex gap-6">
@@ -542,7 +542,7 @@ export const AIBox: React.FC<AIBoxProps> = ({
           className="ai-text"
           style={{ color: '#506479', lineHeight: 1.7, marginBottom: '12px' }}
         >
-          Klik tombol di bawah untuk meminta <strong>Gemini AI</strong> menganalisis pergerakan {ticker}. AI akan memadukan indikator teknikal grafik (<strong>MA20, MA50, RSI 14, Support &amp; Resistance</strong>) dengan <strong>seluruh berita pasar &amp; emiten terkini</strong> sebagai input analisis.
+          Klik tombol di bawah untuk menganalisis pergerakan {ticker}. Analisis cerdas akan memadukan indikator teknikal grafik (<strong>MA20, MA50, RSI 14, Support &amp; Resistance</strong>) dengan <strong>berita pasar, sentimen makro, dan kinerja emiten terkini</strong>.
         </p>
 
         <div

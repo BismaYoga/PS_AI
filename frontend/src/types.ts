@@ -167,7 +167,7 @@ export interface AIAnalysisResult {
 
 export type Timeframe = '1D' | '1M' | '3M' | '6M' | '1Y';
 export type ChartType = 'line' | 'candle';
-export type Route = 'home' | 'watchlist' | 'stock' | 'compare' | 'admin';
+export type Route = 'home' | 'watchlist' | 'stock' | 'chat' | 'compare' | 'admin';
 
 export interface UserProfile {
   id: string;

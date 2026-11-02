@@ -66,6 +66,16 @@
     "note": "Perkiraan tanggal rilis laporan keuangan resmi kuartalan untuk PT Japfa Comfeed Indonesia Tbk (JPFA) berdasarkan kalender resmi Invezgo & IDX Official Feed (BEI)."
   },
   {
+    "id": "bei_INKP_20261030_1",
+    "ticker": "INKP",
+    "date": "2026-10-30",
+    "type": "Laporan Keuangan",
+    "title": "Penyampaian Laporan Keuangan Interim Yang Tidak Diaudit",
+    "sub": "Keterbukaan Informasi Resmi BEI (INKP)",
+    "amount": "Dokumen Resmi BEI",
+    "note": "Pengumuman resmi Bursa Efek Indonesia untuk INKP pada 30 Oct 2026: Penyampaian Laporan Keuangan Interim Yang Tidak Diaudit."
+  },
+  {
     "id": "earn_BBRI_20261029",
     "ticker": "BBRI",
     "date": "2026-10-29",
@@ -174,6 +184,43 @@
     "sub": "Keterbukaan Informasi Resmi BEI (PGAS)",
     "amount": "Dokumen Resmi BEI",
     "note": "Pengumuman resmi Bursa Efek Indonesia untuk PGAS pada 29 Oct 2026: Penyampaian Laporan Keuangan Interim Yang Tidak Diaudit."
+  },
+  {
+    "id": "bei_TCPI_20261029_0",
+    "ticker": "TCPI",
+    "date": "2026-10-29",
+    "type": "Laporan Keuangan",
+    "title": "Penyampaian Laporan Keuangan Interim Yang Tidak Diaudit",
+    "sub": "Keterbukaan Informasi Resmi BEI (TCPI)",
+    "amount": "Dokumen Resmi BEI",
+    "note": "Pengumuman resmi Bursa Efek Indonesia untuk TCPI pada 29 Oct 2026: Penyampaian Laporan Keuangan Interim Yang Tidak Diaudit.",
+    "url": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202610/20261029135121-65269-0/FinancialStatement-2026-III-TCPI.pdf",
+    "attachments": [
+      {
+        "name": "FinancialStatement-2026-III-TCPI.pdf",
+        "url": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202610/20261029135121-65269-0/FinancialStatement-2026-III-TCPI.pdf"
+      },
+      {
+        "name": "FinancialStatement-2026-III-TCPI.xlsx",
+        "url": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202610/20261029135121-65269-0/FinancialStatement-2026-III-TCPI.xlsx"
+      },
+      {
+        "name": "inlineXBRL.zip",
+        "url": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202610/20261029135121-65269-0/inlineXBRL.zip"
+      },
+      {
+        "name": "instance.zip",
+        "url": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202610/20261029135121-65269-0/instance.zip"
+      },
+      {
+        "name": "Penyampaian TCPI LK Interim Q3 2026.pdf",
+        "url": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202610/20261029135121-65269-0/Penyampaian TCPI LK Interim Q3 2026.pdf"
+      },
+      {
+        "name": "TCPI LK Interim 30 Sep 2026.pdf",
+        "url": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202610/20261029135121-65269-0/TCPI LK Interim 30 Sep 2026.pdf"
+      }
+    ]
   },
   {
     "id": "bei_ASII_20261028_1",
@@ -534,6 +581,31 @@
     "sub": "Keterbukaan Informasi Resmi BEI (PTBA)",
     "amount": "Dokumen Resmi BEI",
     "note": "Pengumuman resmi Bursa Efek Indonesia untuk PTBA pada 28 Sep 2026: Transaksi Material Tanpa Persetujuan RUPS."
+  },
+  {
+    "id": "bei_TCPI_20260923_4",
+    "ticker": "TCPI",
+    "date": "2026-09-23",
+    "type": "Laporan Keuangan",
+    "title": "Perubahan Komite Audit",
+    "sub": "Keterbukaan Informasi Resmi BEI (TCPI)",
+    "amount": "Dokumen Resmi BEI",
+    "note": "Pengumuman resmi Bursa Efek Indonesia untuk TCPI pada 23 Sep 2026: Perubahan Komite Audit.",
+    "url": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202609/2adf0ec40a_7df6b4f7e9.pdf",
+    "attachments": [
+      {
+        "name": "20260923_TCPI_Perubahan Corsec Komite Audit Alamat NPWP Internal Audit_32150602.pdf",
+        "url": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202609/2adf0ec40a_7df6b4f7e9.pdf"
+      },
+      {
+        "name": "20260923_TCPI_Perubahan Corsec Komite Audit Alamat NPWP Internal Audit_32150602_lamp2.pdf",
+        "url": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202609/15840a349c_27b7f46da3.pdf"
+      },
+      {
+        "name": "20260923_TCPI_Perubahan Corsec Komite Audit Alamat NPWP Internal Audit_32150602_lamp1.pdf",
+        "url": "https://www.idx.co.id/StaticData/NewsAndAnnouncement/ANNOUNCEMENTSTOCK/From_EREP/202609/ffdf252705_db1fde0c5e.pdf"
+      }
+    ]
   },
   {
     "id": "earn_PGAS_20260922",
@@ -1743,7 +1815,10 @@
     "title": "Cum/Ex Date Dividen Tunai HEAL",
     "sub": "Dividen Rp10.50 per lembar saham",
     "amount": "Rp10.50 per saham",
-    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Medikaloka Hermina Tbk (HEAL) sebesar Rp10.50 per lembar saham."
+    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Medikaloka Hermina Tbk (HEAL) sebesar Rp10.50 per lembar saham.",
+    "ai_summary": "PT Medikaloka Hermina Tbk (HEAL) mengumumkan pembagian dividen tunai sebesar Rp10,50 per saham, mencerminkan komitmen emiten dalam mendistribusikan laba di tengah ekspansi rumah sakit yang agresif. Agenda ini menunjukkan kondisi arus kas yang stabil dan kesehatan finansial perusahaan dalam sektor layanan kesehatan yang defensif.",
+    "ai_sentiment": "Netral",
+    "ai_impact": "Distribusi dividen ini memberikan kepastian arus kas bagi investor, namun dengan estimasi yield yang cenderung kecil, dampaknya terhadap apresiasi harga saham diperkirakan bersifat terbatas."
   },
   {
     "id": "div_CUAN_20250430",
@@ -1753,7 +1828,10 @@
     "title": "Cum/Ex Date Dividen Tunai CUAN",
     "sub": "Dividen Rp0.32 per lembar saham",
     "amount": "Rp0.32 per saham",
-    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Petrindo Jaya Kreasi Tbk (CUAN) sebesar Rp0.32 per lembar saham."
+    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Petrindo Jaya Kreasi Tbk (CUAN) sebesar Rp0.32 per lembar saham.",
+    "ai_summary": "PT Petrindo Jaya Kreasi Tbk (CUAN) menjadwalkan pembagian dividen tunai sebesar Rp0,32 per saham sebagai bentuk distribusi laba kepada pemegang saham. Mengingat profil CUAN sebagai emiten holding tambang dengan valuasi harga saham yang tinggi, pembagian dividen ini cenderung bersifat simbolis dengan rasio pembayaran yang sangat kecil.",
+    "ai_sentiment": "Netral",
+    "ai_impact": "Dividen yield yang sangat rendah (mendekati 0%) menyebabkan aksi korporasi ini tidak menjadi katalis penggerak harga saham dan minim dampak terhadap valuasi investasi secara keseluruhan."
   },
   {
     "id": "div_SSMS_20250430",
@@ -1763,7 +1841,10 @@
     "title": "Cum/Ex Date Dividen Tunai SSMS",
     "sub": "Dividen Rp47.24 per lembar saham",
     "amount": "Rp47.24 per saham",
-    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Sawit Sumbermas Sarana Tbk (SSMS) sebesar Rp47.24 per lembar saham."
+    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Sawit Sumbermas Sarana Tbk (SSMS) sebesar Rp47.24 per lembar saham.",
+    "ai_summary": "PT Sawit Sumbermas Sarana Tbk (SSMS) mengumumkan pembagian dividen tunai sebesar Rp47,24 per saham, mencerminkan komitmen perseroan dalam mendistribusikan laba di tengah dinamika harga komoditas CPO. Langkah ini menegaskan posisi SSMS sebagai emiten perkebunan dengan arus kas operasional yang stabil dan fokus pada nilai pemegang saham.",
+    "ai_sentiment": "Positif",
+    "ai_impact": "Pembagian dividen ini memberikan kepastian yield bagi investor dan menjadi katalis jangka pendek yang mendukung daya tarik valuasi saham menjelang tanggal cum-date."
   },
   {
     "id": "div_ESSA_20250428",
@@ -1773,7 +1854,10 @@
     "title": "Cum/Ex Date Dividen Tunai ESSA",
     "sub": "Dividen Rp10 per lembar saham",
     "amount": "Rp10 per saham",
-    "note": "Distribusi dividen tunai riil untuk pemegang saham PT ESSA Industries Indonesia Tbk (ESSA) sebesar Rp10 per lembar saham."
+    "note": "Distribusi dividen tunai riil untuk pemegang saham PT ESSA Industries Indonesia Tbk (ESSA) sebesar Rp10 per lembar saham.",
+    "ai_summary": "PT ESSA Industries Indonesia Tbk (ESSA) mengumumkan pembagian dividen tunai sebesar Rp10 per lembar saham yang dijadwalkan pada 28 April 2025. Keputusan ini mencerminkan komitmen emiten di sektor pengolahan amonia dan kilang LPG untuk terus memberikan imbal hasil kas kepada pemegang saham di tengah dinamika harga komoditas global. Bagi investor, distribusi ini menjadi indikator positif atas kesehatan arus kas operasional perusahaan.",
+    "ai_sentiment": "Positif",
+    "ai_impact": "Pembagian dividen tunai ini memberikan tambahan yield langsung bagi pemegang saham sekaligus mencerminkan likuiditas kas yang sehat untuk menopang valuasi jangka pendek."
   },
   {
     "id": "div_JPFA_20250422",
@@ -1783,7 +1867,10 @@
     "title": "Cum/Ex Date Dividen Tunai JPFA",
     "sub": "Dividen Rp70 per lembar saham",
     "amount": "Rp70 per saham",
-    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Japfa Comfeed Indonesia Tbk (JPFA) sebesar Rp70 per lembar saham."
+    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Japfa Comfeed Indonesia Tbk (JPFA) sebesar Rp70 per lembar saham.",
+    "ai_summary": "PT Japfa Comfeed Indonesia Tbk (JPFA) mengumumkan distribusi dividen tunai sebesar Rp70 per lembar saham yang dijadwalkan pada 22 April 2025. Kebijakan ini mencerminkan komitmen emiten dalam memberikan imbal hasil tunai yang solid bagi pemegang saham di tengah pemulihan daya beli sektor konsumer non-siklikal dan stabilitas kinerja fundamental sektor perunggasan terintegrasi.",
+    "ai_sentiment": "Positif",
+    "ai_impact": "Pembagian dividen tunai ini memberikan katalis positif bagi daya tarik saham JPFA dan berpotensi memicu aksi beli jangka pendek menjelang cum-date untuk mengejar dividend yield."
   },
   {
     "id": "div_BBTN_20250415",
@@ -1793,7 +1880,10 @@
     "title": "Cum/Ex Date Dividen Tunai BBTN",
     "sub": "Dividen Rp53.57 per lembar saham",
     "amount": "Rp53.57 per saham",
-    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Bank Tabungan Negara (Persero) Tbk (BBTN) sebesar Rp53.57 per lembar saham."
+    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Bank Tabungan Negara (Persero) Tbk (BBTN) sebesar Rp53.57 per lembar saham.",
+    "ai_summary": "PT Bank Tabungan Negara (Persero) Tbk (BBTN) mengumumkan pembagian dividen tunai sebesar Rp53,57 per lembar saham untuk tahun buku yang bersangkutan. Kebijakan ini mencerminkan komitmen emiten pembiayaan perumahan utama ini dalam memberikan imbal hasil kas secara langsung kepada pemegang saham di tengah upaya menjaga kualitas aset dan likuiditas.",
+    "ai_sentiment": "Positif",
+    "ai_impact": "Pengumuman dividen tunai ini memberikan kepastian *cash yield* jangka pendek bagi investor, yang berpotensi mendorong aksi beli jelang tanggal *cum date* untuk mengamankan hak dividen."
   },
   {
     "id": "div_BBNI_20250415",
@@ -1803,7 +1893,10 @@
     "title": "Cum/Ex Date Dividen Tunai BBNI",
     "sub": "Dividen Rp374.06 per lembar saham",
     "amount": "Rp374.06 per saham",
-    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Bank Negara Indonesia (Persero) Tbk (BBNI) sebesar Rp374.06 per lembar saham."
+    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Bank Negara Indonesia (Persero) Tbk (BBNI) sebesar Rp374.06 per lembar saham.",
+    "ai_summary": "PT Bank Negara Indonesia (Persero) Tbk (BBNI) menjadwalkan pembagian dividen tunai sebesar Rp374,06 per lembar saham. Kebijakan ini mencerminkan komitmen emiten perbankan big caps dalam memberikan imbal hasil optimal serta menjaga kesehatan fundamental di tengah dinamika sektor keuangan.",
+    "ai_sentiment": "Positif",
+    "ai_impact": "Besaran dividen ini menawarkan dividend yield yang atraktif dan berpotensi menjadi katalis penguatan harga saham menjelang tanggal cum date."
   },
   {
     "id": "div_BRPT_20240627",
@@ -1813,7 +1906,10 @@
     "title": "Cum/Ex Date Dividen Tunai BRPT",
     "sub": "Dividen Rp0.87 per lembar saham",
     "amount": "Rp0.87 per saham",
-    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Barito Pacific Tbk (BRPT) sebesar Rp0.87 per lembar saham."
+    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Barito Pacific Tbk (BRPT) sebesar Rp0.87 per lembar saham.",
+    "ai_summary": "PT Barito Pacific Tbk (BRPT) mengumumkan distribusi dividen tunai tahun buku berjalan sebesar Rp0,87 per lembar saham. Meskipun menunjukkan komitmen pengembalian kepada pemegang saham, nominal ini mencerminkan dividend yield yang relatif kecil mengingat profil emiten yang lebih berorientasi pada ekspansi modal di sektor petrokimia dan energi terbarukan.",
+    "ai_sentiment": "Netral",
+    "ai_impact": "Pembagian dividen tunai dengan nominal mini ini berdampak marjinal terhadap pergerakan harga saham harian, di mana pergerakan valuasi BRPT tetap akan sangat bergantung pada kinerja operasional anak usahanya di sektor energi (BREN) dan petrokimia (TPIA)."
   },
   {
     "id": "div_BBTN_20240319",
@@ -1823,7 +1919,10 @@
     "title": "Cum/Ex Date Dividen Tunai BBTN",
     "sub": "Dividen Rp49.89 per lembar saham",
     "amount": "Rp49.89 per saham",
-    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Bank Tabungan Negara (Persero) Tbk (BBTN) sebesar Rp49.89 per lembar saham."
+    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Bank Tabungan Negara (Persero) Tbk (BBTN) sebesar Rp49.89 per lembar saham.",
+    "ai_summary": "PT Bank Tabungan Negara (Persero) Tbk (BBTN) mengumumkan pembagian dividen tunai tahun buku 2023 sebesar Rp49,89 per lembar saham. Kebijakan ini mencerminkan komitmen emiten spesialis KPR ini dalam memberikan imbal hasil bagi pemegang saham di tengah upaya menjaga rasio kecukupan modal (CAR) untuk ekspansi kredit perumahan.",
+    "ai_sentiment": "Positif",
+    "ai_impact": "Pembagian dividen ini memberikan tambahan yield tunai jangka pendek bagi investor, dengan potensi pergerakan harga saham yang biasanya terkoreksi secara wajar (ex-dividend adjustment) pada tanggal ex-date."
   },
   {
     "id": "div_HRUM_20221214",

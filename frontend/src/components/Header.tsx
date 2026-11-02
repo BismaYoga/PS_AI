@@ -194,15 +194,16 @@ export const Header: React.FC<HeaderProps> = ({
             Watchlist <span className="nav-count" id="watch-count">{watchlistCount}</span>
           </a>
           <a
-            href="#compare"
-            id="nav-compare"
-            className={route === 'compare' ? 'active' : ''}
+            href="#chat"
+            id="nav-chat"
+            className={route === 'chat' ? 'active' : ''}
             onClick={(e) => {
               e.preventDefault();
-              onNavigate('compare');
+              onNavigate('chat');
             }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}
           >
-            Bandingkan
+            <Icon name="sparkles" cls="sm" style={{ color: '#60a5fa' }} /> Chat AI
           </a>
           {user?.role === 'admin' && (
             <a
@@ -472,12 +473,12 @@ export const Header: React.FC<HeaderProps> = ({
                       type="button"
                       className="btn small-btn"
                       onClick={() => {
-                        onNavigate('compare');
+                        onNavigate('chat');
                         setUserDropdownOpen(false);
                       }}
                       style={{ justifyContent: 'flex-start', border: 'none', background: 'transparent', padding: '6px 8px' }}
                     >
-                      <Icon name="compare" cls="sm" /> Bandingkan
+                      <Icon name="sparkles" cls="sm" /> Chat AI
                     </button>
                     {user.role === 'admin' && (
                       <button

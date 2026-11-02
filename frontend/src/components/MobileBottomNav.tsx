@@ -74,12 +74,12 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
 
       <button
         type="button"
-        className={`mobile-nav-item ${route === 'compare' ? 'active' : ''}`}
-        onClick={() => onNavigate('compare')}
-        aria-label="Komparasi Saham Head-to-Head"
+        className={`mobile-nav-item ${route === 'chat' ? 'active' : ''}`}
+        onClick={() => onNavigate('chat')}
+        aria-label="Chat AI Pasar Saham"
       >
-        <Icon name="compare" cls="mobile-nav-icon" />
-        <span>Bandingkan</span>
+        <Icon name="sparkles" cls="mobile-nav-icon" />
+        <span>Chat AI</span>
       </button>
 
       <button

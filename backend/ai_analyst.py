@@ -29,7 +29,7 @@ def analyze_market_instrument(ticker: str, tech_input: dict = None, force_refres
             print(f"[ai_analyst] Menggunakan cache analisis untuk {key}")
             return cached_res
 
-    # 1. Ambil SELURUH berita terkini dari 1 request Invezgo API (atau dari cache jika sudah di-trigger)
+    # 1. Ambil berita terkini instrumen terkait
     news_items = get_news(key, force_refresh=force_refresh)
     news_summary_list = []
     for n in news_items:
@@ -42,6 +42,21 @@ def analyze_market_instrument(ticker: str, tech_input: dict = None, force_refres
             "bias": n.get("bias", "netral")
         })
     total_news_count = len(news_summary_list)
+
+    # 1b. Ambil berita makroekonomi pasar modal Indonesia (IHSG, MSCI, Suku Bunga, Arus Asing)
+    macro_summary_list = []
+    if key != "IHSG":
+        try:
+            macro_items = get_news("IHSG", force_refresh=False)
+            for m_item in macro_items[:3]:
+                macro_summary_list.append({
+                    "title": m_item.get("title", ""),
+                    "desc": m_item.get("desc", ""),
+                    "impact": m_item.get("impact", ""),
+                    "bias": m_item.get("bias", "netral")
+                })
+        except Exception:
+            pass
 
     # 2. Siapkan data teknikal
     tech = tech_input or {}
@@ -167,8 +182,9 @@ Format output HANYA sebuah valid JSON murni tanpa markdown:
 }}
 """
     else:
+        macro_text = f"\n=== 3b. SENTIMEN PASAR MAKRO & GLOBAL TERKINI (MSCI, SUKU BUNGA, ARUS ASING) ===\n{json.dumps(macro_summary_list, indent=2, ensure_ascii=False)}" if macro_summary_list else ""
         prompt = f"""Kamu adalah Chief Market Strategist, Fundamental & Technical Analyst profesional di Bursa Efek Indonesia (IDX).
-Tugasmu adalah menyusun 'Ringkasan Eksekutif Terpadu' untuk instrumen {key} ({emiten_name}) berdasarkan data teknikal chart, kinerja laporan keuangan kuartalan resmi BEI dari SQLite DB, dan SELURUH ({total_news_count}) berita pasar/emiten terkini dari Invezgo API:
+Tugasmu adalah menyusun 'Ringkasan Eksekutif Terpadu' untuk instrumen {key} ({emiten_name}) berdasarkan data teknikal chart, kinerja laporan keuangan resmi BEI, sentimen emiten terkini, serta kaitan dengan iklim pasar makro (seperti rebalancing MSCI, suku bunga BI/Fed, dan IHSG):
 
 === 1. DATA TEKNIKAL GRAFIK ({period}) ===
 - Instrumen: {key} ({emiten_name}) · Sektor: {sector}
@@ -179,15 +195,16 @@ Tugasmu adalah menyusun 'Ringkasan Eksekutif Terpadu' untuk instrumen {key} ({em
 - Potensi Support Terdekat: Rp{support}
 - Potensi Resistance Terdekat: Rp{resistance}
 
-=== 2. DATA FUNDAMENTAL KUARTALAN, KSEI, & KETERBUKAAN INFORMASI BEI (SQLITE DB) ===
+=== 2. DATA FUNDAMENTAL KUARTALAN, KSEI, & KETERBUKAAN INFORMASI RESMI BEI ===
 {fundamental_context_str}
 
-=== 3. SELURUH BERITA & KATALIS PASAR TERKINI INVEZGO API ({total_news_count} BERITA) ===
+=== 3. BERITA & KATALIS PASAR EMITEN TERKINI ({total_news_count} BERITA) ===
 {json.dumps(news_summary_list, indent=2, ensure_ascii=False)}
+{macro_text}
 
 === INSTRUKSI ANALISIS ===
-Padukan sinyal teknikal chart (tren MA, posisi RSI, batas support/resistance), kekuatan fundamental kuartalan terbaru (laba, arus kas, ROE), serta sintesis menyeluruh dari {total_news_count} berita terbaru di atas.
-Buat analisis yang tajam, objektif, dan berorientasi pada keputusan investor.
+Padukan sinyal teknikal chart (tren MA, momentum RSI, batas support/resistance), kinerja fundamental kuartalan terbaru, sentimen emiten, serta konteks makro pasar saham Indonesia (seperti rebalancing MSCI, arus dana asing, dan sentimen IHSG).
+Buat analisis yang tajam, objektif, dan berorientasi pada keputusan investasi taktis.
 
 Format output HANYA sebuah valid JSON murni tanpa markdown wrapper:
 {{
@@ -196,9 +213,9 @@ Format output HANYA sebuah valid JSON murni tanpa markdown wrapper:
   "is_index": false,
   "sentiment": "Bullish / Bearish / Konsolidasi / Koreksi Sehat",
   "sentiment_bias": "positif / negatif / netral",
-  "executive_summary": "1 paragraf padat (3-4 kalimat) yang menyatukan kondisi teknikal chart, fundamental kuartalan terbaru, dan rangkuman benang merah dari {total_news_count} berita hari ini secara jelas.",
+  "executive_summary": "1 paragraf padat (3-4 kalimat) yang menyatukan kondisi teknikal chart, fundamental emiten, serta kaitan dengan sentimen berita terkini dan pasar makro (MSCI/IHSG) secara jelas.",
   "technical_insight": "Ulasan teknikal mendalam: posisi harga thd MA20/50, momentum RSI 14 ({rsi_val}), serta pengujian area support Rp{support} dan resistance Rp{resistance}.",
-  "catalyst_insight": "Ulasan katalis menyeluruh dari kinerja kuartalan terbaru & {total_news_count} berita Invezgo hari ini: bagaimana katalis tersebut mempengaruhi likuiditas, valuasi, dan prospek harga.",
+  "catalyst_insight": "Ulasan katalis menyeluruh: bagaimana kinerja emiten dan sentimen makro pasar (kebijakan suku bunga, arus dana asing/MSCI) mempengaruhi likuiditas, valuasi, dan prospek saham.",
   "actionable_plan": "Rencana tindakan taktis bagi investor/trader: area masuk (entry/buy on weakness), level stop loss/proteksi, atau rekomendasi wait-and-see.",
   "trading_plan": {{
     "entry_zone": "Area beli terdekat, misal: Rp{support} - Rp{price}",
@@ -221,7 +238,13 @@ Format output HANYA sebuah valid JSON murni tanpa markdown wrapper:
 }}
 """
 
-    models_to_try = ["gemini-flash-lite-latest", "gemini-2.5-flash", "gemini-3.6-flash", "gemini-3.8-flash"]
+    models_to_try = [
+        "gemini-3-flash-preview",
+        "gemini-3.5-flash-lite",
+        "gemini-3.8-flash",
+        "gemma-4-26b-a4b-it",
+        "gemini-flash-latest"
+    ]
 
     for model_name in models_to_try:
         try:

@@ -92,10 +92,10 @@ PANDUAN SENTIMEN:
 
 PENTING: Keluarkan HANYA string JSON murni tanpa pembuka/penutup markdown backtick (```json)."""
 
-    # Model fallback: gemini-3.5-flash-lite & gemini-3-flash-preview terbukti sangat andal
+    # Model fallback: gemini-3-flash-preview terbukti paling cepat dan andal
     models_to_try = [
-        "gemini-3.5-flash-lite",
         "gemini-3-flash-preview",
+        "gemini-3.5-flash-lite",
         "gemma-4-26b-a4b-it",
         "gemini-flash-latest"
     ]

@@ -33,8 +33,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     },
     {
       icon: 'sparkles',
-      title: 'Gemini AI Market Strategist',
-      desc: 'Sintesis cerdas menggabungkan indikator teknikal (MA20, MA50, RSI 14) dengan ratusan berita pasar terkini untuk rekomendasi konkret.',
+      title: 'AI Market Strategist',
+      desc: 'Sintesis cerdas menggabungkan indikator teknikal (MA20, MA50, RSI 14) dengan sentimen pasar dan emiten terkini untuk rekomendasi konkret.',
     },
     {
       icon: 'coins',
@@ -42,9 +42,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       desc: 'Hitung nilai wajar saham (Fair Value) berbasis EPS riil dan Graham formula untuk menemukan saham berfundamental sehat yang undervalued.',
     },
     {
-      icon: 'compare',
-      title: 'Komparasi Emiten Head-to-Head',
-      desc: 'Bandingkan dua saham dalam sektor yang sama secara berdampingan untuk menentukan pilihan investasi terbaik.',
+      icon: 'sparkles',
+      title: 'Chat AI Asisten Pasar Modal',
+      desc: 'Tanyakan teknikal chart, rasio valuasi, dan prospek saham Indonesia langsung dalam format percakapan interaktif.',
     },
     {
       icon: 'calendar',
@@ -53,8 +53,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     },
     {
       icon: 'download',
-      title: 'Export Data CSV & SQLite DB',
-      desc: 'Download data watchlist dan rasio valuasi ke spreadsheet serta nikmati akses kilat 0 detik berkat SQLite DB cache lokal.',
+      title: 'Export Data CSV & Arsip Data',
+      desc: 'Download data watchlist dan rasio valuasi ke spreadsheet serta nikmati akses kilat 0 detik untuk analisis investasi mendalam.',
     },
   ];
 
@@ -118,11 +118,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const faqs = [
     {
       q: 'Dari mana sumber data harga dan laporan keuangan PintarSaham?',
-      a: 'PintarSaham terhubung langsung ke Invezgo API (penyedia data resmi BEI/IDX) untuk grafik real-time, order book, berita keterbukaan informasi, dan laporan keuangan kuartalan.',
+      a: 'PintarSaham terhubung langsung ke sumber data resmi bursa efek untuk grafik real-time, rasio valuasi, keterbukaan informasi resmi BEI, dan laporan keuangan kuartalan.',
     },
     {
-      q: 'Bagaimana cara kerja analisis Gemini AI?',
-      a: 'Gemini AI membaca indikator teknikal (MA20, MA50, RSI 14, Support/Resistance) dan merangkum benang merah berita pasar terkini untuk menghasilkan rekomendasi Entry Zone, Target Price (TP1/TP2), dan batasan Stop Loss.',
+      q: 'Bagaimana cara kerja analisis AI PintarSaham?',
+      a: 'Sistem menganalisis indikator teknikal (MA20, MA50, RSI 14, Support/Resistance) dan merangkum benang merah sentimen pasar terkini untuk menghasilkan rekomendasi Entry Zone, Target Price (TP1/TP2), dan batasan Stop Loss.',
     },
     {
       q: 'Apakah bisa digunakan di smartphone (layar mobile)?',

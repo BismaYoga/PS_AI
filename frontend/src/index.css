@@ -1782,7 +1782,8 @@
   font-weight: 700;
   padding: 6px 10px;
   border-bottom: 1px solid #e2e8f0;
-  white-space: nowrap;
+  white-space: normal;
+  word-break: break-word;
 }
 
 [data-theme="dark"] .formatted-chat-message .chat-table th {
@@ -1795,7 +1796,8 @@
   padding: 6px 10px;
   border-bottom: 1px solid #f1f5f9;
   color: #1e293b;
-  white-space: nowrap;
+  white-space: normal;
+  word-break: break-word;
 }
 
 [data-theme="dark"] .formatted-chat-message .chat-table td {
@@ -2178,4 +2180,61 @@
   color: #6ee7b7;
   border-color: #047857;
 }
+
+/* ========================================================
+   Global Animation Utilities (Spin, Pulse, Fade)
+   ======================================================== */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse-bg {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+.spin-animation {
+  animation: spin 1s linear infinite !important;
+}
+
+/* ========================================================
+   Chat Layout & Text Wrapping Optimization (Anti-Horizontal Scroll)
+   ======================================================== */
+.formatted-chat-message {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  max-width: 100%;
+}
+
+.formatted-chat-message p,
+.formatted-chat-message div,
+.formatted-chat-message span,
+.formatted-chat-message li {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.formatted-chat-message .chat-table-container {
+  max-width: 100%;
+  overflow-x: auto;
+  border-radius: 8px;
+  margin: 10px 0;
+}
+
+.formatted-chat-message .chat-table td,
+.formatted-chat-message .chat-table th {
+  white-space: normal;
+  word-break: break-word;
+}
+
 

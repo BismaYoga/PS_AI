@@ -81,7 +81,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           <div className="eyebrow">RINGKASAN PASAR MODAL INDONESIA</div>
           <h1>IHSG (Indeks Harga Saham Gabungan)</h1>
           <p className="hero-subtitle">
-            Pantau arah pergerakan pasar bursa efek, likuiditas transaksi harian, serta evaluasi kelayakan iklim investasi pasar modal via Gemini AI.
+            Pantau arah pergerakan pasar bursa efek, likuiditas transaksi harian, serta evaluasi kelayakan iklim investasi pasar modal secara real-time.
           </p>
         </div>
         <div className="date-block">

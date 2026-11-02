@@ -383,10 +383,27 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
             <strong>{base ? `${rp(base)} / saham` : '—'}</strong>
           </div>
           <div className="assumption">
-            <div className="assumption-heading">
-              <label htmlFor={`slider-${type}`} style={{ margin: 0 }}>
-                {isPe ? 'Target PER' : 'Target PBV'} dasar
-              </label>
+            <div className="assumption-heading" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <label htmlFor={`slider-${type}`} style={{ margin: 0 }}>
+                  {isPe ? 'Target PER' : 'Target PBV'} dasar
+                </label>
+                <span
+                  title={
+                    isPe
+                      ? 'Target PER (Price-to-Earnings Ratio): Kelipatan laba bersih tahunan yang wajar untuk emiten ini. Menggeser slider menyesuaikan proyeksi harga wajar berdasarkan EPS riil BEI.'
+                      : 'Target PBV (Price-to-Book Value): Kelipatan nilai buku ekuitas yang wajar untuk emiten ini. Menggeser slider menyesuaikan valuasi berbasis aset bersih per saham (BVPS).'
+                  }
+                  style={{
+                    display: 'inline-flex',
+                    cursor: 'help',
+                    color: 'var(--blue)',
+                    verticalAlign: 'middle',
+                  }}
+                >
+                  <Icon name="info" cls="sm" />
+                </span>
+              </div>
               <output htmlFor={`slider-${type}`} id={`output-${type}`}>
                 {fmt(target, isPe ? 1 : 2)}×
               </output>
@@ -398,6 +415,11 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
               max={isPe ? 40 : 7}
               step={isPe ? 0.5 : 0.05}
               value={target}
+              title={
+                isPe
+                  ? `Target PER saat ini: ${fmt(target, 1)}×. Geser ke kanan untuk skenario valuasi premium/optimistis, atau ke kiri untuk skenario valuasi konservatif.`
+                  : `Target PBV saat ini: ${fmt(target, 2)}×. Geser untuk menyesuaikan ekspektasi kelipatan nilai buku saham.`
+              }
               aria-label={`Ubah asumsi ${isPe ? 'PER' : 'PBV'} dasar`}
               onChange={(e) => {
                 const val = Number(e.target.value);
@@ -748,10 +770,10 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
                 className="btn"
                 onClick={() => fetchCompanyDetail(true)}
                 disabled={loadingDetail}
-                title="Sinkronkan ulang data kuartalan & keterbukaan informasi dari Invezgo API ke SQLite DB"
+                title="Perbarui data pasar & kinerja emiten terbaru"
               >
                 <Icon name="refresh" cls="sm" />{' '}
-                {loadingDetail ? 'Memuat DB...' : 'Sinkronkan DB'}
+                {loadingDetail ? 'Memperbarui...' : 'Perbarui Data'}
               </button>
               <button
                 className="btn"
@@ -846,13 +868,9 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
                 <span
                   className="pill green"
                   style={{ fontSize: '9px' }}
-                  title={
-                    companyDetail.cachedDb
-                      ? 'Dimuat langsung dari SQLite DB lokal (0 API request)'
-                      : 'Baru diambil dari Invezgo API & disimpan ke SQLite DB'
-                  }
+                  title="Data emiten resmi terverifikasi Bursa Efek Indonesia (BEI)"
                 >
-                  {companyDetail.cachedDb ? 'SQLite DB (0 Req)' : 'Tersimpan di DB'}
+                  Resmi BEI
                 </span>
               )}
             </div>
@@ -1236,7 +1254,7 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
             <h2>Kinerja keuangan historis ({stock.ticker})</h2>
             <p>
               {hasRealFin
-                ? `Data laporan keuangan ${finTimeframe === 'annual' ? 'tahunan fiskal (FY 2019–2025)' : 'kuartalan berurutan (Q2 2024–Q3 2026, Q4 dilaporkan via FY)'} resmi BEI · Tersimpan di SQLite DB.`
+                ? `Data laporan keuangan ${finTimeframe === 'annual' ? `tahunan fiskal (${fin[0]?.year}–${latestPeriodLabel})` : `kuartalan berurutan (${fin[0]?.year}–${latestPeriodLabel})`} resmi Bursa Efek Indonesia (BEI).`
                 : 'Pahami pertumbuhan, kondisi neraca, dan kualitas arus kas.'}
             </p>
           </div>
@@ -1271,7 +1289,7 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '11.5px', color: 'var(--text-muted, #64748b)', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
                   <Icon name={finInsightData.cached ? 'zap' : 'sparkles'} cls="sm" style={{ width: '13px', height: '13px', color: '#0284c7' }} />
-                  {finInsightData.cached ? 'Tersimpan di SQLite' : 'Baru Dianalisis'} ({finInsightData.period_tag?.replace('_', ' · ')})
+                  {finInsightData.cached ? 'Terverifikasi' : 'Baru Dianalisis'} ({finInsightData.period_tag?.replace('_', ' · ')})
                 </span>
                 <button
                   className="btn small-btn"
@@ -1570,7 +1588,7 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
             <div style={{ padding: '8px 14px', background: 'var(--bg-subtle, rgba(26, 98, 191, 0.05))', borderRadius: '6px', margin: '0 16px 12px', fontSize: '12px', color: 'var(--text-muted, #555)', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Icon name="info" cls="sm" />
               <span>
-                <strong>Tampilan Year on Year (YoY):</strong> Menampilkan perbandingan kinerja jangka panjang ({finTimeframe === 'annual' ? '7 tahun fiskal 2019–2025' : 'kuartalan berurutan'}) lengkap dengan persentase pertumbuhan tahunan (YoY). {finTimeframe === 'annual' ? 'Klik Kuartalan jika ingin melihat rincian triwulan.' : 'Di BEI, kuartal IV dilaporkan sebagai Laporan Tahunan (FY).'}
+                <strong>Tampilan Year on Year (YoY):</strong> Menampilkan perbandingan kinerja jangka panjang ({finTimeframe === 'annual' ? `${fin.length} tahun fiskal (${fin[0]?.year}–${latestPeriodLabel})` : `${fin.length} periode kuartalan (${fin[0]?.year}–${latestPeriodLabel})`}) lengkap dengan persentase pertumbuhan tahunan (YoY). {finTimeframe === 'annual' ? 'Klik Kuartalan jika ingin melihat rincian triwulan.' : 'Di BEI, kuartal IV dilaporkan sebagai Laporan Tahunan (FY).'}
               </span>
             </div>
             <div className="financial-summary">
@@ -1741,7 +1759,7 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
             <div className="table-note">
               <span>
                 {hasRealFin
-                  ? `Data laporan keuangan ${finTimeframe === 'annual' ? 'tahunan fiskal (hingga 8 tahun)' : 'kuartalan (hingga 8 kuartal)'} resmi BEI (${fin[0]?.year}–${latestPeriodLabel}) tersimpan di SQLite DB.`
+                  ? `Data laporan keuangan ${finTimeframe === 'annual' ? `tahunan fiskal (${fin.length} tahun)` : `kuartalan (${fin.length} periode)`} resmi BEI (${fin[0]?.year}–${latestPeriodLabel}) terverifikasi.`
                   : 'Memuat laporan keuangan...'}
               </span>
               <button
@@ -1765,18 +1783,27 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
               perbedaannya.
             </p>
           </div>
-          <button
-            className="link-btn"
-            onClick={() => {
-              setValuations({
-                pe: stock.targetPe || stock.pe || 14,
-                pb: stock.pb || 2.0,
-              });
-              onNotify('Asumsi valuasi dikembalikan ke default');
-            }}
-          >
-            <Icon name="refresh" cls="sm" /> Reset asumsi
-          </button>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <button
+              className="btn small-btn"
+              onClick={() => onOpenDrawer('method')}
+              title="Pelajari rumus perhitungan harga wajar, margin of safety (MOS), dan skenario konservatif/optimistis"
+            >
+              <Icon name="book" cls="sm" /> Metodologi harga wajar
+            </button>
+            <button
+              className="link-btn"
+              onClick={() => {
+                setValuations({
+                  pe: stock.targetPe || stock.pe || 14,
+                  pb: stock.pb || 2.0,
+                });
+                onNotify('Asumsi valuasi dikembalikan ke default');
+              }}
+            >
+              <Icon name="refresh" cls="sm" /> Reset asumsi
+            </button>
+          </div>
         </div>
 
         <div className="valuation-grid">
@@ -1855,7 +1882,7 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
           <div className="table-note">
             <span>
               {realDisclosures.length > 0
-                ? `Menampilkan ${filteredDocs.length} dokumen Keterbukaan Informasi resmi BEI untuk ${stock.ticker} (disimpan di SQLite DB lokal).`
+                ? `Menampilkan ${filteredDocs.length} dokumen Keterbukaan Informasi resmi BEI untuk ${stock.ticker}.`
                 : `Memuat dokumen Keterbukaan Informasi BEI untuk ${stock.ticker}...`}
             </span>
           </div>
