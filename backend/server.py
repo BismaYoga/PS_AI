@@ -521,6 +521,30 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 self.wfile.write(err_payload)
                 return
 
+        # 4b. API: /api/enrich-corporate-events (Trigger pengayaan ringkasan cerdas AI untuk aksi korporasi)
+        if path == '/api/enrich-corporate-events':
+            try:
+                from enrich_corporate_events import enrich_all_corporate_events
+                enriched_cnt = enrich_all_corporate_events(only_upcoming=True, max_count=5)
+                payload = json.dumps({'success': True, 'enriched_count': enriched_cnt}, ensure_ascii=False).encode('utf-8')
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_header('Content-Length', str(len(payload)))
+                self.end_headers()
+                self.wfile.write(payload)
+                return
+            except Exception as e:
+                print(f"[API/enrich-corporate-events Error] {e}")
+                err_payload = json.dumps({'error': str(e)}).encode('utf-8')
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_header('Content-Length', str(len(err_payload)))
+                self.end_headers()
+                self.wfile.write(err_payload)
+                return
+
         # 5. Static Admin Console support
         if path == '/admin.html':
             admin_file = os.path.join(LEGACY_DIR, 'admin.html')
@@ -690,6 +714,13 @@ def main():
                     cache['IHSG'] = ihsg_live
                     save_market_cache(cache)
                     print("[Auto-Sync] Statistik Gainers/Losers/Turnover IHSG berhasil disinkronkan ke DB.")
+
+                # Sinkronkan pengayaan AI pada agenda aksi korporasi terdekat
+                try:
+                    from enrich_corporate_events import enrich_all_corporate_events
+                    enrich_all_corporate_events(only_upcoming=True, max_count=3)
+                except Exception as e_ev:
+                    print(f"[Auto-Sync Events Warning] {e_ev}")
             except Exception as e_sync:
                 print(f"[Auto-Sync Warning] {e_sync}")
         threading.Thread(target=_bg_sync_if_needed, daemon=True).start()

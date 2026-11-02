@@ -499,6 +499,59 @@ export const DrawerModal: React.FC<DrawerModalProps> = ({
                 <span>Sumber verifikasi</span>
                 <b>Invezgo &amp; IDX Official Feed ({e.ticker})</b>
               </div>
+              {e.ai_summary && (
+                <div
+                  style={{
+                    margin: '18px 0',
+                    padding: '16px',
+                    borderRadius: '12px',
+                    background: 'linear-gradient(135deg, rgba(26, 98, 191, 0.06) 0%, rgba(25, 129, 93, 0.06) 100%)',
+                    border: '1px solid rgba(26, 98, 191, 0.22)',
+                  }}
+                >
+                  <div className="flex between" style={{ marginBottom: '10px' }}>
+                    <div className="flex gap-8">
+                      <Icon name="sparkles" cls="sm" style={{ color: 'var(--blue)' }} />
+                      <strong style={{ fontSize: '13px', color: 'var(--navy)' }}>
+                        Analisis Cerdas AI PintarSaham
+                      </strong>
+                    </div>
+                    {e.ai_sentiment && (
+                      <span
+                        className={`pill ${
+                          e.ai_sentiment === 'Positif'
+                            ? 'green'
+                            : e.ai_sentiment === 'Waspada'
+                            ? 'red'
+                            : 'blue'
+                        }`}
+                        style={{ fontWeight: 650 }}
+                      >
+                        {e.ai_sentiment}
+                      </span>
+                    )}
+                  </div>
+                  <p style={{ fontSize: '13px', lineHeight: '1.6', marginBottom: e.ai_impact ? '10px' : '0' }}>
+                    {e.ai_summary}
+                  </p>
+                  {e.ai_impact && (
+                    <div
+                      style={{
+                        marginTop: '10px',
+                        padding: '9px 12px',
+                        borderRadius: '8px',
+                        background: 'rgba(255, 255, 255, 0.85)',
+                        borderLeft: '3px solid var(--blue)',
+                        fontSize: '12px',
+                        lineHeight: '1.5',
+                        color: 'var(--ink)',
+                      }}
+                    >
+                      <strong style={{ color: 'var(--navy)' }}>Katalis Utama Investor:</strong> {e.ai_impact}
+                    </div>
+                  )}
+                </div>
+              )}
               <h3>Ringkasan peristiwa</h3>
               <p>{e.note}</p>
               <h3>Ketentuan penting bagi investor</h3>

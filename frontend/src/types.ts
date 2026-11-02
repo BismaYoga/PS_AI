@@ -24,6 +24,9 @@ export interface CorporateEvent {
   sub: string;
   amount: string;
   note: string;
+  ai_summary?: string;
+  ai_sentiment?: string; // 'Positif' | 'Netral' | 'Waspada'
+  ai_impact?: string;
 }
 
 export interface NewsItem {

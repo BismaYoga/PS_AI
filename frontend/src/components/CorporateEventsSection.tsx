@@ -311,7 +311,24 @@ export const CorporateEventsSection: React.FC<CorporateEventsSectionProps> = ({
                           </span>
                         </td>
                         <td className="event-column">
-                          <strong>{e.title}</strong>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                            <strong>{e.title}</strong>
+                            {e.ai_sentiment && (
+                              <span
+                                className={`pill ${
+                                  e.ai_sentiment === 'Positif'
+                                    ? 'green'
+                                    : e.ai_sentiment === 'Waspada'
+                                    ? 'red'
+                                    : 'blue'
+                                }`}
+                                style={{ fontSize: '10px', padding: '1px 6px', fontWeight: 650 }}
+                                title="Ringkasan dan dampak cerdas telah dianalisis oleh AI PintarSaham"
+                              >
+                                AI: {e.ai_sentiment}
+                              </span>
+                            )}
+                          </div>
                           <div className="small muted">{e.sub}</div>
                         </td>
                         <td className="action-column">

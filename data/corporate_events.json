@@ -1,15 +1,5 @@
 [
   {
-    "id": "earn_INKP_20261106",
-    "ticker": "INKP",
-    "date": "2026-11-06",
-    "type": "Laporan Keuangan",
-    "title": "Rilis Laporan Keuangan INKP",
-    "sub": "Jadwal rilis kinerja kuartalan",
-    "amount": "Sesuai publikasi",
-    "note": "Perkiraan tanggal rilis laporan keuangan resmi kuartalan untuk PT Indah Kiat Pulp & Paper Tbk (INKP) berdasarkan kalender resmi Invezgo & IDX Official Feed (BEI)."
-  },
-  {
     "id": "earn_INTP_20261103",
     "ticker": "INTP",
     "date": "2026-11-03",
@@ -17,7 +7,23 @@
     "title": "Rilis Laporan Keuangan INTP",
     "sub": "Jadwal rilis kinerja kuartalan · Est. EPS: Rp197.8",
     "amount": "Est. EPS Rp197.8",
-    "note": "Perkiraan tanggal rilis laporan keuangan resmi kuartalan untuk PT Indocement Tunggal Prakarsa Tbk (INTP) berdasarkan kalender resmi Invezgo & IDX Official Feed (BEI)."
+    "note": "Perkiraan tanggal rilis laporan keuangan resmi kuartalan untuk PT Indocement Tunggal Prakarsa Tbk (INTP) berdasarkan kalender resmi Invezgo & IDX Official Feed (BEI).",
+    "ai_summary": "PT Indocement Tunggal Prakarsa Tbk (INTP) dijadwalkan merilis laporan keuangan kuartalannya pada 3 November 2026 dengan estimasi EPS sebesar Rp197,8. Rilis kinerja ini menjadi acuan penting bagi investor untuk memantau pemulihan margin profitabilitas di tengah ketatnya persaingan industri semen domestik dan fluktuasi biaya energi. Investor akan mencermati efisiensi biaya operasional serta volume penjualan emiten ber merek Tiga Roda ini.",
+    "ai_sentiment": "Netral",
+    "ai_impact": "Realisasi EPS yang melampaui estimasi konsensus Rp197,8 akan menjadi katalis positif bagi pergerakan harga saham INTP di tengah tantangan oversupply semen nasional."
+  },
+  {
+    "id": "earn_INKP_20261106",
+    "ticker": "INKP",
+    "date": "2026-11-06",
+    "type": "Laporan Keuangan",
+    "title": "Rilis Laporan Keuangan INKP",
+    "sub": "Jadwal rilis kinerja kuartalan",
+    "amount": "Sesuai publikasi",
+    "note": "Perkiraan tanggal rilis laporan keuangan resmi kuartalan untuk PT Indah Kiat Pulp & Paper Tbk (INKP) berdasarkan kalender resmi Invezgo & IDX Official Feed (BEI).",
+    "ai_summary": "PT Indah Kiat Pulp & Paper Tbk (INKP) dijadwalkan merilis laporan keuangan kuartalan pada 6 November 2026. Publikasi kinerja ini menjadi momentum krusial bagi investor untuk memonitor margin profitabilitas emiten di tengah dinamika harga komoditas global sektor bubur kertas dan kertas industri.",
+    "ai_sentiment": "Netral",
+    "ai_impact": "Rilis kinerja ini akan menjadi katalis arah pergerakan harga saham jangka pendek yang bergantung pada realisasi pertumbuhan laba bersih dan efisiensi biaya operasional terhadap ekspektasi konsensus."
   },
   {
     "id": "earn_ASII_20261030",
@@ -140,6 +146,56 @@
     "note": "Perkiraan tanggal rilis laporan keuangan resmi kuartalan untuk PT United Tractors Tbk (UNTR) berdasarkan kalender resmi Invezgo & IDX Official Feed (BEI)."
   },
   {
+    "id": "bei_SUNI_20261029_0",
+    "ticker": "SUNI",
+    "date": "2026-10-29",
+    "type": "Laporan Keuangan",
+    "title": "Penyampaian Laporan Keuangan Interim Yang Tidak Diaudit",
+    "sub": "Keterbukaan Informasi Resmi BEI (SUNI)",
+    "amount": "Dokumen Resmi BEI",
+    "note": "Pengumuman resmi Bursa Efek Indonesia untuk SUNI pada 29 Oct 2026: Penyampaian Laporan Keuangan Interim Yang Tidak Diaudit."
+  },
+  {
+    "id": "bei_HYGN_20261029_0",
+    "ticker": "HYGN",
+    "date": "2026-10-29",
+    "type": "Laporan Keuangan",
+    "title": "Penyampaian Laporan Keuangan Interim Yang Tidak Diaudit",
+    "sub": "Keterbukaan Informasi Resmi BEI (HYGN)",
+    "amount": "Dokumen Resmi BEI",
+    "note": "Pengumuman resmi Bursa Efek Indonesia untuk HYGN pada 29 Oct 2026: Penyampaian Laporan Keuangan Interim Yang Tidak Diaudit."
+  },
+  {
+    "id": "bei_PGAS_20261029_0",
+    "ticker": "PGAS",
+    "date": "2026-10-29",
+    "type": "Laporan Keuangan",
+    "title": "Penyampaian Laporan Keuangan Interim Yang Tidak Diaudit",
+    "sub": "Keterbukaan Informasi Resmi BEI (PGAS)",
+    "amount": "Dokumen Resmi BEI",
+    "note": "Pengumuman resmi Bursa Efek Indonesia untuk PGAS pada 29 Oct 2026: Penyampaian Laporan Keuangan Interim Yang Tidak Diaudit."
+  },
+  {
+    "id": "bei_ASII_20261028_1",
+    "ticker": "ASII",
+    "date": "2026-10-28",
+    "type": "Laporan Keuangan",
+    "title": "Penyampaian Laporan Keuangan Interim Yang Tidak Diaudit",
+    "sub": "Keterbukaan Informasi Resmi BEI (ASII)",
+    "amount": "Dokumen Resmi BEI",
+    "note": "Pengumuman resmi Bursa Efek Indonesia untuk ASII pada 28 Oct 2026: Penyampaian Laporan Keuangan Interim Yang Tidak Diaudit."
+  },
+  {
+    "id": "bei_ALII_20261028_0",
+    "ticker": "ALII",
+    "date": "2026-10-28",
+    "type": "Laporan Keuangan",
+    "title": "Penyampaian Laporan Keuangan Interim Yang Tidak Diaudit",
+    "sub": "Keterbukaan Informasi Resmi BEI (ALII)",
+    "amount": "Dokumen Resmi BEI",
+    "note": "Pengumuman resmi Bursa Efek Indonesia untuk ALII pada 28 Oct 2026: Penyampaian Laporan Keuangan Interim Yang Tidak Diaudit."
+  },
+  {
     "id": "earn_ADRO_20261027",
     "ticker": "ADRO",
     "date": "2026-10-27",
@@ -190,6 +246,66 @@
     "note": "Perkiraan tanggal rilis laporan keuangan resmi kuartalan untuk PT Pakuwon Jati Tbk (PWON) berdasarkan kalender resmi Invezgo & IDX Official Feed (BEI)."
   },
   {
+    "id": "bei_AALI_20261027_0",
+    "ticker": "AALI",
+    "date": "2026-10-27",
+    "type": "Laporan Keuangan",
+    "title": "Penyampaian Laporan Keuangan Interim Yang Tidak Diaudit",
+    "sub": "Keterbukaan Informasi Resmi BEI (AALI)",
+    "amount": "Dokumen Resmi BEI",
+    "note": "Pengumuman resmi Bursa Efek Indonesia untuk AALI pada 27 Oct 2026: Penyampaian Laporan Keuangan Interim Yang Tidak Diaudit."
+  },
+  {
+    "id": "bei_BBCA_20261027_1",
+    "ticker": "BBCA",
+    "date": "2026-10-27",
+    "type": "Laporan Keuangan",
+    "title": "Penyampaian Press Release terkait Informasi Ringkasan Kinerja Keuangan Kuartal III Tahun 2026 (",
+    "sub": "Keterbukaan Informasi Resmi BEI (BBCA)",
+    "amount": "Dokumen Resmi BEI",
+    "note": "Pengumuman resmi Bursa Efek Indonesia untuk BBCA pada 27 Oct 2026: Penyampaian Press Release terkait Informasi Ringkasan Kinerja Keuangan Kuartal III Tahun 2026 (unaudited) PT Bank Central Asia Tbk (."
+  },
+  {
+    "id": "bei_BBCA_20261027_2",
+    "ticker": "BBCA",
+    "date": "2026-10-27",
+    "type": "Laporan Keuangan",
+    "title": "Penyampaian Laporan Keuangan Interim Yang Tidak Diaudit",
+    "sub": "Keterbukaan Informasi Resmi BEI (BBCA)",
+    "amount": "Dokumen Resmi BEI",
+    "note": "Pengumuman resmi Bursa Efek Indonesia untuk BBCA pada 27 Oct 2026: Penyampaian Laporan Keuangan Interim Yang Tidak Diaudit."
+  },
+  {
+    "id": "bei_SMMA_20261026_0",
+    "ticker": "SMMA",
+    "date": "2026-10-26",
+    "type": "RUPS",
+    "title": "Penyampaian Bukti Iklan Panggilan RUPS",
+    "sub": "Keterbukaan Informasi Resmi BEI (SMMA)",
+    "amount": "Dokumen Resmi BEI",
+    "note": "Pengumuman resmi Bursa Efek Indonesia untuk SMMA pada 26 Oct 2026: Penyampaian Bukti Iklan Panggilan RUPS."
+  },
+  {
+    "id": "bei_SMMA_20261026_1",
+    "ticker": "SMMA",
+    "date": "2026-10-26",
+    "type": "RUPS",
+    "title": "Pemanggilan Rapat Umum Pemegang Saham Luar Biasa",
+    "sub": "Keterbukaan Informasi Resmi BEI (SMMA)",
+    "amount": "Dokumen Resmi BEI",
+    "note": "Pengumuman resmi Bursa Efek Indonesia untuk SMMA pada 26 Oct 2026: Pemanggilan Rapat Umum Pemegang Saham Luar Biasa."
+  },
+  {
+    "id": "bei_BMRI_20261026_3",
+    "ticker": "BMRI",
+    "date": "2026-10-26",
+    "type": "Laporan Keuangan",
+    "title": "Penyampaian Bukti Iklan Informasi Laporan Keuangan Interim",
+    "sub": "Keterbukaan Informasi Resmi BEI (BMRI)",
+    "amount": "Dokumen Resmi BEI",
+    "note": "Pengumuman resmi Bursa Efek Indonesia untuk BMRI pada 26 Oct 2026: Penyampaian Bukti Iklan Informasi Laporan Keuangan Interim."
+  },
+  {
     "id": "earn_BBNI_20261022",
     "ticker": "BBNI",
     "date": "2026-10-22",
@@ -210,6 +326,26 @@
     "note": "Perkiraan tanggal rilis laporan keuangan resmi kuartalan untuk PT Bank Mandiri (Persero) Tbk (BMRI) berdasarkan kalender resmi Invezgo & IDX Official Feed (BEI)."
   },
   {
+    "id": "bei_ADCP_20261022_0",
+    "ticker": "ADCP",
+    "date": "2026-10-22",
+    "type": "RUPS",
+    "title": "Penyampaian Bukti Iklan Panggilan RUPS",
+    "sub": "Keterbukaan Informasi Resmi BEI (ADCP)",
+    "amount": "Dokumen Resmi BEI",
+    "note": "Pengumuman resmi Bursa Efek Indonesia untuk ADCP pada 22 Oct 2026: Penyampaian Bukti Iklan Panggilan RUPS."
+  },
+  {
+    "id": "bei_ADCP_20261022_1",
+    "ticker": "ADCP",
+    "date": "2026-10-22",
+    "type": "RUPS",
+    "title": "Pemanggilan Rapat Umum Pemegang Saham Luar Biasa",
+    "sub": "Keterbukaan Informasi Resmi BEI (ADCP)",
+    "amount": "Dokumen Resmi BEI",
+    "note": "Pengumuman resmi Bursa Efek Indonesia untuk ADCP pada 22 Oct 2026: Pemanggilan Rapat Umum Pemegang Saham Luar Biasa."
+  },
+  {
     "id": "earn_BBCA_20261020",
     "ticker": "BBCA",
     "date": "2026-10-20",
@@ -228,6 +364,76 @@
     "sub": "Keterbukaan Informasi Resmi BEI (UNTR)",
     "amount": "Dokumen Resmi BEI",
     "note": "Pengumuman resmi Bursa Efek Indonesia untuk UNTR pada 16 Oct 2026: Pemanggilan Rapat Umum Pemegang Saham Luar Biasa."
+  },
+  {
+    "id": "bei_EAST_20261016_0",
+    "ticker": "EAST",
+    "date": "2026-10-16",
+    "type": "Laporan Keuangan",
+    "title": "Penyampaian Bukti Iklan Informasi Laporan Keuangan Interim",
+    "sub": "Keterbukaan Informasi Resmi BEI (EAST)",
+    "amount": "Dokumen Resmi BEI",
+    "note": "Pengumuman resmi Bursa Efek Indonesia untuk EAST pada 16 Oct 2026: Penyampaian Bukti Iklan Informasi Laporan Keuangan Interim."
+  },
+  {
+    "id": "bei_ADCP_20261015_2",
+    "ticker": "ADCP",
+    "date": "2026-10-15",
+    "type": "Laporan Keuangan",
+    "title": "Penyampaian Laporan Keuangan Interim Yang Tidak Diaudit",
+    "sub": "Keterbukaan Informasi Resmi BEI (ADCP)",
+    "amount": "Dokumen Resmi BEI",
+    "note": "Pengumuman resmi Bursa Efek Indonesia untuk ADCP pada 15 Oct 2026: Penyampaian Laporan Keuangan Interim Yang Tidak Diaudit."
+  },
+  {
+    "id": "bei_EAST_20261015_1",
+    "ticker": "EAST",
+    "date": "2026-10-15",
+    "type": "Laporan Keuangan",
+    "title": "Penyampaian Laporan Keuangan Interim Yang Tidak Diaudit",
+    "sub": "Keterbukaan Informasi Resmi BEI (EAST)",
+    "amount": "Dokumen Resmi BEI",
+    "note": "Pengumuman resmi Bursa Efek Indonesia untuk EAST pada 15 Oct 2026: Penyampaian Laporan Keuangan Interim Yang Tidak Diaudit."
+  },
+  {
+    "id": "bei_ADCP_20261009_3",
+    "ticker": "ADCP",
+    "date": "2026-10-09",
+    "type": "RUPS",
+    "title": "Penyampaian Bukti Iklan Pemberitahuan RUPS",
+    "sub": "Keterbukaan Informasi Resmi BEI (ADCP)",
+    "amount": "Dokumen Resmi BEI",
+    "note": "Pengumuman resmi Bursa Efek Indonesia untuk ADCP pada 09 Oct 2026: Penyampaian Bukti Iklan Pemberitahuan RUPS."
+  },
+  {
+    "id": "bei_SMMA_20261009_2",
+    "ticker": "SMMA",
+    "date": "2026-10-09",
+    "type": "RUPS",
+    "title": "Penyampaian Bukti Iklan Pemberitahuan RUPS",
+    "sub": "Keterbukaan Informasi Resmi BEI (SMMA)",
+    "amount": "Dokumen Resmi BEI",
+    "note": "Pengumuman resmi Bursa Efek Indonesia untuk SMMA pada 09 Oct 2026: Penyampaian Bukti Iklan Pemberitahuan RUPS."
+  },
+  {
+    "id": "bei_SMMA_20261009_3",
+    "ticker": "SMMA",
+    "date": "2026-10-09",
+    "type": "RUPS",
+    "title": "Pemberitahuan Rencana Rapat Umum Pemegang Saham Luar Biasa",
+    "sub": "Keterbukaan Informasi Resmi BEI (SMMA)",
+    "amount": "Dokumen Resmi BEI",
+    "note": "Pengumuman resmi Bursa Efek Indonesia untuk SMMA pada 09 Oct 2026: Pemberitahuan Rencana Rapat Umum Pemegang Saham Luar Biasa."
+  },
+  {
+    "id": "bei_BBRI_20261006_4",
+    "ticker": "BBRI",
+    "date": "2026-10-06",
+    "type": "Laporan Keuangan",
+    "title": "Perubahan Komite Audit",
+    "sub": "Keterbukaan Informasi Resmi BEI (BBRI)",
+    "amount": "Dokumen Resmi BEI",
+    "note": "Pengumuman resmi Bursa Efek Indonesia untuk BBRI pada 06 Oct 2026: Perubahan Komite Audit."
   },
   {
     "id": "bei_AMRT_20261005_1",
@@ -260,6 +466,36 @@
     "note": "Pengumuman resmi Bursa Efek Indonesia untuk APIC pada 05 Oct 2026: Penyampaian Bukti Iklan Informasi Laporan Keuangan Interim."
   },
   {
+    "id": "bei_AALI_20261005_3",
+    "ticker": "AALI",
+    "date": "2026-10-05",
+    "type": "Dividen",
+    "title": "Jadwal Dividen Tunai Interim (KOREKSI)",
+    "sub": "Keterbukaan Informasi Resmi BEI (AALI)",
+    "amount": "Dokumen Resmi BEI",
+    "note": "Pengumuman resmi Bursa Efek Indonesia untuk AALI pada 05 Oct 2026: Jadwal Dividen Tunai Interim (KOREKSI)."
+  },
+  {
+    "id": "bei_ASII_20261002_4",
+    "ticker": "ASII",
+    "date": "2026-10-02",
+    "type": "Dividen",
+    "title": "Pembagian dividen interim",
+    "sub": "Keterbukaan Informasi Resmi BEI (ASII)",
+    "amount": "Dokumen Resmi BEI",
+    "note": "Pengumuman resmi Bursa Efek Indonesia untuk ASII pada 02 Oct 2026: Pembagian dividen interim."
+  },
+  {
+    "id": "bei_TLKM_20261002_4",
+    "ticker": "TLKM",
+    "date": "2026-10-02",
+    "type": "Laporan Keuangan",
+    "title": "Perubahan Internal Audit",
+    "sub": "Keterbukaan Informasi Resmi BEI (TLKM)",
+    "amount": "Dokumen Resmi BEI",
+    "note": "Pengumuman resmi Bursa Efek Indonesia untuk TLKM pada 02 Oct 2026: Perubahan Internal Audit."
+  },
+  {
     "id": "bei_APIC_20261001_2",
     "ticker": "APIC",
     "date": "2026-10-01",
@@ -278,6 +514,16 @@
     "sub": "Keterbukaan Informasi Resmi BEI (APIC)",
     "amount": "Dokumen Resmi BEI",
     "note": "Pengumuman resmi Bursa Efek Indonesia untuk APIC pada 01 Oct 2026: Penyampaian Laporan Keuangan Interim Auditan."
+  },
+  {
+    "id": "bei_AADI_20261001_4",
+    "ticker": "AADI",
+    "date": "2026-10-01",
+    "type": "RUPS",
+    "title": "Transaksi Material Tanpa Persetujuan RUPS",
+    "sub": "Keterbukaan Informasi Resmi BEI (AADI)",
+    "amount": "Dokumen Resmi BEI",
+    "note": "Pengumuman resmi Bursa Efek Indonesia untuk AADI pada 01 Oct 2026: Transaksi Material Tanpa Persetujuan RUPS."
   },
   {
     "id": "bei_PTBA_20260928_2",
@@ -360,6 +606,16 @@
     "note": "Distribusi dividen tunai riil untuk pemegang saham PT AKR Corporindo Tbk (AKRA) sebesar Rp50 per lembar saham."
   },
   {
+    "id": "bei_SATU_20260803_4",
+    "ticker": "SATU",
+    "date": "2026-08-03",
+    "type": "Laporan Keuangan",
+    "title": "Penyampaian Bukti Iklan Informasi Laporan Keuangan Interim",
+    "sub": "Keterbukaan Informasi Resmi BEI (SATU)",
+    "amount": "Dokumen Resmi BEI",
+    "note": "Pengumuman resmi Bursa Efek Indonesia untuk SATU pada 03 Aug 2026: Penyampaian Bukti Iklan Informasi Laporan Keuangan Interim."
+  },
+  {
     "id": "bei_ICBP_20260731_3",
     "ticker": "ICBP",
     "date": "2026-07-31",
@@ -378,6 +634,26 @@
     "sub": "Keterbukaan Informasi Resmi BEI (INDF)",
     "amount": "Dokumen Resmi BEI",
     "note": "Pengumuman resmi Bursa Efek Indonesia untuk INDF pada 31 Jul 2026: Penyampaian Laporan Keuangan Interim Yang Tidak Diaudit."
+  },
+  {
+    "id": "bei_PZZA_20260731_4",
+    "ticker": "PZZA",
+    "date": "2026-07-31",
+    "type": "Laporan Keuangan",
+    "title": "Penyampaian Laporan Keuangan Interim Yang Tidak Diaudit",
+    "sub": "Keterbukaan Informasi Resmi BEI (PZZA)",
+    "amount": "Dokumen Resmi BEI",
+    "note": "Pengumuman resmi Bursa Efek Indonesia untuk PZZA pada 31 Jul 2026: Penyampaian Laporan Keuangan Interim Yang Tidak Diaudit."
+  },
+  {
+    "id": "bei_RONY_20260731_4",
+    "ticker": "RONY",
+    "date": "2026-07-31",
+    "type": "Laporan Keuangan",
+    "title": "Penyampaian Laporan Keuangan Interim Yang Tidak Diaudit",
+    "sub": "Keterbukaan Informasi Resmi BEI (RONY)",
+    "amount": "Dokumen Resmi BEI",
+    "note": "Pengumuman resmi Bursa Efek Indonesia untuk RONY pada 31 Jul 2026: Penyampaian Laporan Keuangan Interim Yang Tidak Diaudit."
   },
   {
     "id": "div_WIFI_20260709",
@@ -1557,7 +1833,10 @@
     "title": "Cum/Ex Date Dividen Tunai HRUM",
     "sub": "Dividen Rp75.10 per lembar saham",
     "amount": "Rp75.10 per saham",
-    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Harum Energy Tbk (HRUM) sebesar Rp75.10 per lembar saham."
+    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Harum Energy Tbk (HRUM) sebesar Rp75.10 per lembar saham.",
+    "ai_summary": "PT Harum Energy Tbk (HRUM) mengumumkan distribusi dividen tunai sebesar Rp75,10 per lembar saham yang mencerminkan komitmen berkelanjutan emiten energi ini dalam memberikan imbal hasil bagi pemegang saham. Keputusan ini didukung oleh kinerja keuangan yang solid di tengah momentum tingginya harga komoditas serta diversifikasi bisnis perusahaan ke sektor hilirisasi nikel. Aksi korporasi ini memperkuat daya Tarik saham HRUM bagi investor yang berorientasi pada pendapatan dividen (dividend investing).",
+    "ai_sentiment": "Positif",
+    "ai_impact": "Pembagian dividen tunai ini memberikan tambahan likuiditas langsung bagi pemegang saham sekaligus menjadi katalis positif minor yang dapat menjaga minat beli jangka pendek menjelang tanggal cum date."
   },
   {
     "id": "div_PNLF_20220711",
@@ -1567,7 +1846,10 @@
     "title": "Cum/Ex Date Dividen Tunai PNLF",
     "sub": "Dividen Rp10 per lembar saham",
     "amount": "Rp10 per saham",
-    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Panin Financial Tbk (PNLF) sebesar Rp10 per lembar saham."
+    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Panin Financial Tbk (PNLF) sebesar Rp10 per lembar saham.",
+    "ai_summary": "PT Panin Financial Tbk (PNLF) mengumumkan distribusi dividen tunai riil sebesar Rp10 per lembar saham yang dijadwalkan pada 11 Juli 2022. Langkah ini mencerminkan komitmen emiten sektor keuangan subsektor asuransi jiwa ini dalam memberikan imbal hasil kas langsung kepada para pemegang sahamnya. Secara fundamental, pembagian dividen ini menunjukkan kesehatan arus kas yang memadai di tengah dinamika industri jasa keuangan.",
+    "ai_sentiment": "Positif",
+    "ai_impact": "Pembagian dividen tunai Rp10 per saham memberikan tambahan yield langsung bagi pemegang saham, yang berpotensi memicu aksi beli jangka pendek menjelang cum-date namun rentan terhadap aksi profit taking setelah ex-date."
   },
   {
     "id": "div_HRUM_20220615",
@@ -1577,7 +1859,10 @@
     "title": "Cum/Ex Date Dividen Tunai HRUM",
     "sub": "Dividen Rp15.02 per lembar saham",
     "amount": "Rp15.02 per saham",
-    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Harum Energy Tbk (HRUM) sebesar Rp15.02 per lembar saham."
+    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Harum Energy Tbk (HRUM) sebesar Rp15.02 per lembar saham.",
+    "ai_summary": "PT Harum Energy Tbk (HRUM) mengumumkan distribusi dividen tunai tahun buku berjalan sebesar Rp15,02 per lembar saham. Kebijakan ini mencerminkan komitmen manajemen dalam membagikan hasil positif dari kinerja operasional kepada para pemegang saham di tengah dinamika sektor energi dan transisi hilirisasi nikel.",
+    "ai_sentiment": "Positif",
+    "ai_impact": "Pembagian dividen tunai ini memberikan tambahan *dividend yield* langsung bagi investor serta mencerminkan likuiditas kas yang sehat untuk mendukung valuasi saham HRUM di pasar."
   },
   {
     "id": "div_BSDE_20170612",
@@ -1587,7 +1872,10 @@
     "title": "Cum/Ex Date Dividen Tunai BSDE",
     "sub": "Dividen Rp5 per lembar saham",
     "amount": "Rp5 per saham",
-    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Bumi Serpong Damai Tbk (BSDE) sebesar Rp5 per lembar saham."
+    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Bumi Serpong Damai Tbk (BSDE) sebesar Rp5 per lembar saham.",
+    "ai_summary": "PT Bumi Serpong Damai Tbk (BSDE) mengumumkan distribusi dividen tunai tahun buku terkait sebesar Rp5 per lembar saham. Kebijakan ini mencerminkan komitmen emiten pengembang kota mandiri ini untuk tetap memberikan imbal hasil kas kepada pemegang saham di tengah siklus bisnis properti. Meskipun nilainya relatif konservatif, pembagian dividen tetap menjadi sinyal positif atas terjaganya arus kas operasional perusahaan.",
+    "ai_sentiment": "Netral",
+    "ai_impact": "Pembagian dividen tunai Rp5 per saham memberikan tambahan imbal hasil kas jangka pendek, namun dampaknya terhadap pergerakan harga saham cenderung terbatas karena yield yang relatif kecil."
   },
   {
     "id": "div_BSDE_20160527",
@@ -1597,7 +1885,10 @@
     "title": "Cum/Ex Date Dividen Tunai BSDE",
     "sub": "Dividen Rp5 per lembar saham",
     "amount": "Rp5 per saham",
-    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Bumi Serpong Damai Tbk (BSDE) sebesar Rp5 per lembar saham."
+    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Bumi Serpong Damai Tbk (BSDE) sebesar Rp5 per lembar saham.",
+    "ai_summary": "PT Bumi Serpong Damai Tbk (BSDE) mengagendakan distribusi dividen tunai sebesar Rp5 per lembar saham pada Mei 2016. Sebagai pengembang kota mandiri terkemuka, kebijakan dividen ini mencerminkan komitmen emiten dalam memberikan imbal hasil kas kepada pemegang saham di tengah siklus bisnis properti yang dinamis.",
+    "ai_sentiment": "Netral",
+    "ai_impact": "Pembagian dividen tunai memberikan tambahan yield kas langsung bagi investor, meskipun secara jangka pendek harga saham umumnya akan mengalami penyesuaian (ex-dividend adjustment) sesuai nilai dividen yang dibagikan."
   },
   {
     "id": "div_KPIG_20160516",
@@ -1607,7 +1898,10 @@
     "title": "Cum/Ex Date Dividen Tunai KPIG",
     "sub": "Dividen Rp0.60 per lembar saham",
     "amount": "Rp0.60 per saham",
-    "note": "Distribusi dividen tunai riil untuk pemegang saham PT MNC Land Tbk (KPIG) sebesar Rp0.60 per lembar saham."
+    "note": "Distribusi dividen tunai riil untuk pemegang saham PT MNC Land Tbk (KPIG) sebesar Rp0.60 per lembar saham.",
+    "ai_summary": "PT MNC Land Tbk (KPIG) menjadwalkan distribusi dividen tunai tahun buku terkait sebesar Rp0,60 per lembar saham pada Mei 2016. Secara historis, emiten di sektor properti dan hospitality ini mengalokasikan dividen yang relatif konservatif seiring kebutuhan pendanaan masif untuk proyek-proyek pengembangan properti skala besar jangka panjang. Aksi ini menunjukkan komitmen emiten dalam memberikan imbal hasil kas kepada pemegang saham di tengah intensitas belanja modal yang tinggi.",
+    "ai_sentiment": "Netral",
+    "ai_impact": "Besaran dividen tunai Rp0,60 per saham memberikan dividend yield yang sangat rendah terhadap harga pasar saat itu, sehingga tidak berdampak signifikan terhadap perubahan valuasi jangka pendek."
   },
   {
     "id": "div_KPIG_20150529",
@@ -1617,7 +1911,10 @@
     "title": "Cum/Ex Date Dividen Tunai KPIG",
     "sub": "Dividen Rp1 per lembar saham",
     "amount": "Rp1 per saham",
-    "note": "Distribusi dividen tunai riil untuk pemegang saham PT MNC Land Tbk (KPIG) sebesar Rp1 per lembar saham."
+    "note": "Distribusi dividen tunai riil untuk pemegang saham PT MNC Land Tbk (KPIG) sebesar Rp1 per lembar saham.",
+    "ai_summary": "PT MNC Land Tbk (KPIG) menjadwalkan distribusi dividen tunai sebesar Rp1 per lembar saham pada tahun 2015. Agenda ini merefleksikan arus kas yang dihasilkan dari lini bisnis properti dan hospitality emiten, meskipun nilai nominal dividen tergolong konservatif. Bagi investor, aksi ini menjadi salah satu bentuk pengembalian hasil tunai di tengah ekspansi aset jangka panjang perseroan.",
+    "ai_sentiment": "Netral",
+    "ai_impact": "Pembagian dividen tunai nominal kecil ini memberikan imbal hasil (dividend yield) yang terbatas dan cenderung berdampak marjinal terhadap pergerakan harga saham dalam jangka pendek."
   },
   {
     "id": "div_PNLF_20050719",
@@ -1627,7 +1924,10 @@
     "title": "Cum/Ex Date Dividen Tunai PNLF",
     "sub": "Dividen Rp4 per lembar saham",
     "amount": "Rp4 per saham",
-    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Panin Financial Tbk (PNLF) sebesar Rp4 per lembar saham."
+    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Panin Financial Tbk (PNLF) sebesar Rp4 per lembar saham.",
+    "ai_summary": "PT Panin Financial Tbk (PNLF) mengumumkan distribusi dividen tunai sebesar Rp4 per lembar saham yang dijadwalkan pada Juli 2005. Langkah ini mencerminkan komitmen emiten sektor jasa keuangan dan investasi ini dalam memberikan imbal hasil kas kepada para pemegang sahamnya dari perolehan laba tahun berjalan.",
+    "ai_sentiment": "Netral",
+    "ai_impact": "Pembagian dividen tunai ini memberikan tambahan likuiditas langsung bagi pemegang saham tanpa mengubah fundamental nilai intrinsik atau struktur permodalan jangka panjang emiten secara signifikan."
   },
   {
     "id": "div_ENRG_20041202",
@@ -1637,6 +1937,9 @@
     "title": "Cum/Ex Date Dividen Tunai ENRG",
     "sub": "Dividen Rp2.66 per lembar saham",
     "amount": "Rp2.66 per saham",
-    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Energi Mega Persada Tbk (ENRG) sebesar Rp2.66 per lembar saham."
+    "note": "Distribusi dividen tunai riil untuk pemegang saham PT Energi Mega Persada Tbk (ENRG) sebesar Rp2.66 per lembar saham.",
+    "ai_summary": "PT Energi Mega Persada Tbk (ENRG) mengumumkan distribusi dividen tunai sebesar Rp2.66 per lembar saham yang dijadwalkan pada awal Desember 2004. Langkah ini merefleksikan komitmen emiten sektor hulu migas dalam memberikan imbal hasil kas kepada para pemegang saham di tengah dinamika industri energi.",
+    "ai_sentiment": "Positif",
+    "ai_impact": "Pembagian dividen tunai memberikan tambahan imbal hasil langsung bagi pemegang saham eksisting menjelang tanggal cum-date."
   }
 ]
