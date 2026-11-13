@@ -63,36 +63,26 @@ export default function App() {
     setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
   }, []);
 
-  const defaultAdminUser: UserProfile = {
-    id: 'usr_admin',
-    username: 'admin',
-    name: 'Super Administrator',
-    email: 'admin@pintarsaham.id',
-    role: 'super admin',
-    tier: 'institutional',
-    avatar: 'AD',
-    createdAt: '2025-01-01',
-    monthlyTokens: 100,
-    additionalTokens: 50,
-  };
-
-  // User Authentication state
+  // User Authentication state (starts as null until user explicitly logs in)
   const [user, setUser] = useState<UserProfile | null>(() => {
     try {
-      const saved = localStorage.getItem('ps-auth-user');
+      // Clear legacy key that previously cached defaultAdminUser
+      localStorage.removeItem('ps-auth-user');
+      const saved = localStorage.getItem('ps-auth-session-v2');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed && (parsed.id || parsed.username || parsed.email)) return parsed;
       }
-      return defaultAdminUser;
+      return null;
     } catch {
-      return defaultAdminUser;
+      return null;
     }
   });
 
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [contactModalOpen, setContactModalOpen] = useState(false);
   const [proMonthlyTokens, setProMonthlyTokens] = useState<number>(30);
+  const [pePbvMap, setPePbvMap] = useState<Record<string, any>>({});
 
   useEffect(() => {
     fetch('/api/settings/contact')
@@ -103,12 +93,21 @@ export default function App() {
         }
       })
       .catch(() => {});
+
+    fetch('/data/pe_pbv.json')
+      .then((r) => (r.ok ? r.json() : {}))
+      .then((d) => {
+        if (d && typeof d === 'object') {
+          setPePbvMap(d);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const handleLoginSuccess = useCallback((usr: UserProfile) => {
     setUser(usr);
     try {
-      localStorage.setItem('ps-auth-user', JSON.stringify(usr));
+      localStorage.setItem('ps-auth-session-v2', JSON.stringify(usr));
     } catch {}
   }, []);
 
@@ -153,14 +152,18 @@ export default function App() {
   // Sync live user profile & tokens from database periodically or on load
   useEffect(() => {
     if (!user?.id && !user?.email) return;
+    const reqId = user.id;
+    const reqEmail = user.email;
     const fetchLiveProfile = async () => {
       try {
-        const param = user.id ? `id=${encodeURIComponent(user.id)}` : `email=${encodeURIComponent(user.email)}`;
+        const param = reqId ? `id=${encodeURIComponent(reqId)}` : `email=${encodeURIComponent(reqEmail)}`;
         const res = await fetch(`/api/user/profile?${param}`);
         if (res.ok) {
           const liveData = await res.json();
           setUser((prev) => {
             if (!prev) return null;
+            if (liveData.id && prev.id && liveData.id !== prev.id) return prev;
+            if (liveData.email && prev.email && liveData.email.toLowerCase() !== prev.email.toLowerCase()) return prev;
             const updated = {
               ...prev,
               role: liveData.role || prev.role,
@@ -168,7 +171,7 @@ export default function App() {
               monthlyTokens: liveData.monthlyTokens !== undefined ? liveData.monthlyTokens : prev.monthlyTokens,
               additionalTokens: liveData.additionalTokens !== undefined ? liveData.additionalTokens : prev.additionalTokens,
             };
-            localStorage.setItem('ps-auth-user', JSON.stringify(updated));
+            localStorage.setItem('ps-auth-session-v2', JSON.stringify(updated));
             return updated;
           });
         }
@@ -189,7 +192,7 @@ export default function App() {
         additionalTokens: rem.additional !== undefined ? rem.additional : prev.additionalTokens,
       };
       try {
-        localStorage.setItem('ps-auth-user', JSON.stringify(updated));
+        localStorage.setItem('ps-auth-session-v2', JSON.stringify(updated));
       } catch {}
       return updated;
     });
@@ -198,6 +201,7 @@ export default function App() {
   const handleLogout = useCallback(() => {
     setUser(null);
     try {
+      localStorage.removeItem('ps-auth-session-v2');
       localStorage.removeItem('ps-auth-user');
     } catch {}
     setToastMessage('Anda telah keluar (logout).');
@@ -440,7 +444,73 @@ export default function App() {
     return allEmitens.map((e) => {
       const p = PRESET_STOCKS[e.ticker] || {};
       const m = marketBundle[e.ticker] || null;
+      const csvRow = pePbvMap[e.ticker] || null;
       const shortName = (e.name || e.ticker).replace(/^PT\s+/i, '').replace(/\s+Tbk$/i, '');
+
+      const price = m ? m.price : 1000;
+      const csvPe = csvRow && csvRow.pe != null ? Number(csvRow.pe) : null;
+      const csvPeMean = csvRow && csvRow.peMean != null ? Number(csvRow.peMean) : null;
+      const csvPb = csvRow && csvRow.pb != null ? Number(csvRow.pb) : null;
+      const csvPbMean = csvRow && csvRow.pbMean != null ? Number(csvRow.pbMean) : null;
+
+      const pe = csvPe != null ? csvPe : (m && m.pe != null ? m.pe : (m && m.targetPe != null ? m.targetPe : 12));
+      const targetPe =
+        csvPe != null && csvPe < 0
+          ? csvPe
+          : csvPeMean != null && csvPeMean > 0 && csvPeMean <= 150
+          ? csvPeMean
+          : csvPe != null && csvPe > 0
+          ? csvPe
+          : m && m.targetPe != null
+          ? m.targetPe
+          : 12;
+
+      const pb = csvPb != null ? csvPb : (m && m.pb != null ? m.pb : 1.5);
+      const targetPb =
+        csvPb != null && csvPb < 0
+          ? csvPb
+          : csvPbMean != null && csvPbMean > 0 && csvPbMean <= 50
+          ? csvPbMean
+          : csvPb != null && csvPb > 0
+          ? csvPb
+          : m && m.targetPb != null
+          ? m.targetPb
+          : pb;
+
+      const eps =
+        m && m.eps != null
+          ? m.eps
+          : csvPe != null && csvPe !== 0 && price > 0
+          ? Number((price / csvPe).toFixed(2))
+          : null;
+      const bvps =
+        m && m.bvps != null
+          ? m.bvps
+          : csvPb != null && csvPb !== 0 && price > 0
+          ? Number((price / csvPb).toFixed(2))
+          : null;
+
+      const peBands = csvRow
+        ? {
+            current: csvRow.pe,
+            minus2Sd: csvRow.peMinus2Sd,
+            minus1Sd: csvRow.peMinus1Sd,
+            mean: csvRow.peMean,
+            plus1Sd: csvRow.pePlus1Sd,
+            plus2Sd: csvRow.pePlus2Sd,
+          }
+        : m?.peBands;
+
+      const pbvBands = csvRow
+        ? {
+            current: csvRow.pb,
+            minus2Sd: csvRow.pbMinus2Sd,
+            minus1Sd: csvRow.pbMinus1Sd,
+            mean: csvRow.pbMean,
+            plus1Sd: csvRow.pbPlus1Sd,
+            plus2Sd: csvRow.pbPlus2Sd,
+          }
+        : m?.pbvBands;
 
       return {
         ticker: e.ticker,
@@ -450,13 +520,16 @@ export default function App() {
         subsector: e.subsector || e.sector || 'Umum',
         color: p.color || '#1a62bf',
         mark: p.mark || e.ticker.slice(0, 3),
-        price: m ? m.price : 1000,
+        price,
         change: m ? m.changePct : 0,
-        eps: m && m.eps != null ? m.eps : null,
-        bvps: m && m.bvps != null ? m.bvps : null,
-        pe: m && m.pe != null ? m.pe : (m && m.targetPe != null ? m.targetPe : 12),
-        targetPe: m && m.targetPe != null ? m.targetPe : 12,
-        pb: m && m.pb != null ? m.pb : 1.5,
+        eps,
+        bvps,
+        pe,
+        targetPe,
+        pb,
+        targetPb,
+        peBands,
+        pbvBands,
         roe: m && m.roe != null ? m.roe : null,
         dividendYield: m && m.dividendYield != null ? m.dividendYield : null,
         marketCap: m && m.marketCap != null ? m.marketCap : null,
@@ -476,7 +549,7 @@ export default function App() {
           `Profil emiten ${e.name} yang beroperasi di sektor ${e.sector}.`,
       };
     });
-  }, [allEmitens, marketBundle]);
+  }, [allEmitens, marketBundle, pePbvMap]);
 
   // Construct IndexItem (IHSG)
   const indexData: IndexItem = useMemo(() => {

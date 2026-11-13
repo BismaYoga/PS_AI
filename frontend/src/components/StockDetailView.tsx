@@ -316,16 +316,37 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
     onNotify('CSV data laporan keuangan berhasil diunduh');
   };
 
-  // Valuation card renderer with negative EPS/BVPS protection
+  // Valuation card renderer with negative EPS/BVPS protection (menggunakan data PE & PBV CSV 1 Tahun tanpa slider)
   const renderValuationCard = (type: 'pe' | 'pb') => {
     const isPe = type === 'pe';
-    const target = valuations[type];
+    const bands = isPe ? stock.peBands : stock.pbvBands;
+    const currentMult = bands?.current != null ? bands.current : (isPe ? stock.pe : stock.pb);
+    const meanMult = isPe
+      ? (bands?.mean != null && bands.mean > 0 && bands.mean <= 150
+          ? bands.mean
+          : stock.targetPe || currentMult || 12)
+      : (bands?.mean != null && bands.mean > 0 && bands.mean <= 50
+          ? bands.mean
+          : stock.targetPb || currentMult || 1.5);
+    const target = Number(meanMult) || (isPe ? 12 : 1.5);
+
+    const lowMult =
+      bands?.minus1Sd != null && bands.minus1Sd > 0 && bands.minus1Sd < target
+        ? Number(bands.minus1Sd)
+        : target * 0.8;
+    const highMult =
+      bands?.plus1Sd != null && bands.plus1Sd > target && bands.plus1Sd <= (isPe ? 200 : 80)
+        ? Number(bands.plus1Sd)
+        : target * 1.2;
+
     const rawBase = isPe ? stock.eps : stock.bvps;
-    const isInvalidBase = rawBase !== null && rawBase !== undefined && rawBase <= 0;
+    const isInvalidBase =
+      (rawBase !== null && rawBase !== undefined && rawBase <= 0) ||
+      (currentMult !== null && currentMult !== undefined && currentMult <= 0);
     const base = isInvalidBase ? 0 : rawBase || (isPe ? 100 : 500);
-    const fair = base > 0 ? base * target : 0;
-    const low = fair > 0 ? fair * 0.8 : stock.price * 0.8;
-    const high = fair > 0 ? fair * 1.2 : stock.price * 1.2;
+    const fair = base > 0 && target > 0 ? base * target : 0;
+    const low = base > 0 && lowMult > 0 ? base * lowMult : stock.price * 0.8;
+    const high = base > 0 && highMult > 0 ? base * highMult : stock.price * 1.2;
     const m = fair > 0 ? (1 - stock.price / fair) * 100 : -99.9;
 
     const min = Math.min(stock.price, low) * 0.83;
@@ -354,9 +375,9 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
             <div className="valuation-price-note">
               {isInvalidBase
                 ? isPe
-                  ? 'Emiten mencatat rugi bersih (EPS negatif)'
+                  ? 'Emiten mencatat rugi bersih (EPS/PER negatif)'
                   : 'Ekuitas negatif (defisiensi modal)'
-                : 'Harga wajar skenario dasar'}
+                : 'Harga wajar skenario dasar (Mean 1 Tahun)'}
             </div>
           </div>
           <span
@@ -412,55 +433,23 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
             <strong>{base ? `${rp(base)} / saham` : '—'}</strong>
           </div>
           <div className="assumption">
-            <div className="assumption-heading" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                <label htmlFor={`slider-${type}`} style={{ margin: 0 }}>
-                  {isPe ? 'Target PER' : 'Target PBV'} dasar
-                </label>
-                <span
-                  title={
-                    isPe
-                      ? 'Target PER (Price-to-Earnings Ratio): Kelipatan laba bersih tahunan yang wajar untuk emiten ini. Menggeser slider menyesuaikan proyeksi harga wajar berdasarkan EPS riil BEI.'
-                      : 'Target PBV (Price-to-Book Value): Kelipatan nilai buku ekuitas yang wajar untuk emiten ini. Menggeser slider menyesuaikan valuasi berbasis aset bersih per saham (BVPS).'
-                  }
-                  style={{
-                    display: 'inline-flex',
-                    cursor: 'help',
-                    color: 'var(--blue)',
-                    verticalAlign: 'middle',
-                  }}
-                >
-                  <Icon name="info" cls="sm" />
-                </span>
-              </div>
-              <output htmlFor={`slider-${type}`} id={`output-${type}`}>
-                {fmt(target, isPe ? 1 : 2)}×
-              </output>
-            </div>
-            <input
-              id={`slider-${type}`}
-              type="range"
-              min={isPe ? 4 : 0.3}
-              max={isPe ? 40 : 7}
-              step={isPe ? 0.5 : 0.05}
-              value={target}
-              title={
-                isPe
-                  ? `Target PER saat ini: ${fmt(target, 1)}×. Geser ke kanan untuk skenario valuasi premium/optimistis, atau ke kiri untuk skenario valuasi konservatif.`
-                  : `Target PBV saat ini: ${fmt(target, 2)}×. Geser untuk menyesuaikan ekspektasi kelipatan nilai buku saham.`
-              }
-              aria-label={`Ubah asumsi ${isPe ? 'PER' : 'PBV'} dasar`}
-              onChange={(e) => {
-                const val = Number(e.target.value);
-                setValuations((prev) => ({ ...prev, [type]: val }));
-              }}
-            />
+            <label>
+              {isPe ? 'PER' : 'PBV'} Dasar (Mean 1Y) · Saat Ini
+            </label>
+            <strong>
+              {target > 0 ? `${fmt(target, 2)}×` : '—'}
+              {currentMult != null ? ` · Saat ini ${fmt(currentMult, 2)}×` : ''}
+            </strong>
           </div>
         </div>
 
         <div className="valuation-bottom">
-          <span>{isPe ? 'EPS riil × PER target' : 'BVPS riil × PBV target'}</span>
-          <span>Konservatif −20% · Optimistis +20%</span>
+          <span>{isPe ? 'EPS riil × PER Mean 1Y' : 'BVPS riil × PBV Mean 1Y'}</span>
+          <span>
+            {bands?.minus1Sd != null && bands?.plus1Sd != null && bands.minus1Sd > 0
+              ? `-1SD: ${fmt(bands.minus1Sd, 2)}× · Mean: ${fmt(target, 2)}× · +1SD: ${fmt(bands.plus1Sd, 2)}×`
+              : 'Konservatif −20% · Optimistis +20%'}
+          </span>
         </div>
       </div>
     );
@@ -2016,8 +2005,7 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
           <div>
             <h2>Rentang harga wajar</h2>
             <p>
-              Dua pendekatan, tiga skenario. Geser asumsi untuk melihat
-              perbedaannya.
+              Dua pendekatan, tiga skenario berdasarkan standar deviasi historis PE &amp; PBV (1 Tahun).
             </p>
           </div>
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -2028,25 +2016,13 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
             >
               <Icon name="book" cls="sm" /> Metodologi harga wajar
             </button>
-            <button
-              className="link-btn"
-              onClick={() => {
-                setValuations({
-                  pe: stock.targetPe || stock.pe || 14,
-                  pb: stock.pb || 2.0,
-                });
-                onNotify('Asumsi valuasi dikembalikan ke default');
-              }}
-            >
-              <Icon name="refresh" cls="sm" /> Reset asumsi
-            </button>
           </div>
         </div>
 
         <LockedFeatureOverlay
           isLocked={isStarter}
-          featureName="Kalkulator Valuasi MOS & Fair Value Interaktif"
-          description="Eksklusif Pro Trader: Simulasi multi-skenario PE/PBV dinamis, estimasi Margin of Safety (MOS), dan proyeksi harga wajar."
+          featureName="Kalkulator Valuasi MOS & Fair Value"
+          description="Eksklusif Pro Trader: Valuasi multi-skenario PE/PBV (1 Tahun), estimasi Margin of Safety (MOS), dan proyeksi harga wajar."
           onUnlockClick={() => {
             setContactFeatureTitle('Kalkulator Valuasi MOS');
             setContactAdminOpen(true);
@@ -2060,7 +2036,7 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
 
         <p className="valuation-warning">
           <Icon name="info" cls="sm" />
-          Harga wajar dihitung dari EPS riil ({stock.eps ? 'Rp' + fmt(stock.eps) : '—'}) × Target PER. Geser slider untuk menguji skenario valuasi.
+          Harga wajar dihitung dari EPS riil ({stock.eps ? 'Rp' + fmt(stock.eps) : '—'}) × Target PER (Mean 1 Tahun) dan BVPS riil × Target PBV (Mean 1 Tahun).
         </p>
       </section>
 

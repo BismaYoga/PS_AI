@@ -694,7 +694,9 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
 
         if path == '/api/auth/google/login':
             host = self.headers.get('Host') or 'pintarsaham.202.10.47.34.nip.io'
-            scheme = self.headers.get('X-Forwarded-Proto', 'http')
+            scheme = self.headers.get('X-Forwarded-Proto', '')
+            if not scheme:
+                scheme = 'http' if ('localhost' in host or '127.0.0.1' in host or '202.10.47.34' in host) else 'https'
             redirect_uri = f"{scheme}://{host}/api/auth/google/callback"
             params = {
                 'client_id': GOOGLE_CLIENT_ID,
@@ -727,7 +729,9 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
 
             try:
                 host = self.headers.get('Host') or 'pintarsaham.202.10.47.34.nip.io'
-                scheme = self.headers.get('X-Forwarded-Proto', 'http')
+                scheme = self.headers.get('X-Forwarded-Proto', '')
+                if not scheme:
+                    scheme = 'http' if ('localhost' in host or '127.0.0.1' in host or '202.10.47.34' in host) else 'https'
                 redirect_uri = f"{scheme}://{host}/api/auth/google/callback"
 
                 token_resp = requests.post(
@@ -861,15 +865,17 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 check_and_run_monthly_reset()
                 user_id = query.get('id', [None])[0]
                 email = query.get('email', [None])[0]
+                if not user_id and not email:
+                    self.send_response(401)
+                    self.end_headers()
+                    return
                 db_path = os.path.join(DATA_DIR, 'pintarsaham.db')
                 con = sqlite3.connect(db_path)
                 cur = con.cursor()
                 if user_id:
                     cur.execute("SELECT id, username, name, email, role, tier, avatar, status, monthly_tokens, additional_tokens FROM users WHERE id=?", (user_id,))
-                elif email:
-                    cur.execute("SELECT id, username, name, email, role, tier, avatar, status, monthly_tokens, additional_tokens FROM users WHERE email=?", (email,))
                 else:
-                    cur.execute("SELECT id, username, name, email, role, tier, avatar, status, monthly_tokens, additional_tokens FROM users LIMIT 1")
+                    cur.execute("SELECT id, username, name, email, role, tier, avatar, status, monthly_tokens, additional_tokens FROM users WHERE email=?", (email,))
                 row = cur.fetchone()
                 con.close()
                 if not row:

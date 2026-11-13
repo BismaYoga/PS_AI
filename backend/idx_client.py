@@ -67,8 +67,33 @@ _mem_cache: dict[str, tuple[float, dict]] = {}
 CACHE_DEFAULT_TTL = 180  # 3 menit cache untuk data live
 
 
+_PE_PBV_CSV_MAP = None
+
+def get_pe_pbv_csv_map() -> dict:
+    global _PE_PBV_CSV_MAP
+    if _PE_PBV_CSV_MAP is not None:
+        return _PE_PBV_CSV_MAP
+    _PE_PBV_CSV_MAP = {}
+    json_path = os.path.join(DATA_DIR, 'pe_pbv.json')
+    if os.path.exists(json_path):
+        try:
+            with open(json_path, 'r', encoding='utf-8') as f:
+                _PE_PBV_CSV_MAP = json.load(f)
+        except Exception:
+            _PE_PBV_CSV_MAP = {}
+    return _PE_PBV_CSV_MAP
+
 def get_target_pe(ticker: str, sector: str = None) -> float:
     ticker_clean = ticker.upper().strip()
+    csv_map = get_pe_pbv_csv_map()
+    if ticker_clean in csv_map:
+        row = csv_map[ticker_clean]
+        pe_mean = row.get('peMean')
+        pe_cur = row.get('pe')
+        if pe_mean is not None and 0 < pe_mean <= 150:
+            return float(pe_mean)
+        if pe_cur is not None and pe_cur > 0:
+            return float(pe_cur)
     if ticker_clean in TICKER_TARGET_PE:
         return TICKER_TARGET_PE[ticker_clean]
     if sector and sector in SECTOR_TARGET_PE:

@@ -2,26 +2,27 @@ import os
 import sys
 import shutil
 import socket
+import traceback
 import threading
 import http.client
 import http.server
 import socketserver
 
-# =====================================================================
-# PASSENGER WSGI ADAPTER UNTUK CPANEL / HOSTINGER PYTHON APP
-# File ini memungkinkan PintarSaham AI berjalan langsung di cPanel
-# melalui menu "Setup Python App" (Application Startup File: passenger_wsgi.py,
-# Application Entry Point: application).
-# =====================================================================
-
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 BACKEND_DIR = os.path.join(BASE_DIR, "backend")
+LOG_FILE = os.path.join(BASE_DIR, "error_app.log")
 
-if BACKEND_DIR not in sys.path:
-    sys.path.insert(0, BACKEND_DIR)
+def _write_log(msg):
+    try:
+        with open(LOG_FILE, "a", encoding="utf-8") as f:
+            f.write(msg + "\n")
+    except Exception:
+        pass
 
-# Pastikan folder statis (logos & data) di frontend/dist tersinkron dari frontend/public
-# agar pengguna di cPanel tidak wajib menjalankan 'npm run build' di server.
+for path in (BASE_DIR, BACKEND_DIR):
+    if os.path.exists(path) and path not in sys.path:
+        sys.path.insert(0, path)
+
 def _ensure_frontend_dist_assets():
     pub_dir = os.path.join(BASE_DIR, "frontend", "public")
     dist_dir = os.path.join(BASE_DIR, "frontend", "dist")
@@ -35,10 +36,20 @@ def _ensure_frontend_dist_assets():
                 except Exception:
                     pass
 
-_ensure_frontend_dist_assets()
-os.chdir(BACKEND_DIR)
+ps_server = None
+_BOOT_ERROR = None
 
-import server as ps_server
+try:
+    _ensure_frontend_dist_assets()
+    if os.path.exists(BACKEND_DIR):
+        os.chdir(BACKEND_DIR)
+    else:
+        os.chdir(BASE_DIR)
+
+    import server as ps_server
+except Exception:
+    _BOOT_ERROR = traceback.format_exc()
+    _write_log("=== BOOT ERROR ===\n" + _BOOT_ERROR)
 
 _INTERNAL_PORT = None
 _SERVER_LOCK = threading.Lock()
@@ -49,7 +60,6 @@ def _get_or_start_internal_server():
         if _INTERNAL_PORT is not None:
             return _INTERNAL_PORT
 
-        # Cari port lokal kosong untuk jembatan internal WSGI
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.bind(("127.0.0.1", 0))
         _, free_port = sock.getsockname()
@@ -67,51 +77,65 @@ def _get_or_start_internal_server():
 
 def application(environ, start_response):
     """Entry point standar WSGI untuk cPanel Phusion Passenger."""
-    port = _get_or_start_internal_server()
+    if _BOOT_ERROR or ps_server is None:
+        err_text = _BOOT_ERROR or "Module server gagal dimuat."
+        err_bytes = err_text.encode("utf-8")
+        start_response("500 Internal Server Error", [
+            ("Content-Type", "text/plain; charset=utf-8"),
+            ("Content-Length", str(len(err_bytes)))
+        ])
+        return [err_bytes]
 
-    method = environ.get("REQUEST_METHOD", "GET")
-    path = environ.get("PATH_INFO", "/") or "/"
-    query = environ.get("QUERY_STRING", "")
-    full_path = f"{path}?{query}" if query else path
-
-    # Baca body request (jika POST/PUT)
     try:
-        content_length = int(environ.get("CONTENT_LENGTH") or 0)
-    except ValueError:
-        content_length = 0
-    body = environ["wsgi.input"].read(content_length) if content_length > 0 else None
+        port = _get_or_start_internal_server()
 
-    # Teruskan header HTTP penting
-    headers = {}
-    if environ.get("CONTENT_TYPE"):
-        headers["Content-Type"] = environ["CONTENT_TYPE"]
-    if content_length > 0:
-        headers["Content-Length"] = str(content_length)
-    for k, v in environ.items():
-        if k.startswith("HTTP_"):
-            h_name = k[5:].replace("_", "-").title()
-            headers[h_name] = v
+        method = environ.get("REQUEST_METHOD", "GET")
+        path = environ.get("PATH_INFO", "/") or "/"
+        query = environ.get("QUERY_STRING", "")
+        full_path = f"{path}?{query}" if query else path
 
-    conn = http.client.HTTPConnection("127.0.0.1", port, timeout=90)
-    try:
-        conn.request(method, full_path, body=body, headers=headers)
-        resp = conn.getresponse()
-        resp_body = resp.read()
-        status_str = f"{resp.status} {resp.reason}"
+        try:
+            content_length = int(environ.get("CONTENT_LENGTH") or 0)
+        except ValueError:
+            content_length = 0
+        body = environ["wsgi.input"].read(content_length) if content_length > 0 else None
 
-        hop_by_hop = {"connection", "keep-alive", "proxy-authenticate", "proxy-authorization", "te", "trailers", "transfer-encoding", "upgrade"}
-        resp_headers = [
-            (k, v) for k, v in resp.getheaders()
-            if k.lower() not in hop_by_hop
-        ]
-        start_response(status_str, resp_headers)
-        return [resp_body]
-    except Exception as e:
-        err_msg = f"Internal Server Error: {e}".encode("utf-8")
+        headers = {}
+        if environ.get("CONTENT_TYPE"):
+            headers["Content-Type"] = environ["CONTENT_TYPE"]
+        if content_length > 0:
+            headers["Content-Length"] = str(content_length)
+        for k, v in environ.items():
+            if k.startswith("HTTP_"):
+                h_name = k[5:].replace("_", "-").title()
+                headers[h_name] = v
+
+        conn = http.client.HTTPConnection("127.0.0.1", port, timeout=90)
+        try:
+            conn.request(method, full_path, body=body, headers=headers)
+            resp = conn.getresponse()
+            resp_body = resp.read()
+            status_str = f"{resp.status} {resp.reason}"
+
+            hop_by_hop = {
+                "connection", "keep-alive", "proxy-authenticate",
+                "proxy-authorization", "te", "trailers",
+                "transfer-encoding", "upgrade"
+            }
+            resp_headers = [
+                (k, v) for k, v in resp.getheaders()
+                if k.lower() not in hop_by_hop
+            ]
+            start_response(status_str, resp_headers)
+            return [resp_body]
+        finally:
+            conn.close()
+    except Exception:
+        runtime_err = traceback.format_exc()
+        _write_log("=== RUNTIME ERROR ===\n" + runtime_err)
+        err_msg = runtime_err.encode("utf-8")
         start_response("500 Internal Server Error", [
             ("Content-Type", "text/plain; charset=utf-8"),
             ("Content-Length", str(len(err_msg)))
         ])
         return [err_msg]
-    finally:
-        conn.close()

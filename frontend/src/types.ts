@@ -83,6 +83,23 @@ export interface StockItem {
   rev: [string, number][];
   description: string;
   targetPe?: number;
+  targetPb?: number;
+  peBands?: {
+    current?: number | null;
+    minus2Sd?: number | null;
+    minus1Sd?: number | null;
+    mean?: number | null;
+    plus1Sd?: number | null;
+    plus2Sd?: number | null;
+  };
+  pbvBands?: {
+    current?: number | null;
+    minus2Sd?: number | null;
+    minus1Sd?: number | null;
+    mean?: number | null;
+    plus1Sd?: number | null;
+    plus2Sd?: number | null;
+  };
   ohlc?: OHLCPoint[];
 }
 

@@ -328,7 +328,9 @@ export const fairValue = (
 ): number | null => {
   const eps = s.eps != null ? s.eps : null;
   if (!eps || eps <= 0) return null;
-  const targetPe = customVal ? customVal.pe : (s.pe || s.targetPe || 12);
+  if (s.pe != null && s.pe <= 0) return null;
+  const targetPe = customVal ? customVal.pe : (s.targetPe || s.pe || 12);
+  if (targetPe <= 0) return null;
   return eps * targetPe;
 };
 
