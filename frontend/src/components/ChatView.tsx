@@ -1,13 +1,18 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { StockItem, ApprovalPlan } from '../types';
+import { StockItem, ApprovalPlan, UserProfile } from '../types';
 import { Icon } from './Icon';
 import { FormattedMessage } from './FormattedMessage';
+import { ContactAdminModal } from './ContactAdminModal';
+import { isUserProOrAdmin } from '../utils';
 
 interface ChatViewProps {
   stocks: StockItem[];
   onSelectStock: (ticker: string) => void;
   onNotify: (msg: string) => void;
   onNavigateHome: () => void;
+  currentUser?: UserProfile | null;
+  onUpdateTokens?: (tokens: { monthly?: number; additional?: number; total?: number }) => void;
+  proMonthlyTokens?: number;
 }
 
 interface ChatMessage {
@@ -72,8 +77,8 @@ const createInitialSession = (): ChatSession => {
       {
         id: `welcome-${id}`,
         role: 'model',
-        text: 'Halo! Saya Asisten Analis Pasar Modal PintarSaham. Anda bisa menanyakan analisis teknikal chart (MA20/50, RSI, Support/Resistance), valuasi harga wajar, kinerja laporan keuangan resmi BEI, perbandingan emiten, hingga dampak isu makro seperti rebalancing MSCI dan kebijakan suku bunga. Ada yang ingin Anda diskusikan?',
-        time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+        text: 'Halo! Saya Asisten Analis Pasar Modal PintarSaham. Anda bisa menanyakan analisis teknikal chart (MA20/50, RSI, Support/Resistance), valuasi harga wajar (MOS), kinerja laporan keuangan resmi BEI, hingga dampak isu makro seperti sentimen pasar bursa dan kebijakan suku bunga. Ada yang ingin Anda diskusikan?',
+        time: '',
       },
     ],
   };
@@ -84,7 +89,13 @@ export const ChatView: React.FC<ChatViewProps> = ({
   onSelectStock: _onSelectStock,
   onNotify,
   onNavigateHome,
+  currentUser,
+  onUpdateTokens,
+  proMonthlyTokens = 30,
 }) => {
+  const isPro = isUserProOrAdmin(currentUser);
+  const isStarter = !isPro;
+  const [contactAdminOpen, setContactAdminOpen] = useState(false);
   // 1. Session Management State
   const [sessions, setSessions] = useState<ChatSession[]>(() => {
     try {
@@ -238,6 +249,12 @@ export const ChatView: React.FC<ChatViewProps> = ({
     const q = (textToSend || input).trim();
     if (!q || isLoading) return;
 
+    if (isStarter) {
+      onNotify('Fitur Chat AI membutuhkan kuota token Pro Trader (0 Token tersisa).');
+      setContactAdminOpen(true);
+      return;
+    }
+
     const userMsg: ChatMessage = {
       id: Date.now().toString(),
       role: 'user',
@@ -308,14 +325,20 @@ export const ChatView: React.FC<ChatViewProps> = ({
       const res = await fetch('/api/ai-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: apiMessages }),
+        body: JSON.stringify({ messages: apiMessages, user_id: currentUser?.id, email: currentUser?.email }),
       });
 
       if (!res.ok) {
-        throw new Error(`Server returned status ${res.status}`);
+        const errJson = await res.json().catch(() => null);
+        throw new Error(errJson?.error || (res.status === 403
+          ? 'Akun Starter atau kuota token habis (0 Token). Silakan hubungi administrator untuk beralih ke Pro Trader.'
+          : `Server mengembalikan status ${res.status}`));
       }
 
       const data = await res.json();
+      if (data.remaining_tokens) {
+        onUpdateTokens?.(data.remaining_tokens);
+      }
       const botMsg: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: 'model',
@@ -368,14 +391,20 @@ export const ChatView: React.FC<ChatViewProps> = ({
       const res = await fetch('/api/ai-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: apiMessages }),
+        body: JSON.stringify({ messages: apiMessages, user_id: currentUser?.id, email: currentUser?.email }),
       });
 
       if (!res.ok) {
-        throw new Error(`Server returned status ${res.status}`);
+        const errJson = await res.json().catch(() => null);
+        throw new Error(errJson?.error || (res.status === 403
+          ? 'Akun Starter atau kuota token habis (0 Token). Silakan hubungi administrator untuk beralih ke Pro Trader.'
+          : `Server mengembalikan status ${res.status}`));
       }
 
       const data = await res.json();
+      if (data.remaining_tokens) {
+        onUpdateTokens?.(data.remaining_tokens);
+      }
       const botMsg: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: 'model',
@@ -422,9 +451,9 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const isOnlyGreeting = messages.length <= 1;
 
   return (
-    <div style={{ maxWidth: '1240px', margin: '0 auto', padding: '10px 16px 40px' }}>
+    <div className="chat-view-container">
       {/* Top Breadcrumb */}
-      <div className="breadcrumb" style={{ marginBottom: '14px' }}>
+      <div className="breadcrumb chat-breadcrumb">
         <a
           href="#home"
           onClick={(e) => {
@@ -440,6 +469,15 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
       {/* Main Studio Frame */}
       <div className="ps-chat-studio">
+        {/* Backdrop on mobile when sidebar is open */}
+        {sidebarOpen && (
+          <div
+            className="sidebar-backdrop"
+            onClick={() => setSidebarOpen(false)}
+            aria-label="Tutup sidebar"
+          />
+        )}
+
         {/* Left Sidebar: Session Management */}
         <aside className={`ps-chat-sidebar ${sidebarOpen ? '' : 'collapsed'}`}>
           <div className="sidebar-header">
@@ -593,7 +631,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
           {/* Messages Stream */}
           <div className="chat-canvas-messages">
             {isOnlyGreeting ? (
-              /* Welcoming Hero Screen (Gemini / Claude style) */
+              /* Welcoming Hero Screen */
               <div className="chat-welcome-hero">
                 <div className="hero-avatar-wrap">
                   <Icon name="sparkles" cls="lg" />
@@ -724,11 +762,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
                         <FormattedMessage content={m.text} />
                       </>
                     )}
-
-                    {/* Turn Meta Timestamp */}
-                    <div className="turn-meta">
-                      <span>{m.time}</span>
-                    </div>
                   </div>
                 </div>
               );
@@ -771,6 +804,38 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
           {/* Floating Input Box */}
           <div className="chat-canvas-input-wrap">
+            {isStarter && (
+              <div
+                style={{
+                  background: 'rgba(234, 179, 8, 0.08)',
+                  border: '1px solid rgba(234, 179, 8, 0.28)',
+                  borderRadius: '10px',
+                  padding: '9px 14px',
+                  marginBottom: '10px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '8px',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#92400e' }}>
+                  <Icon name="lock" cls="sm" style={{ color: '#d97706', flexShrink: 0 }} />
+                  <span>
+                    Akun Starter (0 Token AI). Upgrade ke <strong>Pro Trader</strong> untuk mendapatkan {proMonthlyTokens} token AI/bulan dan akses asisten pasar BEI.
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  className="btn small-btn primary"
+                  onClick={() => setContactAdminOpen(true)}
+                  style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '6px' }}
+                >
+                  Beralih ke Pro Trader
+                </button>
+              </div>
+            )}
+
             <div className="chat-input-box">
               <input
                 ref={inputRef}
@@ -794,12 +859,19 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 </svg>
               </button>
             </div>
-            <div style={{ marginTop: '7px', textAlign: 'center', fontSize: '10.5px', color: 'var(--muted)' }}>
-              Data bersumber resmi dari Bursa Efek Indonesia (IDX). Selalu lakukan riset mandiri sebelum mengambil keputusan investasi.
+            <div style={{ marginTop: '8px', textAlign: 'center', fontSize: '11px', color: 'var(--muted)', lineHeight: 1.5 }}>
+              PintarSaham AI dapat membuat kekeliruan. Selalu lakukan riset mandiri (DYOR) sebelum mengambil keputusan investasi. AI ini bertindak sebagai alat bantu riset cepat yang terhubung dengan data resmi BEI.
             </div>
           </div>
         </div>
       </div>
+
+      <ContactAdminModal
+        isOpen={contactAdminOpen}
+        onClose={() => setContactAdminOpen(false)}
+        user={currentUser || null}
+        featureTitle="Asisten Pasar Chat AI"
+      />
     </div>
   );
 };

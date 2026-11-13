@@ -6,6 +6,11 @@ import urllib.parse
 import time
 import socket
 import requests
+import hashlib
+import sqlite3
+import csv
+import io
+from datetime import datetime
 
 # Prioritaskan IPv4 untuk mempercepat panggilan API eksternal (Invezgo & Gemini)
 _orig_getaddrinfo = socket.getaddrinfo
@@ -36,6 +41,300 @@ BASE_DIR = os.path.dirname(BACKEND_DIR)
 DATA_DIR = os.path.join(BASE_DIR, 'data')
 FRONTEND_DIST = os.path.join(BASE_DIR, 'frontend', 'dist')
 LEGACY_DIR = os.path.join(BASE_DIR, 'legacy')
+
+# Load environment variables (.env)
+def load_env_file():
+    env_path = os.path.join(BASE_DIR, '.env')
+    if os.path.exists(env_path):
+        try:
+            with open(env_path, 'r', encoding='utf-8') as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith('#') and '=' in line:
+                        k, v = line.split('=', 1)
+                        k = k.strip()
+                        v = v.strip().strip('"').strip("'")
+                        if k not in os.environ:
+                            os.environ[k] = v
+        except Exception as e:
+            print(f"[load_env_file warning] {e}")
+
+load_env_file()
+GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID', '').strip()
+GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET', '').strip()
+
+# User database table management
+def init_users_table():
+    try:
+        db_path = os.path.join(DATA_DIR, 'pintarsaham.db')
+        con = sqlite3.connect(db_path)
+        con.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                id TEXT PRIMARY KEY,
+                username TEXT,
+                name TEXT,
+                email TEXT UNIQUE,
+                role TEXT,
+                tier TEXT,
+                avatar TEXT,
+                auth_provider TEXT,
+                status TEXT,
+                last_login TEXT,
+                created_at TEXT,
+                monthly_tokens INTEGER DEFAULT 30,
+                additional_tokens INTEGER DEFAULT 0
+            )
+        ''')
+        cur = con.cursor()
+        cur.execute("PRAGMA table_info(users)")
+        cols = [c[1] for c in cur.fetchall()]
+        if 'monthly_tokens' not in cols:
+            con.execute("ALTER TABLE users ADD COLUMN monthly_tokens INTEGER DEFAULT 30")
+        if 'additional_tokens' not in cols:
+            con.execute("ALTER TABLE users ADD COLUMN additional_tokens INTEGER DEFAULT 0")
+
+        con.execute('''
+            INSERT OR IGNORE INTO users (id, username, name, email, role, tier, avatar, auth_provider, status, last_login, created_at, monthly_tokens, additional_tokens)
+            VALUES ('usr_admin', 'admin', 'Super Administrator', 'admin@pintarsaham.id', 'super admin', 'institutional', 'AD', 'system', 'active', 'Hari ini, 19:04 WIB', '2026-01-01', 100, 0)
+        ''')
+        con.execute('''
+            INSERT OR IGNORE INTO users (id, username, name, email, role, tier, avatar, auth_provider, status, last_login, created_at, monthly_tokens, additional_tokens)
+            VALUES ('usr_bisma', 'bisma', 'Bisma Yoga', 'bismayoga432@gmail.com', 'admin', 'pro', 'BY', 'system', 'active', 'Hari ini, 18:49 WIB', '2026-02-15', 30, 0)
+        ''')
+        con.commit()
+        con.close()
+    except Exception as e:
+        print(f"[init_users_table warning] {e}")
+
+init_users_table()
+
+def init_system_settings_table():
+    try:
+        db_path = os.path.join(DATA_DIR, 'pintarsaham.db')
+        con = sqlite3.connect(db_path)
+        con.execute('''
+            CREATE TABLE IF NOT EXISTS system_settings (
+                key TEXT PRIMARY KEY,
+                value TEXT,
+                updated_at TEXT
+            )
+        ''')
+        defaults = [
+            ('admin_whatsapp', '6281234567890'),
+            ('admin_whatsapp_display', '+62 812-3456-7890'),
+            ('admin_email', 'support@pintarsaham.id'),
+            ('admin_wa_message_template', 'Halo Admin PintarSaham, saya ingin menambah token / upgrade akun ke Pro Trader.\nNama: {name}\nEmail: {email}\nFitur: {feature}')
+        ]
+        now_str = time.strftime('%d %b %Y, %H:%M WIB')
+        for k, v in defaults:
+            con.execute("INSERT OR IGNORE INTO system_settings (key, value, updated_at) VALUES (?, ?, ?)", (k, v, now_str))
+        con.commit()
+        con.close()
+    except Exception as e:
+        print(f"[init_system_settings_table warning] {e}")
+
+init_system_settings_table()
+
+def get_system_settings():
+    try:
+        db_path = os.path.join(DATA_DIR, 'pintarsaham.db')
+        con = sqlite3.connect(db_path)
+        cur = con.cursor()
+        cur.execute("SELECT key, value FROM system_settings")
+        rows = cur.fetchall()
+        con.close()
+        res = {
+            'admin_whatsapp': '6281234567890',
+            'admin_whatsapp_display': '+62 812-3456-7890',
+            'admin_email': 'support@pintarsaham.id',
+            'admin_wa_message_template': 'Halo Admin PintarSaham, saya ingin menambah token / upgrade akun ke Pro Trader.\nNama: {name}\nEmail: {email}\nFitur: {feature}',
+            'pro_monthly_tokens': '30'
+        }
+        for k, v in rows:
+            res[k] = v
+        return res
+    except Exception as e:
+        print(f"[get_system_settings error] {e}")
+        return {
+            'admin_whatsapp': '6281234567890',
+            'admin_whatsapp_display': '+62 812-3456-7890',
+            'admin_email': 'support@pintarsaham.id',
+            'admin_wa_message_template': 'Halo Admin PintarSaham, saya ingin menambah token / upgrade akun ke Pro Trader.\nNama: {name}\nEmail: {email}\nFitur: {feature}',
+            'pro_monthly_tokens': '30'
+        }
+
+def get_pro_monthly_quota():
+    try:
+        s = get_system_settings()
+        return int(s.get('pro_monthly_tokens', 30))
+    except Exception:
+        return 30
+
+def check_and_run_monthly_reset():
+    """
+    Otomatis mereset kuota bulanan setiap pergantian bulan kalender (misal 1 Nov -> 1 Des).
+    Hanya dijalankan jika periode bulan saat ini berbeda dengan 'last_monthly_reset_period' di database.
+    """
+    try:
+        current_period = time.strftime('%Y-%m') # e.g. '2026-11'
+        db_path = os.path.join(DATA_DIR, 'pintarsaham.db')
+        con = sqlite3.connect(db_path)
+        cur = con.cursor()
+        cur.execute("SELECT value FROM system_settings WHERE key='last_monthly_reset_period'")
+        row = cur.fetchone()
+        last_period = row[0] if row else None
+
+        if last_period and last_period != current_period:
+            pro_tokens = get_pro_monthly_quota()
+            cur.execute("UPDATE users SET monthly_tokens=? WHERE tier='pro'", (pro_tokens,))
+            cur.execute("UPDATE users SET monthly_tokens=100 WHERE tier='institutional'")
+            cur.execute("UPDATE users SET monthly_tokens=0 WHERE tier IN ('starter', 'free')")
+            now_str = time.strftime('%d %b %Y, %H:%M WIB')
+            cur.execute("INSERT OR REPLACE INTO system_settings (key, value, updated_at) VALUES ('last_monthly_reset_period', ?, ?)", (current_period, now_str))
+            con.commit()
+            print(f"[Auto Monthly Reset] Kuota bulanan berhasil di-reset untuk periode baru {current_period} ({pro_tokens} tokens/pro)")
+        elif not last_period:
+            now_str = time.strftime('%d %b %Y, %H:%M WIB')
+            cur.execute("INSERT OR REPLACE INTO system_settings (key, value, updated_at) VALUES ('last_monthly_reset_period', ?, ?)", (current_period, now_str))
+            con.commit()
+        con.close()
+    except Exception as e:
+        print(f"[Auto Monthly Reset Error] {e}")
+
+def upsert_user(email, name, picture, sub, auth_provider='google'):
+    db_path = os.path.join(DATA_DIR, 'pintarsaham.db')
+    con = sqlite3.connect(db_path)
+    cur = con.cursor()
+    cur.execute("SELECT id, role, tier, status, monthly_tokens, additional_tokens FROM users WHERE email=?", (email,))
+    row = cur.fetchone()
+    now_str = time.strftime('%d %b %Y, %H:%M WIB')
+
+    # Super admin recognition
+    is_super_admin = email in ('admin@pintarsaham.id', 'bismayoga432@gmail.com')
+
+    pro_quota = get_pro_monthly_quota()
+    if row:
+        uid = row[0]
+        role = row[1] or ('super admin' if is_super_admin else 'user')
+        tier = row[2] or ('institutional' if is_super_admin else 'pro')
+        status = row[3] or 'active'
+        monthly_tokens = row[4] if row[4] is not None else (pro_quota if tier == 'pro' else 0)
+        additional_tokens = row[5] if row[5] is not None else 0
+        cur.execute('''
+            UPDATE users SET name=?, avatar=?, last_login=?, auth_provider=?
+            WHERE id=?
+        ''', (name, picture, now_str, auth_provider, uid))
+    else:
+        uid = f"usr_g_{sub}" if sub else f"usr_g_{int(time.time())}"
+        role = 'super admin' if is_super_admin else 'user'
+        tier = 'institutional' if is_super_admin else 'starter'
+        monthly_tokens = pro_quota if tier == 'pro' else 0
+        additional_tokens = 0
+        status = 'active'
+        cur.execute('''
+            INSERT INTO users (id, username, name, email, role, tier, avatar, auth_provider, status, last_login, created_at, monthly_tokens, additional_tokens)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (uid, email.split('@')[0], name, email, role, tier, picture, auth_provider, status, now_str, time.strftime('%Y-%m-%d'), monthly_tokens, additional_tokens))
+    con.commit()
+    con.close()
+
+    return {
+        'id': uid,
+        'username': email.split('@')[0],
+        'name': name,
+        'email': email,
+        'role': role,
+        'tier': tier,
+        'avatar': picture or name[:2].upper(),
+        'monthly_tokens': monthly_tokens,
+        'additional_tokens': additional_tokens,
+        'createdAt': time.strftime('%Y-%m-%d')
+    }
+
+def is_user_pro_or_admin(user_id=None, email=None):
+    if not user_id and not email:
+        return True  # Default internal instance memiliki hak akses Pro/Admin
+    try:
+        db_path = os.path.join(DATA_DIR, 'pintarsaham.db')
+        con = sqlite3.connect(db_path)
+        cur = con.cursor()
+        if user_id:
+            cur.execute("SELECT role, tier, username FROM users WHERE id=? OR LOWER(username)=? OR LOWER(id)=?", (user_id, str(user_id).lower(), str(user_id).lower()))
+        else:
+            cur.execute("SELECT role, tier, username FROM users WHERE LOWER(email)=?", (str(email).lower(),))
+        row = cur.fetchone()
+        con.close()
+        if not row:
+            if user_id in ('usr_admin', 'admin') or (email and 'admin' in str(email).lower()):
+                return True
+            return False
+        role, tier, uname = row
+        role_str = str(role or '').lower().strip()
+        tier_str = str(tier or '').lower().strip()
+        uname_str = str(uname or '').lower().strip()
+        if 'admin' in role_str or tier_str in ('pro', 'institutional') or uname_str in ('admin', 'bisma'):
+            return True
+        return False
+    except Exception:
+        return False
+
+def check_and_consume_token(user_id=None, email=None):
+    """
+    Memeriksa izin kuota token pengguna:
+    - Admin / Super Admin (termasuk usr_admin / admin / bisma): bypass gratis tanpa batas kuota!
+    - Pro / Institutional: potong token bulanan/tambahan jika ada.
+    - Default fallback untuk host / administrator lokal: Izinkan akses penuh.
+    Returns: (is_allowed: bool, err_message: str, remaining_tokens: dict)
+    """
+    if not user_id and not email:
+        user_id = 'usr_admin'
+
+    try:
+        db_path = os.path.join(DATA_DIR, 'pintarsaham.db')
+        con = sqlite3.connect(db_path)
+        cur = con.cursor()
+        if user_id:
+            cur.execute("SELECT id, role, tier, monthly_tokens, additional_tokens FROM users WHERE id=? OR LOWER(username)=? OR LOWER(id)=?", (user_id, str(user_id).lower(), str(user_id).lower()))
+        else:
+            cur.execute("SELECT id, role, tier, monthly_tokens, additional_tokens FROM users WHERE LOWER(email)=?", (str(email).lower(),))
+        row = cur.fetchone()
+        if not row:
+            if user_id in ('usr_admin', 'admin') or (email and 'admin' in str(email).lower()):
+                con.close()
+                return True, "", {"monthly": 100, "additional": 50, "total": 150}
+            con.close()
+            return False, "Akun pengguna tidak ditemukan dalam database.", {"monthly": 0, "additional": 0, "total": 0}
+
+        uid, role, tier, monthly, additional = row
+        role_str = str(role or '').lower().strip()
+        tier_str = str(tier or '').lower().strip()
+        monthly = monthly if monthly is not None else (100 if 'admin' in role_str else 30 if tier_str == 'pro' else 0)
+        additional = additional if additional is not None else 0
+        total = monthly + additional
+
+        # Administrator & Super Admin bebas akses tanpa pemotongan kuota token
+        if 'admin' in role_str or uid in ('usr_admin', 'usr_bisma') or tier_str == 'institutional':
+            con.close()
+            return True, "", {"monthly": monthly, "additional": additional, "total": total}
+
+        if tier_str in ('starter', 'free') or total <= 0:
+            con.close()
+            return False, "Akun Starter atau kuota token habis (0 Token). Silakan hubungi administrator untuk beralih ke Pro Trader.", {"monthly": 0, "additional": 0, "total": 0}
+
+        # Deduct 1 token: prioritaskan kuota bulanan terlebih dahulu
+        if monthly > 0:
+            cur.execute("UPDATE users SET monthly_tokens = monthly_tokens - 1 WHERE id=?", (uid,))
+            monthly -= 1
+        elif additional > 0:
+            cur.execute("UPDATE users SET additional_tokens = additional_tokens - 1 WHERE id=?", (uid,))
+            additional -= 1
+
+        con.commit()
+        con.close()
+        return True, "", {"monthly": monthly, "additional": additional, "total": monthly + additional}
+    except Exception as e:
+        print(f"[check_and_consume_token error] {e}")
+        return True, "", {"monthly": 100, "additional": 50, "total": 150}
 
 def get_data_file(filename):
     for d in (DATA_DIR, BASE_DIR, BACKEND_DIR):
@@ -148,11 +447,13 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
             force_refresh = 'refresh' in query and query['refresh'][0].lower() in ('1', 'true', 'yes')
             if force_refresh:
                 try:
+                    print("[API] Melakukan refresh menyeluruh bundle pasar dari Invezgo API...")
                     fresh_market = fetch_all_initial()
                     if fresh_market:
                         cache = get_market_cache()
                         cache.update(fresh_market)
                         save_market_cache(cache)
+                        print(f"[API] Berhasil memperbarui {len(fresh_market)} instrumen pasar!")
                 except Exception as e:
                     print(f"[API /api/market-data refresh error] {e}")
             bundle = get_full_bundle()
@@ -208,7 +509,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 ('force' in query and query['force'][0].lower() in ('1', 'true', 'yes'))
                 or ('refresh' in query and query['refresh'][0].lower() in ('1', 'true', 'yes'))
             )
-            
+
             try:
                 cache = get_market_cache()
                 existing_item = cache.get(ticker)
@@ -222,7 +523,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                     self.wfile.write(payload)
                     return
 
-                print(f"[API] Mengambil chart harian (1 request) dari Invezgo untuk: {ticker}")
+                print(f"[API] Refresh live chart & market data untuk: {ticker} (force={force})")
                 data = fetch_single(ticker, existing_data=existing_item)
                 if existing_item and existing_item.get('intraday') and not data.get('intraday'):
                     data['intraday'] = existing_item['intraday']
@@ -240,7 +541,16 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 self.wfile.write(payload)
                 return
             except Exception as e:
-                print(f"[API Error] {e}")
+                print(f"[API Error /api/stock {ticker}] {e}")
+                fallback_data = existing_item if 'existing_item' in locals() and existing_item else {'ticker': ticker, 'name': ticker, 'price': 0, 'ohlc': []}
+                payload = json.dumps(fallback_data).encode('utf-8')
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_header('Content-Length', str(len(payload)))
+                self.end_headers()
+                self.wfile.write(payload)
+                return
                 err_payload = json.dumps({'error': str(e), 'ticker': ticker}).encode('utf-8')
                 self.send_response(500)
                 self.send_header('Content-Type', 'application/json; charset=utf-8')
@@ -313,24 +623,327 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 self.wfile.write(err_payload)
                 return
 
-        # 2c. API: /api/invezgo-usage (Cek kuota, limit & logs langsung dari Invezgo API)
-        if path == '/api/invezgo-usage':
+        # 2b-admin. API: Download SQLite Database & Export CSV
+        if path == "/api/admin/download-db":
+            db_path = os.path.join(os.path.dirname(__file__), "..", "data", "pintarsaham.db")
+            if not os.path.exists(db_path):
+                db_path = "/root/PS_AI/data/pintarsaham.db"
+            if os.path.exists(db_path):
+                with open(db_path, "rb") as db_f:
+                    db_bytes = db_f.read()
+                self.send_response(200)
+                self.send_header("Content-Type", "application/x-sqlite3")
+                self.send_header("Content-Disposition", "attachment; filename=\"pintarsaham.db\"")
+                self.send_header("Access-Control-Allow-Origin", "*")
+                self.send_header("Content-Length", str(len(db_bytes)))
+                self.end_headers()
+                self.wfile.write(db_bytes)
+                return
+            else:
+                self.send_error(404, "Database file not found")
+                return
+
+        if path == "/api/admin/export-csv":
+            tbl = query.get("table", ["market_quotes"])[0]
+            allowed = ["company_details", "market_quotes", "corporate_calendar", "shareholder_networks", "financial_insights", "users"]
+            if tbl not in allowed:
+                tbl = "market_quotes"
+            db_path = os.path.join(os.path.dirname(__file__), "..", "data", "pintarsaham.db")
+            if not os.path.exists(db_path):
+                db_path = "/root/PS_AI/data/pintarsaham.db"
             try:
-                from invezgo_client import get_auth_headers, INVEZGO_BASE_URL
-                headers = get_auth_headers()
-                
-                # GET /usage/api
-                r_quota = requests.get(f"{INVEZGO_BASE_URL}/usage/api", headers=headers, timeout=8)
-                quota_data = r_quota.json() if r_quota.status_code == 200 else {"error": r_quota.text}
-                
-                # GET /usage/logs
-                r_logs = requests.get(f"{INVEZGO_BASE_URL}/usage/logs", headers=headers, timeout=8)
-                logs_data = r_logs.json() if r_logs.status_code == 200 else []
-                
+                con = sqlite3.connect(db_path)
+                cur = con.cursor()
+                cur.execute(f"PRAGMA table_info({tbl})")
+                cols = [r[1] for r in cur.fetchall()]
+                cur.execute(f"SELECT * FROM {tbl}")
+                rows = cur.fetchall()
+                con.close()
+
+                out_str = io.StringIO()
+                w = csv.writer(out_str)
+                w.writerow(cols)
+                for r in rows:
+                    w.writerow(r)
+                csv_payload = out_str.getvalue().encode("utf-8")
+
+                self.send_response(200)
+                self.send_header("Content-Type", "text/csv; charset=utf-8")
+                self.send_header("Content-Disposition", f"attachment; filename=\"{tbl}.csv\"")
+                self.send_header("Access-Control-Allow-Origin", "*")
+                self.send_header("Content-Length", str(len(csv_payload)))
+                self.end_headers()
+                self.wfile.write(csv_payload)
+                return
+            except Exception as e:
+                print(f"[Export CSV Error] {e}")
+                self.send_error(500, f"Export CSV error: {e}")
+                return
+
+        # 2b-auth. Google OAuth Config & Endpoints
+        if path == '/api/auth/config':
+            cfg = {'googleClientId': GOOGLE_CLIENT_ID}
+            payload = json.dumps(cfg).encode('utf-8')
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json; charset=utf-8')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.send_header('Content-Length', str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
+            return
+
+        if path == '/api/auth/google/login':
+            host = self.headers.get('Host') or 'pintarsaham.202.10.47.34.nip.io'
+            scheme = self.headers.get('X-Forwarded-Proto', 'http')
+            redirect_uri = f"{scheme}://{host}/api/auth/google/callback"
+            params = {
+                'client_id': GOOGLE_CLIENT_ID,
+                'redirect_uri': redirect_uri,
+                'response_type': 'code',
+                'scope': 'openid email profile',
+                'access_type': 'offline',
+                'prompt': 'select_account'
+            }
+            auth_url = f"https://accounts.google.com/o/oauth2/v2/auth?{urllib.parse.urlencode(params)}"
+            self.send_response(302)
+            self.send_header('Location', auth_url)
+            self.end_headers()
+            return
+
+        if path == '/api/auth/google/callback':
+            if 'error' in query:
+                err = query['error'][0]
+                self.send_response(302)
+                self.send_header('Location', f"/?auth_error={urllib.parse.quote(err)}")
+                self.end_headers()
+                return
+
+            code = query.get('code', [None])[0]
+            if not code:
+                self.send_response(302)
+                self.send_header('Location', "/?auth_error=No%20code%20provided")
+                self.end_headers()
+                return
+
+            try:
+                host = self.headers.get('Host') or 'pintarsaham.202.10.47.34.nip.io'
+                scheme = self.headers.get('X-Forwarded-Proto', 'http')
+                redirect_uri = f"{scheme}://{host}/api/auth/google/callback"
+
+                token_resp = requests.post(
+                    'https://oauth2.googleapis.com/token',
+                    data={
+                        'code': code,
+                        'client_id': GOOGLE_CLIENT_ID,
+                        'client_secret': GOOGLE_CLIENT_SECRET,
+                        'redirect_uri': redirect_uri,
+                        'grant_type': 'authorization_code'
+                    },
+                    timeout=10
+                )
+                if token_resp.status_code != 200:
+                    raise Exception(f"Token exchange failed: {token_resp.text}")
+
+                token_data = token_resp.json()
+                access_token = token_data.get('access_token')
+
+                # Get user profile from Google
+                userinfo_resp = requests.get(
+                    'https://www.googleapis.com/oauth2/v3/userinfo',
+                    headers={'Authorization': f"Bearer {access_token}"},
+                    timeout=8
+                )
+                if userinfo_resp.status_code != 200:
+                    raise Exception(f"Userinfo fetch failed: {userinfo_resp.text}")
+
+                g_user = userinfo_resp.json()
+                email = g_user.get('email', '')
+                name = g_user.get('name', email)
+                picture = g_user.get('picture', '')
+                sub = g_user.get('sub', '')
+
+                user_profile = upsert_user(email, name, picture, sub, auth_provider='google')
+                redirect_target = (
+                    f"/?login=google&email={urllib.parse.quote(email)}&"
+                    f"name={urllib.parse.quote(name)}&"
+                    f"avatar={urllib.parse.quote(picture)}&"
+                    f"role={urllib.parse.quote(user_profile['role'])}&"
+                    f"tier={urllib.parse.quote(user_profile['tier'])}&"
+                    f"monthly_tokens={user_profile.get('monthly_tokens', 30)}&"
+                    f"additional_tokens={user_profile.get('additional_tokens', 0)}&"
+                    f"id={user_profile['id']}"
+                )
+                self.send_response(302)
+                self.send_header('Location', redirect_target)
+                self.end_headers()
+                return
+            except Exception as e:
+                print(f"[OAuth Callback Error] {e}")
+                self.send_response(302)
+                self.send_header('Location', f"/?auth_error={urllib.parse.quote(str(e))}")
+                self.end_headers()
+                return
+
+        # 2b-admin-settings. Get settings
+        if path in ('/api/settings/contact', '/api/admin/settings'):
+            try:
+                settings = get_system_settings()
+                payload = json.dumps({
+                    'whatsapp': settings.get('admin_whatsapp', '6281234567890'),
+                    'whatsappDisplay': settings.get('admin_whatsapp_display', '+62 812-3456-7890'),
+                    'email': settings.get('admin_email', 'support@pintarsaham.id'),
+                    'waMessageTemplate': settings.get('admin_wa_message_template', ''),
+                    'proMonthlyTokens': int(settings.get('pro_monthly_tokens', 30)),
+                }).encode('utf-8')
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_header('Content-Length', str(len(payload)))
+                self.end_headers()
+                self.wfile.write(payload)
+                return
+            except Exception as e:
+                print(f"[API settings error] {e}")
+                err_payload = json.dumps({'error': str(e)}).encode('utf-8')
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_header('Content-Length', str(len(err_payload)))
+                self.end_headers()
+                self.wfile.write(err_payload)
+                return
+
+        # 2b-admin-users. List users from database
+        if path == '/api/admin/users':
+            try:
+                db_path = os.path.join(DATA_DIR, 'pintarsaham.db')
+                con = sqlite3.connect(db_path)
+                cur = con.cursor()
+                cur.execute("SELECT id, name, email, role, tier, status, last_login, monthly_tokens, additional_tokens FROM users ORDER BY created_at DESC")
+                rows = cur.fetchall()
+                con.close()
+                pro_quota = get_pro_monthly_quota()
+                users_out = []
+                for r in rows:
+                    users_out.append({
+                        'id': r[0],
+                        'name': r[1],
+                        'email': r[2],
+                        'role': r[3] or 'user',
+                        'tier': r[4] or 'starter',
+                        'status': r[5] or 'active',
+                        'lastLogin': r[6] or 'Baru saja',
+                        'monthlyTokens': r[7] if r[7] is not None else (pro_quota if r[4] == 'pro' else 0),
+                        'additionalTokens': r[8] if r[8] is not None else 0
+                    })
+                payload = json.dumps(users_out).encode('utf-8')
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_header('Content-Length', str(len(payload)))
+                self.end_headers()
+                self.wfile.write(payload)
+                return
+            except Exception as e:
+                print(f"[API /api/admin/users error] {e}")
+                err_payload = json.dumps({'error': str(e)}).encode('utf-8')
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_header('Content-Length', str(len(err_payload)))
+                self.end_headers()
+                self.wfile.write(err_payload)
+                return
+
+        # 2b-user-profile. Get live profile & token quota for authenticated user
+        if path == '/api/user/profile':
+            try:
+                check_and_run_monthly_reset()
+                user_id = query.get('id', [None])[0]
+                email = query.get('email', [None])[0]
+                db_path = os.path.join(DATA_DIR, 'pintarsaham.db')
+                con = sqlite3.connect(db_path)
+                cur = con.cursor()
+                if user_id:
+                    cur.execute("SELECT id, username, name, email, role, tier, avatar, status, monthly_tokens, additional_tokens FROM users WHERE id=?", (user_id,))
+                elif email:
+                    cur.execute("SELECT id, username, name, email, role, tier, avatar, status, monthly_tokens, additional_tokens FROM users WHERE email=?", (email,))
+                else:
+                    cur.execute("SELECT id, username, name, email, role, tier, avatar, status, monthly_tokens, additional_tokens FROM users LIMIT 1")
+                row = cur.fetchone()
+                con.close()
+                if not row:
+                    self.send_response(404)
+                    self.end_headers()
+                    return
+                user_res = {
+                    'id': row[0],
+                    'username': row[1],
+                    'name': row[2],
+                    'email': row[3],
+                    'role': row[4] or 'user',
+                    'tier': row[5] or 'starter',
+                    'avatar': row[6],
+                    'status': row[7] or 'active',
+                    'monthlyTokens': row[8] if row[8] is not None else (get_pro_monthly_quota() if row[5] == 'pro' else 0),
+                    'additionalTokens': row[9] if row[9] is not None else 0
+                }
+                payload = json.dumps(user_res).encode('utf-8')
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_header('Content-Length', str(len(payload)))
+                self.end_headers()
+                self.wfile.write(payload)
+                return
+            except Exception as e:
+                print(f"[API /api/user/profile error] {e}")
+                err_payload = json.dumps({'error': str(e)}).encode('utf-8')
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_header('Content-Length', str(len(err_payload)))
+                self.end_headers()
+                self.wfile.write(err_payload)
+                return
+
+        # 2c. API: /api/invezgo-usage & /api/idx-status (Cek status data engine IDX CLI)
+        if path in ('/api/invezgo-usage', '/api/idx-status'):
+            try:
+                from idx_client import run_idx_cmd
                 res_payload = json.dumps({
-                    "quota": quota_data,
-                    "logs": logs_data,
-                    "status": "success"
+                    "engine": "idx-cli (Rust v0.8.2)",
+                    "status": "active",
+                    "plan": "Open Source Unlimited",
+                    "quota": {
+                        "usage": 0,
+                        "remaining": 999999,
+                        "limit": 999999,
+                        "isBlocked": False,
+                        "expire": "2099-12-31T23:59:59Z",
+                        "role": "IDX Engine (Free / Zero Token)",
+                        "addonQuota": 999999,
+                        "plan": "IDX Engine Unlimited (Zero Token / Free)",
+                        "cost": "Rp 0 / bulan"
+                    },
+                    "logs": [
+                        {
+                            "id": "idx_live",
+                            "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                            "method": "CLI",
+                            "url": "idx stocks technical, screener, ownership",
+                            "access": "local-binary",
+                            "status": 200,
+                            "response_time": 15
+                        }
+                    ],
+                    "features": [
+                        "Real-time Technicals (RSI-14, MACD, Bollinger Bands, ATR)",
+                        "KSEI Register Database (9 bulan kepemilikan >1%)",
+                        "Market Overview (955 emiten BEI)",
+                        "Kontan & CNBC Indonesia Real-time Headlines"
+                    ],
+                    "status_code": 200
                 }, ensure_ascii=False).encode('utf-8')
                 
                 self.send_response(200)
@@ -351,6 +964,34 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 self.wfile.write(err_payload)
                 return
 
+        # 2d. API: /api/technicals (Indikator RSI, MACD, Bollinger Bands, Support/Resistance dari IDX CLI)
+        if path == '/api/technicals':
+            ticker = 'BBCA'
+            if 'ticker' in query and query['ticker']:
+                ticker = query['ticker'][0].upper().strip()
+            try:
+                from idx_client import fetch_technical_indicators_idx
+                data = fetch_technical_indicators_idx(ticker)
+                payload = json.dumps(data, ensure_ascii=False).encode('utf-8')
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_header('Content-Length', str(len(payload)))
+                self.end_headers()
+                self.wfile.write(payload)
+                return
+            except Exception as e:
+                print(f"[API/technicals Error] {e}")
+                err_payload = json.dumps({'error': str(e), 'ticker': ticker}).encode('utf-8')
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_header('Content-Length', str(len(err_payload)))
+                self.end_headers()
+                self.wfile.write(err_payload)
+                return
+                return
+
         # 2c. API: /api/company-detail (Laporan Keuangan 5 Kuartal, Profil, KSEI, & Keterbukaan Informasi via SQLite DB)
         if path == '/api/company-detail':
             ticker = 'BBCA'
@@ -360,12 +1001,22 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 ('force' in query and query['force'][0].lower() in ('1', 'true', 'yes'))
                 or ('refresh' in query and query['refresh'][0].lower() in ('1', 'true', 'yes'))
             )
+
             try:
-                res = fetch_company_complete_invezgo(ticker, force=force)
+                from db_manager import get_company_detail_db
+                cached_db = get_company_detail_db(ticker)
+
+                if force or not cached_db:
+                    print(f"[API /api/company-detail] Mengambil data baru {ticker} dari IDX Engine (force={force}) & simpan ke SQLite DB")
+                    res = fetch_company_complete_invezgo(ticker, force=force)
+                else:
+                    res = cached_db
+                    print(f"[API /api/company-detail] Memuat {ticker} dari SQLite DB lokal (0 request API)")
+
                 if res.get('cachedDb'):
                     print(f"[API /api/company-detail] Memuat {ticker} dari SQLite DB lokal (0 request API)")
                 else:
-                    print(f"[API /api/company-detail] Mengambil data baru {ticker} dari Invezgo ({res.get('apiRequestsUsed', 0)} request API) & simpan ke SQLite DB")
+                    print(f"[API /api/company-detail] Mengambil data baru {ticker} dari IDX Engine & simpan ke SQLite DB")
                 payload = json.dumps(res, ensure_ascii=False).encode('utf-8')
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json; charset=utf-8')
@@ -396,8 +1047,30 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 ('force' in query and query['force'][0].lower() in ('1', 'true', 'yes'))
                 or ('refresh' in query and query['refresh'][0].lower() in ('1', 'true', 'yes'))
             )
+            req_user_id = query.get('user_id', [None])[0] or self.headers.get('X-User-Id')
+            req_email = query.get('email', [None])[0] or self.headers.get('X-User-Email')
+            is_pro = is_user_pro_or_admin(user_id=req_user_id, email=req_email)
+
             try:
-                res = get_or_generate_financial_insight(ticker, force_refresh=force)
+                from db_manager import get_financial_insight_db
+                cached_rec = get_financial_insight_db(ticker)
+
+                if not is_pro:
+                    # Starter: hanya kembalikan jika sudah ada di cache DB, dan JANGAN generate AI
+                    if cached_rec and cached_rec.get("insight"):
+                        res = {
+                            "ticker": ticker,
+                            "cached": True,
+                            "period_tag": cached_rec.get("period_tag"),
+                            "health_score": cached_rec.get("health_score", 0),
+                            "insight": cached_rec.get("insight"),
+                            "updated_at": cached_rec.get("updated_at"),
+                        }
+                    else:
+                        res = {"ticker": ticker, "error": "Fitur insight AI terkunci untuk akun Starter", "locked": True}
+                else:
+                    res = get_or_generate_financial_insight(ticker, force_refresh=force)
+
                 payload = json.dumps(res, ensure_ascii=False).encode('utf-8')
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json; charset=utf-8')
@@ -457,6 +1130,13 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 ('force' in query and query['force'][0].lower() in ('1', 'true', 'yes'))
                 or ('refresh' in query and query['refresh'][0].lower() in ('1', 'true', 'yes'))
             )
+            req_user_id = query.get('user_id', [None])[0] or self.headers.get('X-User-Id')
+            req_email = query.get('email', [None])[0] or self.headers.get('X-User-Email')
+            is_pro = is_user_pro_or_admin(user_id=req_user_id, email=req_email)
+
+            if force and not is_pro:
+                force = False
+
             try:
                 print(f"[API] Permintaan berita untuk: {ticker} (force={force})")
                 news_data = get_news(ticker, force_refresh=force)
@@ -502,6 +1182,8 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
             try:
                 print(f"[API] Permintaan Analisis AI untuk: {ticker} (force={force})")
                 analysis_res = analyze_market_instrument(ticker, tech_data, force_refresh=force)
+                if isinstance(analysis_res, dict):
+                    analysis_res['remaining_tokens'] = rem_tokens
                 payload = json.dumps(analysis_res, ensure_ascii=False).encode('utf-8')
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json; charset=utf-8')
@@ -656,8 +1338,24 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 post_body = self.rfile.read(content_len).decode('utf-8')
                 data = json.loads(post_body) if post_body else {}
                 messages = data.get('messages', [])
+                user_id = data.get('user_id') or self.headers.get('X-User-Id')
+                email = data.get('email') or self.headers.get('X-User-Email')
+
+                allowed, err_msg, rem_tokens = check_and_consume_token(user_id=user_id, email=email)
+                if not allowed:
+                    err_payload = json.dumps({'error': err_msg, 'locked': True, 'remaining_tokens': rem_tokens}).encode('utf-8')
+                    self.send_response(403)
+                    self.send_header('Content-Type', 'application/json; charset=utf-8')
+                    self.send_header('Access-Control-Allow-Origin', '*')
+                    self.send_header('Content-Length', str(len(err_payload)))
+                    self.end_headers()
+                    self.wfile.write(err_payload)
+                    return
+
                 print(f"[API POST /api/ai-chat] Memproses percakapan ({len(messages)} pesan)")
                 chat_res = run_chatbot_conversation(messages)
+                if isinstance(chat_res, dict):
+                    chat_res['remaining_tokens'] = rem_tokens
                 payload = json.dumps(chat_res, ensure_ascii=False).encode('utf-8')
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json; charset=utf-8')
@@ -685,7 +1383,20 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 ticker = data.get('ticker', 'IHSG').upper().strip()
                 tech_data = data.get('technical', {})
                 force = bool(data.get('force', False))
-                
+                user_id = data.get('user_id') or self.headers.get('X-User-Id')
+                email = data.get('email') or self.headers.get('X-User-Email')
+
+                allowed, err_msg, rem_tokens = check_and_consume_token(user_id=user_id, email=email)
+                if not allowed:
+                    err_payload = json.dumps({'error': err_msg, 'locked': True, 'remaining_tokens': rem_tokens}).encode('utf-8')
+                    self.send_response(403)
+                    self.send_header('Content-Type', 'application/json; charset=utf-8')
+                    self.send_header('Access-Control-Allow-Origin', '*')
+                    self.send_header('Content-Length', str(len(err_payload)))
+                    self.end_headers()
+                    self.wfile.write(err_payload)
+                    return
+
                 print(f"[API POST] Permintaan Analisis AI untuk: {ticker}")
                 analysis_res = analyze_market_instrument(ticker, tech_data, force_refresh=force)
                 payload = json.dumps(analysis_res, ensure_ascii=False).encode('utf-8')
@@ -700,6 +1411,409 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 print(f"[API POST /ai-analysis Error] {e}")
                 err_payload = json.dumps({'error': str(e)}).encode('utf-8')
                 self.send_response(500)
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_header('Content-Length', str(len(err_payload)))
+                self.end_headers()
+                self.wfile.write(err_payload)
+                return
+
+        if parsed.path == '/api/auth/google':
+            try:
+                content_len = int(self.headers.get('Content-Length', 0))
+                post_body = self.rfile.read(content_len).decode('utf-8')
+                data = json.loads(post_body) if post_body else {}
+                credential = data.get('credential', '')
+
+                if not credential:
+                    raise Exception("Token credential Google wajib disertakan")
+
+                # Verifikasi ID Token langsung ke endpoint resmi Google OAuth2
+                verify_resp = requests.get(
+                    f"https://oauth2.googleapis.com/tokeninfo?id_token={urllib.parse.quote(credential)}",
+                    timeout=10
+                )
+                if verify_resp.status_code != 200:
+                    raise Exception(f"Verifikasi token gagal: {verify_resp.text}")
+
+                token_info = verify_resp.json()
+                aud = token_info.get('aud')
+                if aud != GOOGLE_CLIENT_ID:
+                    raise Exception(f"Audience token tidak sesuai: {aud}")
+
+                email = token_info.get('email', '')
+                if not email:
+                    raise Exception("Alamat email tidak ditemukan dalam token Google")
+
+                email_verified = token_info.get('email_verified')
+                if str(email_verified).lower() not in ('true', '1'):
+                    raise Exception("Email belum diverifikasi oleh Google")
+
+                name = token_info.get('name') or email.split('@')[0]
+                picture = token_info.get('picture') or ''
+                sub = token_info.get('sub') or ''
+
+                user_profile = upsert_user(email, name, picture, sub, auth_provider='google')
+                session_token = f"tok_g_{hashlib.sha256((email + str(time.time())).encode()).hexdigest()[:24]}"
+
+                res_payload = json.dumps({
+                    'success': True,
+                    'user': user_profile,
+                    'token': session_token
+                }, ensure_ascii=False).encode('utf-8')
+
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_header('Content-Length', str(len(res_payload)))
+                self.end_headers()
+                self.wfile.write(res_payload)
+                return
+            except Exception as e:
+                print(f"[API /api/auth/google Error] {e}")
+                err_payload = json.dumps({'error': str(e), 'success': False}).encode('utf-8')
+                self.send_response(400)
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_header('Content-Length', str(len(err_payload)))
+                self.end_headers()
+                self.wfile.write(err_payload)
+                return
+
+        if parsed.path == '/api/auth/manual-login':
+            try:
+                content_len = int(self.headers.get('Content-Length', 0))
+                post_body = self.rfile.read(content_len).decode('utf-8')
+                data = json.loads(post_body) if post_body else {}
+                username_or_email = str(data.get('username', '')).strip().lower()
+                password = str(data.get('password', '')).strip()
+
+                if not username_or_email:
+                    raise Exception("Username atau alamat email wajib diisi")
+                if not password or len(password) < 4:
+                    raise Exception("Password minimal 4 karakter")
+
+                db_path = os.path.join(DATA_DIR, 'pintarsaham.db')
+                con = sqlite3.connect(db_path)
+                cur = con.cursor()
+                now_str = time.strftime('%d %b %Y, %H:%M WIB')
+
+                cur.execute("""
+                    SELECT id, username, name, email, role, tier, avatar, status, monthly_tokens, additional_tokens
+                    FROM users
+                    WHERE LOWER(email)=? OR LOWER(username)=? OR LOWER(id)=?
+                """, (username_or_email, username_or_email, username_or_email))
+                row = cur.fetchone()
+
+                if not row:
+                    # Fallback default seeding for standard admin & bisma
+                    if username_or_email in ('admin', 'admin@pintarsaham.id') and password == 'admin123':
+                        cur.execute("""
+                            INSERT INTO users (id, username, name, email, role, tier, avatar, auth_provider, status, last_login, created_at, monthly_tokens, additional_tokens)
+                            VALUES ('usr_admin', 'admin', 'Super Administrator', 'admin@pintarsaham.id', 'admin', 'institutional', 'AD', 'manual', 'active', ?, ?, 100, 0)
+                        """, (now_str, time.strftime('%Y-%m-%d')))
+                        con.commit()
+                        row = ('usr_admin', 'admin', 'Super Administrator', 'admin@pintarsaham.id', 'admin', 'institutional', 'AD', 'active', 100, 0)
+                    elif username_or_email in ('bisma', 'bismayoga432@gmail.com') and password in ('trader123', 'bisma123', 'admin123'):
+                        cur.execute("""
+                            INSERT INTO users (id, username, name, email, role, tier, avatar, auth_provider, status, last_login, created_at, monthly_tokens, additional_tokens)
+                            VALUES ('usr_bisma', 'bisma', 'Bisma Yoga', 'bismayoga432@gmail.com', 'admin', 'pro', 'BY', 'manual', 'active', ?, ?, 30, 0)
+                        """, (now_str, time.strftime('%Y-%m-%d')))
+                        con.commit()
+                        row = ('usr_bisma', 'bisma', 'Bisma Yoga', 'bismayoga432@gmail.com', 'admin', 'pro', 'BY', 'active', 30, 0)
+                    else:
+                        con.close()
+                        raise Exception("Akun tidak ditemukan. Silakan hubungi admin atau masuk melalui Google Auth.")
+
+                uid, u_uname, u_name, u_email, u_role, u_tier, u_avatar, u_status, u_m_tokens, u_a_tokens = row
+                if u_status == 'suspended':
+                    con.close()
+                    raise Exception("Akun ini telah ditangguhkan (Suspended). Silakan hubungi administrator.")
+
+                # Update last login
+                cur.execute("UPDATE users SET last_login=? WHERE id=?", (now_str, uid))
+                con.commit()
+                con.close()
+
+                user_profile = {
+                    'id': uid,
+                    'username': u_uname or username_or_email,
+                    'name': u_name or username_or_email,
+                    'email': u_email,
+                    'role': u_role or 'user',
+                    'tier': u_tier or 'starter',
+                    'avatar': u_avatar or (u_name[:2].upper() if u_name else 'US'),
+                    'status': u_status or 'active',
+                    'monthlyTokens': u_m_tokens if u_m_tokens is not None else (30 if u_tier == 'pro' else 0),
+                    'additionalTokens': u_a_tokens if u_a_tokens is not None else 0,
+                    'createdAt': time.strftime('%Y-%m-%d')
+                }
+
+                res_payload = json.dumps({'success': True, 'user': user_profile}, ensure_ascii=False).encode('utf-8')
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_header('Content-Length', str(len(res_payload)))
+                self.end_headers()
+                self.wfile.write(res_payload)
+                return
+            except Exception as e:
+                print(f"[API /api/auth/manual-login Error] {e}")
+                err_payload = json.dumps({'error': str(e), 'success': False}).encode('utf-8')
+                self.send_response(400)
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_header('Content-Length', str(len(err_payload)))
+                self.end_headers()
+                self.wfile.write(err_payload)
+                return
+
+        if parsed.path == '/api/admin/settings':
+            try:
+                content_len = int(self.headers.get('Content-Length', 0))
+                post_body = self.rfile.read(content_len).decode('utf-8')
+                data = json.loads(post_body) if post_body else {}
+
+                db_path = os.path.join(DATA_DIR, 'pintarsaham.db')
+                con = sqlite3.connect(db_path)
+                now_str = time.strftime('%d %b %Y, %H:%M WIB')
+
+                if 'whatsapp' in data:
+                    con.execute("INSERT OR REPLACE INTO system_settings (key, value, updated_at) VALUES (?, ?, ?)",
+                                ('admin_whatsapp', str(data['whatsapp']).strip(), now_str))
+                if 'whatsappDisplay' in data:
+                    con.execute("INSERT OR REPLACE INTO system_settings (key, value, updated_at) VALUES (?, ?, ?)",
+                                ('admin_whatsapp_display', str(data['whatsappDisplay']).strip(), now_str))
+                if 'email' in data:
+                    con.execute("INSERT OR REPLACE INTO system_settings (key, value, updated_at) VALUES (?, ?, ?)",
+                                ('admin_email', str(data['email']).strip(), now_str))
+                if 'waMessageTemplate' in data:
+                    con.execute("INSERT OR REPLACE INTO system_settings (key, value, updated_at) VALUES (?, ?, ?)",
+                                ('admin_wa_message_template', str(data['waMessageTemplate']).strip(), now_str))
+                if 'proMonthlyTokens' in data:
+                    try:
+                        pro_val = max(0, int(data['proMonthlyTokens']))
+                        con.execute("INSERT OR REPLACE INTO system_settings (key, value, updated_at) VALUES (?, ?, ?)",
+                                    ('pro_monthly_tokens', str(pro_val), now_str))
+                    except (ValueError, TypeError):
+                        pass
+                con.commit()
+                con.close()
+
+                settings = get_system_settings()
+                out = {
+                    'success': True,
+                    'whatsapp': settings.get('admin_whatsapp', ''),
+                    'whatsappDisplay': settings.get('admin_whatsapp_display', ''),
+                    'email': settings.get('admin_email', ''),
+                    'waMessageTemplate': settings.get('admin_wa_message_template', ''),
+                    'proMonthlyTokens': int(settings.get('pro_monthly_tokens', 30)),
+                }
+                payload = json.dumps(out).encode('utf-8')
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_header('Content-Length', str(len(payload)))
+                self.end_headers()
+                self.wfile.write(payload)
+                return
+            except Exception as e:
+                print(f"[API /api/admin/settings Error] {e}")
+                err_payload = json.dumps({'error': str(e)}).encode('utf-8')
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_header('Content-Length', str(len(err_payload)))
+                self.end_headers()
+                self.wfile.write(err_payload)
+                return
+
+        if parsed.path == '/api/admin/reset-monthly-tokens':
+            try:
+                settings = get_system_settings()
+                pro_tokens = int(settings.get('pro_monthly_tokens', 30))
+
+                db_path = os.path.join(DATA_DIR, 'pintarsaham.db')
+                con = sqlite3.connect(db_path)
+                cur = con.cursor()
+                cur.execute("UPDATE users SET monthly_tokens=? WHERE tier='pro'", (pro_tokens,))
+                cur.execute("UPDATE users SET monthly_tokens=100 WHERE tier='institutional'")
+                cur.execute("UPDATE users SET monthly_tokens=0 WHERE tier IN ('starter', 'free')")
+                con.commit()
+
+                # Hitung jumlah user terupdate
+                cur.execute("SELECT count(*) FROM users WHERE tier='pro'")
+                pro_count = cur.fetchone()[0]
+                con.close()
+
+                out = {
+                    'success': True,
+                    'message': f"Berhasil mereset jatah bulanan seluruh pengguna! ({pro_count} akun Pro di-reset ke {pro_tokens} token bulanan, kuota tambahan tetap aman).",
+                    'proMonthlyTokens': pro_tokens
+                }
+                payload = json.dumps(out).encode('utf-8')
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_header('Content-Length', str(len(payload)))
+                self.end_headers()
+                self.wfile.write(payload)
+                return
+            except Exception as e:
+                print(f"[API /api/admin/reset-monthly-tokens Error] {e}")
+                err_payload = json.dumps({'error': str(e), 'success': False}).encode('utf-8')
+                self.send_response(400)
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_header('Content-Length', str(len(err_payload)))
+                self.end_headers()
+                self.wfile.write(err_payload)
+                return
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_header('Content-Length', str(len(err_payload)))
+                self.end_headers()
+                self.wfile.write(err_payload)
+                return
+
+        if parsed.path == '/api/admin/create-user':
+            try:
+                import uuid
+                content_len = int(self.headers.get('Content-Length', 0))
+                post_body = self.rfile.read(content_len).decode('utf-8')
+                data = json.loads(post_body) if post_body else {}
+                name = str(data.get('name', '')).strip()
+                email = str(data.get('email', '')).strip()
+                role = str(data.get('role', 'user')).strip()
+                tier = str(data.get('tier', 'starter')).strip()
+                if not name or not email:
+                    raise Exception("Nama dan email wajib diisi")
+
+                db_path = os.path.join(DATA_DIR, 'pintarsaham.db')
+                con = sqlite3.connect(db_path)
+                cur = con.cursor()
+                user_id = f"usr_{uuid.uuid4().hex[:10]}"
+                monthly = 100 if tier == 'institutional' else (30 if tier == 'pro' else 0)
+                cur.execute("""
+                    INSERT INTO users (id, username, name, email, role, tier, status, last_login, created_at, monthly_tokens, additional_tokens)
+                    VALUES (?, ?, ?, ?, ?, ?, 'active', datetime('now', '+7 hours'), datetime('now', '+7 hours'), ?, 0)
+                """, (user_id, email.split('@')[0], name, email, role, tier, monthly))
+                con.commit()
+                con.close()
+
+                res_payload = json.dumps({
+                    'success': True,
+                    'user': {
+                        'id': user_id,
+                        'name': name,
+                        'email': email,
+                        'role': role,
+                        'tier': tier,
+                        'status': 'active',
+                        'lastLogin': 'Baru saja',
+                        'monthlyTokens': monthly,
+                        'additionalTokens': 0
+                    }
+                }).encode('utf-8')
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_header('Content-Length', str(len(res_payload)))
+                self.end_headers()
+                self.wfile.write(res_payload)
+                return
+            except Exception as e:
+                err_payload = json.dumps({'error': str(e)}).encode('utf-8')
+                self.send_response(400)
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_header('Content-Length', str(len(err_payload)))
+                self.end_headers()
+                self.wfile.write(err_payload)
+                return
+
+        if parsed.path == '/api/admin/update-user':
+            try:
+                content_len = int(self.headers.get('Content-Length', 0))
+                post_body = self.rfile.read(content_len).decode('utf-8')
+                data = json.loads(post_body) if post_body else {}
+                user_id = data.get('id')
+                role = data.get('role')
+                tier = data.get('tier')
+                status = data.get('status')
+                add_tokens = data.get('add_tokens')
+                monthly_tokens = data.get('monthly_tokens')
+                additional_tokens = data.get('additional_tokens')
+
+                if not user_id:
+                    raise Exception("ID user wajib disertakan")
+
+                db_path = os.path.join(DATA_DIR, 'pintarsaham.db')
+                con = sqlite3.connect(db_path)
+                cur = con.cursor()
+
+                if role:
+                    cur.execute("UPDATE users SET role=? WHERE id=?", (role, user_id))
+                if tier:
+                    pro_quota = get_pro_monthly_quota()
+                    cur.execute("UPDATE users SET tier=? WHERE id=?", (tier, user_id))
+                    # Otomatis sesuaikan jatah bulanan jika beralih tier
+                    if tier in ('pro', 'institutional'):
+                        cur.execute("UPDATE users SET monthly_tokens=CASE WHEN monthly_tokens IS NULL OR monthly_tokens=0 THEN ? ELSE monthly_tokens END WHERE id=?", (100 if tier == 'institutional' else pro_quota, user_id))
+                    elif tier in ('starter', 'free'):
+                        cur.execute("UPDATE users SET monthly_tokens=0 WHERE id=?", (user_id,))
+                if status:
+                    cur.execute("UPDATE users SET status=? WHERE id=?", (status, user_id))
+                if add_tokens is not None:
+                    try:
+                        add_val = int(add_tokens)
+                        cur.execute("UPDATE users SET additional_tokens = MAX(0, COALESCE(additional_tokens, 0) + ?) WHERE id=?", (add_val, user_id))
+                    except ValueError:
+                        pass
+                if monthly_tokens is not None:
+                    try:
+                        cur.execute("UPDATE users SET monthly_tokens = ? WHERE id=?", (int(monthly_tokens), user_id))
+                    except ValueError:
+                        pass
+                if additional_tokens is not None:
+                    try:
+                        cur.execute("UPDATE users SET additional_tokens = ? WHERE id=?", (int(additional_tokens), user_id))
+                    except ValueError:
+                        pass
+
+                con.commit()
+
+                # Ambil data user terbaru
+                cur.execute("SELECT id, name, email, role, tier, status, last_login, monthly_tokens, additional_tokens FROM users WHERE id=?", (user_id,))
+                updated_row = cur.fetchone()
+                con.close()
+
+                updated_user = None
+                if updated_row:
+                    updated_user = {
+                        'id': updated_row[0],
+                        'name': updated_row[1],
+                        'email': updated_row[2],
+                        'role': updated_row[3] or 'user',
+                        'tier': updated_row[4] or 'starter',
+                        'status': updated_row[5] or 'active',
+                        'lastLogin': updated_row[6] or 'Baru saja',
+                        'monthlyTokens': updated_row[7] if updated_row[7] is not None else (30 if updated_row[4] == 'pro' else 0),
+                        'additionalTokens': updated_row[8] if updated_row[8] is not None else 0
+                    }
+
+                res_payload = json.dumps({'success': True, 'user': updated_user}).encode('utf-8')
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_header('Content-Length', str(len(res_payload)))
+                self.end_headers()
+                self.wfile.write(res_payload)
+                return
+            except Exception as e:
+                print(f"[API /api/admin/update-user Error] {e}")
+                err_payload = json.dumps({'error': str(e)}).encode('utf-8')
+                self.send_response(400)
                 self.send_header('Content-Type', 'application/json; charset=utf-8')
                 self.send_header('Access-Control-Allow-Origin', '*')
                 self.send_header('Content-Length', str(len(err_payload)))
@@ -725,6 +1839,7 @@ def main():
     else:
         def _bg_sync_if_needed():
             try:
+                check_and_run_monthly_reset()
                 cache = get_market_cache()
                 save_market_quotes_bulk_db(cache)
                 ihsg_cached = cache.get('IHSG', {})

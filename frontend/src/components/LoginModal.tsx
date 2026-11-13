@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { UserProfile } from '../types';
 import { Icon } from './Icon';
 
@@ -15,105 +15,116 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   onLoginSuccess,
   onNotify,
 }) => {
-  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [tab, setTab] = useState<'login' | 'register'>('login');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [googleClientId, setGoogleClientId] = useState(
+    '662334087321-41g1tqlsl372oapv5nl3dfo246s7aonl.apps.googleusercontent.com'
+  );
+
+  useEffect(() => {
+    fetch('/api/auth/config')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.googleClientId) {
+          setGoogleClientId(data.googleClientId);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleGoogleCredentialResponse = async (response: any) => {
+    if (!response || !response.credential) return;
+    setGoogleLoading(true);
+    setErrorMsg('');
+    try {
+      const res = await fetch('/api/auth/google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ credential: response.credential }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Verifikasi login Google gagal.');
+      }
+      onLoginSuccess(data.user);
+      onNotify(`Selamat datang, ${data.user.name}! Berhasil masuk via Akun Google.`);
+      onClose();
+    } catch (err: any) {
+      console.error('[Google Auth Error]', err);
+      setErrorMsg(err.message || 'Gagal login menggunakan akun Google.');
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const google = (window as any).google;
+    if (google?.accounts?.id && googleClientId) {
+      try {
+        google.accounts.id.initialize({
+          client_id: googleClientId,
+          callback: handleGoogleCredentialResponse,
+          auto_select: false,
+          cancel_on_tap_outside: true,
+        });
+      } catch (e) {
+        console.warn('GIS init error:', e);
+      }
+    }
+  }, [isOpen, googleClientId]);
+
+  const handleGoogleClick = () => {
+    const google = (window as any).google;
+    if (google?.accounts?.id) {
+      google.accounts.id.prompt((notification: any) => {
+        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+          window.location.href = '/api/auth/google/login';
+        }
+      });
+    } else {
+      window.location.href = '/api/auth/google/login';
+    }
+  };
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
+    const cleanUser = username.trim();
+
+    if (!cleanUser) {
+      setErrorMsg('Username atau email wajib diisi.');
+      return;
+    }
+    if (!password || password.length < 4) {
+      setErrorMsg('Password minimal 4 karakter.');
+      return;
+    }
+
     setLoading(true);
-
-    setTimeout(() => {
+    try {
+      const res = await fetch('/api/auth/manual-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: cleanUser, password }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Username atau password salah.');
+      }
+      onLoginSuccess(data.user);
+      onNotify(`Selamat datang kembali, ${data.user.name}!`);
+      onClose();
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Gagal masuk. Periksa kembali kredensial Anda.');
+    } finally {
       setLoading(false);
-      const cleanUser = username.trim().toLowerCase();
-
-      if (!cleanUser) {
-        setErrorMsg('Username atau email wajib diisi.');
-        return;
-      }
-      if (!password || password.length < 4) {
-        setErrorMsg('Password minimal 4 karakter.');
-        return;
-      }
-
-      if (mode === 'login') {
-        if (cleanUser === 'admin' && password === 'admin123') {
-          const adminUser: UserProfile = {
-            id: 'usr_admin',
-            username: 'admin',
-            name: 'Super Administrator',
-            email: 'admin@pintarsaham.id',
-            role: 'admin',
-            tier: 'institutional',
-            avatar: 'AD',
-            createdAt: '2026-01-01',
-          };
-          onLoginSuccess(adminUser);
-          onNotify('Berhasil login sebagai Super Admin! Akses Admin Console terbuka.');
-          onClose();
-        } else if (cleanUser === 'bisma' || cleanUser.includes('bisma')) {
-          const proUser: UserProfile = {
-            id: 'usr_bisma',
-            username: 'bisma',
-            name: 'Bisma Yoga',
-            email: 'bismayoga432@gmail.com',
-            role: 'user',
-            tier: 'pro',
-            avatar: 'BY',
-            createdAt: '2026-02-15',
-          };
-          onLoginSuccess(proUser);
-          onNotify('Selamat datang kembali, Bisma! Akun Pro Trader aktif.');
-          onClose();
-        } else {
-          // Standard login
-          const standardUser: UserProfile = {
-            id: 'usr_' + Date.now().toString(36),
-            username: cleanUser,
-            name: cleanUser.toUpperCase(),
-            email: `${cleanUser}@example.com`,
-            role: 'user',
-            tier: 'pro',
-            avatar: cleanUser.slice(0, 2).toUpperCase(),
-            createdAt: new Date().toISOString().slice(0, 10),
-          };
-          onLoginSuccess(standardUser);
-          onNotify(`Selamat datang, ${cleanUser}! Berhasil masuk ke PintarSaham.`);
-          onClose();
-        }
-      } else {
-        // Register mode
-        const newUser: UserProfile = {
-          id: 'usr_' + Date.now().toString(36),
-          username: cleanUser,
-          name: name.trim() || cleanUser,
-          email: email.trim() || `${cleanUser}@example.com`,
-          role: 'user',
-          tier: 'pro',
-          avatar: (cleanUser[0] || 'U').toUpperCase(),
-          createdAt: new Date().toISOString().slice(0, 10),
-        };
-        onLoginSuccess(newUser);
-        onNotify(`Akun ${cleanUser} berhasil didaftarkan! Akses Pro diaktifkan.`);
-        onClose();
-      }
-    }, 450);
-  };
-
-  const handleQuickDemo = (type: 'admin' | 'trader') => {
-    if (type === 'admin') {
-      setUsername('admin');
-      setPassword('admin123');
-    } else {
-      setUsername('bisma');
-      setPassword('trader123');
     }
   };
 
@@ -146,40 +157,44 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
         {/* Brand Header */}
         <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-          <img src="/logo-putih.png" alt="PintarSaham" style={{ height: '34px', background: 'var(--navy)', padding: '6px 14px', borderRadius: '8px' }} />
+          <img
+            src="/logo-putih.png"
+            alt="PintarSaham"
+            style={{ height: '34px', background: 'var(--navy)', padding: '6px 14px', borderRadius: '8px' }}
+          />
           <h2 style={{ fontSize: '20px', fontWeight: 700, marginTop: '12px' }}>
-            {mode === 'login' ? 'Masuk ke PintarSaham' : 'Buat Akun Investor'}
+            {tab === 'login' ? 'Masuk ke PintarSaham' : 'Daftar Akun Baru'}
           </h2>
           <p style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '4px' }}>
-            {mode === 'login'
-              ? 'Akses riset data pasar real-time, valuasi MOS & AI Trading Plan.'
-              : 'Daftar sekarang untuk menyimpan watchlist dan personalisasi portofolio.'}
+            {tab === 'login'
+              ? 'Gunakan Akun Google resmi atau kredensial terdaftar untuk melanjutkan.'
+              : 'Pendaftaran akun instan melalui verifikasi Akun Google.'}
           </p>
         </div>
 
-        {/* Tabs: Login / Register */}
+        {/* Tab Selector: Masuk / Daftar Akun */}
         <div
           style={{
             display: 'flex',
             background: 'var(--soft, #f1f5f9)',
             borderRadius: '9px',
-            padding: '3px',
+            padding: '4px',
             marginBottom: '18px',
           }}
         >
           <button
             type="button"
-            onClick={() => { setMode('login'); setErrorMsg(''); }}
+            onClick={() => { setTab('login'); setErrorMsg(''); }}
             style={{
               flex: 1,
               padding: '7px 0',
               borderRadius: '7px',
               border: 'none',
               fontSize: '12px',
-              fontWeight: mode === 'login' ? 700 : 500,
-              background: mode === 'login' ? 'var(--card-bg, #fff)' : 'transparent',
-              color: mode === 'login' ? 'var(--ink)' : 'var(--muted)',
-              boxShadow: mode === 'login' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+              fontWeight: tab === 'login' ? 700 : 500,
+              background: tab === 'login' ? 'var(--card-bg, #fff)' : 'transparent',
+              color: tab === 'login' ? 'var(--ink)' : 'var(--muted)',
+              boxShadow: tab === 'login' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
               cursor: 'pointer',
               transition: 'all .15s',
             }}
@@ -188,17 +203,17 @@ export const LoginModal: React.FC<LoginModalProps> = ({
           </button>
           <button
             type="button"
-            onClick={() => { setMode('register'); setErrorMsg(''); }}
+            onClick={() => { setTab('register'); setErrorMsg(''); }}
             style={{
               flex: 1,
               padding: '7px 0',
               borderRadius: '7px',
               border: 'none',
               fontSize: '12px',
-              fontWeight: mode === 'register' ? 700 : 500,
-              background: mode === 'register' ? 'var(--card-bg, #fff)' : 'transparent',
-              color: mode === 'register' ? 'var(--ink)' : 'var(--muted)',
-              boxShadow: mode === 'register' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+              fontWeight: tab === 'register' ? 700 : 500,
+              background: tab === 'register' ? 'var(--card-bg, #fff)' : 'transparent',
+              color: tab === 'register' ? 'var(--ink)' : 'var(--muted)',
+              boxShadow: tab === 'register' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
               cursor: 'pointer',
               transition: 'all .15s',
             }}
@@ -223,115 +238,141 @@ export const LoginModal: React.FC<LoginModalProps> = ({
           </div>
         )}
 
-        <form onSubmit={handleSubmit}>
-          {mode === 'register' && (
-            <div style={{ marginBottom: '12px' }}>
-              <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--muted)', marginBottom: '5px' }}>
-                NAMA LENGKAP
-              </label>
-              <input
-                type="text"
-                className="select"
-                placeholder="cth. Bisma Yoga"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                style={{ width: '100%', fontSize: '12px', padding: '9px 12px' }}
-                required
-              />
-            </div>
-          )}
-
-          <div style={{ marginBottom: '12px' }}>
-            <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--muted)', marginBottom: '5px' }}>
-              USERNAME / EMAIL
-            </label>
-            <input
-              type="text"
-              className="select"
-              placeholder="Username atau alamat email"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              style={{ width: '100%', fontSize: '12px', padding: '9px 12px' }}
-              autoComplete="username"
-              required
-            />
-          </div>
-
-          {mode === 'register' && (
-            <div style={{ marginBottom: '12px' }}>
-              <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--muted)', marginBottom: '5px' }}>
-                ALAMAT EMAIL
-              </label>
-              <input
-                type="email"
-                className="select"
-                placeholder="nama@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                style={{ width: '100%', fontSize: '12px', padding: '9px 12px' }}
-                autoComplete="email"
-                required
-              />
-            </div>
-          )}
-
-          <div style={{ marginBottom: '18px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
-              <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--muted)' }}>
-                PASSWORD
-              </label>
-              {mode === 'login' && (
-                <span style={{ fontSize: '10px', color: 'var(--blue)', cursor: 'pointer' }}>
-                  Lupa password?
-                </span>
-              )}
-            </div>
-            <input
-              type="password"
-              className="select"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              style={{ width: '100%', fontSize: '12px', padding: '9px 12px' }}
-              autoComplete="current-password"
-              required
-            />
-          </div>
-
-          <button
-            type="submit"
-            className="btn primary"
-            disabled={loading}
-            style={{ width: '100%', padding: '11px', fontSize: '13px', fontWeight: 700, justifyContent: 'center' }}
-          >
-            {loading ? 'Memproses...' : mode === 'login' ? 'Masuk Sekarang' : 'Daftar Akun Baru'}
-          </button>
-        </form>
-
-        {/* Quick Demo Credentials */}
-        <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid var(--line)' }}>
-          <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.8px', marginBottom: '8px', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
-            <Icon name="zap" cls="sm" style={{ color: '#eab308' }} /> AKUN DEMO CEPAT (KLIK UNTUK MENGISI)
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+        {/* ── TAB 1: MASUK (LOGIN) ── */}
+        {tab === 'login' && (
+          <div>
             <button
               type="button"
-              className="btn small-btn"
-              onClick={() => handleQuickDemo('admin')}
-              style={{ fontSize: '11px', padding: '6px 8px', justifyContent: 'center', gap: '5px' }}
+              onClick={handleGoogleClick}
+              disabled={googleLoading}
+              style={{
+                width: '100%',
+                height: '44px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '10px',
+                background: '#ffffff',
+                border: '1px solid #cbd5e1',
+                borderRadius: '8px',
+                color: '#1e293b',
+                fontSize: '13px',
+                fontWeight: 650,
+                boxShadow: '0 1px 2px rgba(0,0,0,0.06)',
+                cursor: googleLoading ? 'wait' : 'pointer',
+              }}
             >
-              <Icon name="crown" cls="sm" style={{ color: '#eab308' }} /> Super Admin
+              <svg width="18" height="18" viewBox="0 0 18 18">
+                <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.616z"/>
+                <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/>
+                <path fill="#FBBC05" d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707 0-.59.102-1.167.282-1.707V4.961H.957C.347 6.175 0 7.55 0 9c0 1.45.347 2.825.957 4.039l3.007-2.332z"/>
+                <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.961L3.964 7.293C4.672 5.166 6.656 3.58 9 3.58z"/>
+              </svg>
+              <span>{googleLoading ? 'Menghubungkan ke Google...' : 'Masuk dengan Google'}</span>
             </button>
+
+            <div style={{ display: 'flex', alignItems: 'center', margin: '18px 0 14px', color: 'var(--muted)', fontSize: '10px' }}>
+              <div style={{ flex: 1, height: '1px', background: 'var(--line)' }} />
+              <span style={{ padding: '0 8px', textTransform: 'uppercase', letterSpacing: '0.6px', fontWeight: 600 }}>
+                atau kredensial manual
+              </span>
+              <div style={{ flex: 1, height: '1px', background: 'var(--line)' }} />
+            </div>
+
+            <form onSubmit={handleSubmit}>
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: 650, color: 'var(--muted)', marginBottom: '5px' }}>
+                  USERNAME / EMAIL
+                </label>
+                <input
+                  type="text"
+                  className="select"
+                  placeholder="Username atau email terdaftar"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  style={{ width: '100%', fontSize: '12.5px', padding: '9px 12px' }}
+                  autoComplete="username"
+                  required
+                />
+              </div>
+
+              <div style={{ marginBottom: '18px' }}>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: 650, color: 'var(--muted)', marginBottom: '5px' }}>
+                  PASSWORD
+                </label>
+                <input
+                  type="password"
+                  className="select"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  style={{ width: '100%', fontSize: '12.5px', padding: '9px 12px' }}
+                  autoComplete="current-password"
+                  required
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="btn primary"
+                disabled={loading}
+                style={{ width: '100%', padding: '11px', fontSize: '13px', fontWeight: 700, justifyContent: 'center' }}
+              >
+                {loading ? 'Memverifikasi...' : 'Masuk Sekarang'}
+              </button>
+            </form>
+          </div>
+        )}
+
+        {/* ── TAB 2: DAFTAR AKUN (GOOGLE AUTH ONLY) ── */}
+        {tab === 'register' && (
+          <div>
+            <div
+              style={{
+                background: 'var(--soft, #f8fafc)',
+                border: '1px solid var(--line, #e2e8f0)',
+                borderRadius: '10px',
+                padding: '12px 14px',
+                fontSize: '11.5px',
+                lineHeight: 1.5,
+                color: 'var(--muted)',
+                marginBottom: '16px',
+              }}
+            >
+              Pendaftaran akun baru saat ini dibuka eksklusif menggunakan <strong>Akun Google</strong> untuk verifikasi instan.
+            </div>
+
             <button
               type="button"
-              className="btn small-btn"
-              onClick={() => handleQuickDemo('trader')}
-              style={{ fontSize: '11px', padding: '6px 8px', justifyContent: 'center', gap: '5px' }}
+              onClick={handleGoogleClick}
+              disabled={googleLoading}
+              style={{
+                width: '100%',
+                height: '44px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '10px',
+                background: '#ffffff',
+                border: '1px solid #cbd5e1',
+                borderRadius: '8px',
+                color: '#1e293b',
+                fontSize: '13px',
+                fontWeight: 650,
+                boxShadow: '0 1px 2px rgba(0,0,0,0.06)',
+                cursor: googleLoading ? 'wait' : 'pointer',
+              }}
             >
-              <Icon name="star" cls="sm" style={{ color: '#38bdf8' }} /> Pro Trader (Bisma)
+              <svg width="18" height="18" viewBox="0 0 18 18">
+                <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.616z"/>
+                <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/>
+                <path fill="#FBBC05" d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707 0-.59.102-1.167.282-1.707V4.961H.957C.347 6.175 0 7.55 0 9c0 1.45.347 2.825.957 4.039l3.007-2.332z"/>
+                <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.961L3.964 7.293C4.672 5.166 6.656 3.58 9 3.58z"/>
+              </svg>
+              <span>{googleLoading ? 'Menghubungkan ke Google...' : 'Daftar dengan Akun Google'}</span>
             </button>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

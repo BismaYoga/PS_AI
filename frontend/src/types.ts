@@ -134,6 +134,7 @@ export interface AIAnalysisResult {
   is_index?: boolean;
   market_status?: string;
   executive_summary: string;
+  simple_summary?: string;
   sentiment_bias?: string;
   sentiment?: string;
   technical_insight?: string;
@@ -167,17 +168,22 @@ export interface AIAnalysisResult {
 
 export type Timeframe = '1D' | '1M' | '3M' | '6M' | '1Y';
 export type ChartType = 'line' | 'candle';
-export type Route = 'home' | 'watchlist' | 'stock' | 'chat' | 'compare' | 'admin';
+export type Route = 'home' | 'watchlist' | 'stock' | 'chat' | 'admin';
+
+export type UserRole = 'user' | 'admin' | 'super admin';
+export type UserTier = 'starter' | 'free' | 'pro' | 'institutional';
 
 export interface UserProfile {
   id: string;
   username: string;
   name: string;
   email: string;
-  role: 'admin' | 'user';
-  tier: 'free' | 'pro' | 'institutional';
+  role: UserRole;
+  tier: UserTier;
   avatar?: string;
   createdAt?: string;
+  monthlyTokens?: number;
+  additionalTokens?: number;
 }
 
 export interface ApprovalPlan {

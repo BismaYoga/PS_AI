@@ -10,7 +10,6 @@ import { DemoBar } from './components/DemoBar';
 import { HomeView } from './components/HomeView';
 import { WatchlistView } from './components/WatchlistView';
 import { StockDetailView } from './components/StockDetailView';
-import { CompareView } from './components/CompareView';
 import { ChatView } from './components/ChatView';
 import { AdminView } from './components/AdminView';
 import { LoginModal } from './components/LoginModal';
@@ -18,6 +17,9 @@ import { DrawerModal, DrawerPayload } from './components/DrawerModal';
 import { Toast } from './components/Toast';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { AIChatWidget } from './components/AIChatWidget';
+import { WelcomeLoginView } from './components/WelcomeLoginView';
+import { ContactAdminModal } from './components/ContactAdminModal';
+import { isUserProOrAdmin } from './utils';
 
 // Nilai acuan penutupan terakhir resmi BEI dari database lokal SQLite (mencegah loncatan angka lawas 6277 saat delay request awal)
 const DEFAULT_IHSG_DATA = {
@@ -61,23 +63,136 @@ export default function App() {
     setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
   }, []);
 
+  const defaultAdminUser: UserProfile = {
+    id: 'usr_admin',
+    username: 'admin',
+    name: 'Super Administrator',
+    email: 'admin@pintarsaham.id',
+    role: 'super admin',
+    tier: 'institutional',
+    avatar: 'AD',
+    createdAt: '2025-01-01',
+    monthlyTokens: 100,
+    additionalTokens: 50,
+  };
+
   // User Authentication state
   const [user, setUser] = useState<UserProfile | null>(() => {
     try {
       const saved = localStorage.getItem('ps-auth-user');
-      return saved ? JSON.parse(saved) : null;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && (parsed.id || parsed.username || parsed.email)) return parsed;
+      }
+      return defaultAdminUser;
     } catch {
-      return null;
+      return defaultAdminUser;
     }
   });
 
   const [loginModalOpen, setLoginModalOpen] = useState(false);
+  const [contactModalOpen, setContactModalOpen] = useState(false);
+  const [proMonthlyTokens, setProMonthlyTokens] = useState<number>(30);
+
+  useEffect(() => {
+    fetch('/api/settings/contact')
+      .then((r) => r.json())
+      .then((d) => {
+        if (d && d.proMonthlyTokens !== undefined) {
+          setProMonthlyTokens(Number(d.proMonthlyTokens));
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const handleLoginSuccess = useCallback((usr: UserProfile) => {
     setUser(usr);
     try {
       localStorage.setItem('ps-auth-user', JSON.stringify(usr));
     } catch {}
+  }, []);
+
+  // Handle Google OAuth callback from URL redirect params
+  useEffect(() => {
+    try {
+      const searchParams = new URLSearchParams(window.location.search);
+      if (searchParams.get('login') === 'google') {
+        const email = searchParams.get('email') || '';
+        const name = searchParams.get('name') || email;
+        const avatar = searchParams.get('avatar') || '';
+        const role = (searchParams.get('role') || 'user') as any;
+        const tier = (searchParams.get('tier') || 'starter') as any;
+        const id = searchParams.get('id') || ('usr_g_' + Date.now().toString(36));
+        const monthlyTokens = parseInt(searchParams.get('monthly_tokens') || '0', 10);
+        const additionalTokens = parseInt(searchParams.get('additional_tokens') || '0', 10);
+
+        const googleUser: UserProfile = {
+          id,
+          username: email.split('@')[0],
+          name,
+          email,
+          role,
+          tier,
+          avatar: avatar || name.slice(0, 2).toUpperCase(),
+          createdAt: new Date().toISOString().slice(0, 10),
+          monthlyTokens,
+          additionalTokens,
+        };
+        handleLoginSuccess(googleUser);
+        setToastMessage(`Selamat datang, ${name}! Berhasil masuk via Akun Google.`);
+        window.history.replaceState({}, document.title, window.location.pathname + window.location.hash);
+      } else if (searchParams.get('auth_error')) {
+        setToastMessage(`Gagal login Google: ${searchParams.get('auth_error')}`);
+        window.history.replaceState({}, document.title, window.location.pathname + window.location.hash);
+      }
+    } catch (e) {
+      console.warn('OAuth URL parse error:', e);
+    }
+  }, [handleLoginSuccess]);
+
+  // Sync live user profile & tokens from database periodically or on load
+  useEffect(() => {
+    if (!user?.id && !user?.email) return;
+    const fetchLiveProfile = async () => {
+      try {
+        const param = user.id ? `id=${encodeURIComponent(user.id)}` : `email=${encodeURIComponent(user.email)}`;
+        const res = await fetch(`/api/user/profile?${param}`);
+        if (res.ok) {
+          const liveData = await res.json();
+          setUser((prev) => {
+            if (!prev) return null;
+            const updated = {
+              ...prev,
+              role: liveData.role || prev.role,
+              tier: liveData.tier || prev.tier,
+              monthlyTokens: liveData.monthlyTokens !== undefined ? liveData.monthlyTokens : prev.monthlyTokens,
+              additionalTokens: liveData.additionalTokens !== undefined ? liveData.additionalTokens : prev.additionalTokens,
+            };
+            localStorage.setItem('ps-auth-user', JSON.stringify(updated));
+            return updated;
+          });
+        }
+      } catch (e) {
+        console.warn('Sync profile error:', e);
+      }
+    };
+    fetchLiveProfile();
+  }, [user?.id, user?.email, proMonthlyTokens]);
+
+  const handleUpdateTokens = useCallback((rem: { monthly?: number; additional?: number; total?: number }) => {
+    if (!rem) return;
+    setUser((prev) => {
+      if (!prev) return null;
+      const updated = {
+        ...prev,
+        monthlyTokens: rem.monthly !== undefined ? rem.monthly : prev.monthlyTokens,
+        additionalTokens: rem.additional !== undefined ? rem.additional : prev.additionalTokens,
+      };
+      try {
+        localStorage.setItem('ps-auth-user', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
   }, []);
 
   const handleLogout = useCallback(() => {
@@ -88,20 +203,10 @@ export default function App() {
     setToastMessage('Anda telah keluar (logout).');
   }, []);
 
-  // Compare page state
-  const [compareTickerA, setCompareTickerA] = useState('BBCA');
-  const [compareTickerB, setCompareTickerB] = useState('BBRI');
-
-  const handleOpenCompare = useCallback((tickerA?: string, tickerB?: string) => {
-    if (tickerA) setCompareTickerA(tickerA);
-    if (tickerB) setCompareTickerB(tickerB);
-    window.location.hash = '#compare';
-  }, []);
-
   // Parse initial route from URL hash
   const parseHash = (): { route: Route; ticker: string } => {
     const hash = window.location.hash || '#home';
-    if (hash === '#chat' || hash === '#compare') {
+    if (hash === '#chat') {
       return { route: 'chat', ticker: 'BBCA' };
     }
     if (hash === '#admin') {
@@ -182,8 +287,10 @@ export default function App() {
   const refreshSingleInstrument = useCallback(async (ticker: string, force: boolean = false) => {
     const clean = ticker.toUpperCase().trim();
     try {
+      const authQuery = user ? `&user_id=${encodeURIComponent(user.id)}&email=${encodeURIComponent(user.email)}` : '';
+      const tsQuery = force ? `&_t=${Date.now()}` : '';
       const res = await fetch(
-        `/api/stock?ticker=${encodeURIComponent(clean)}${force ? '&force=1' : ''}`
+        `/api/stock?ticker=${encodeURIComponent(clean)}${force ? '&force=1' : ''}${authQuery}${tsQuery}`
       );
       if (res.ok) {
         const data = await res.json();
@@ -202,15 +309,21 @@ export default function App() {
       console.warn(`Live fetch failed for ${clean}:`, err);
     }
     return false;
-  }, []);
+  }, [user]);
 
   const refreshAllMarket = useCallback(async () => {
     notify('Memperbarui data fundamental & MOS seluruh emiten...');
     try {
-      const res = await fetch('/api/market-data?refresh=1');
+      const authQuery = user ? `&user_id=${encodeURIComponent(user.id)}&email=${encodeURIComponent(user.email)}` : '';
+      const res = await fetch(`/api/market-data?refresh=1&_t=${Date.now()}${authQuery}`);
       if (res.ok) {
         const bundle = await res.json();
-        if (bundle.market) setMarketBundle(bundle.market);
+        if (bundle.market) {
+          setMarketBundle(bundle.market);
+          try {
+            localStorage.setItem('ps_market_bundle_cache', JSON.stringify(bundle.market));
+          } catch {}
+        }
         if (bundle.events && bundle.events.length) setCorporateEvents(bundle.events);
         if (bundle.emitens && bundle.emitens.length) setAllEmitens(bundle.emitens);
         notify('Data fundamental & MOS berhasil diperbarui!');
@@ -220,7 +333,7 @@ export default function App() {
       console.warn('Refresh all market data failed:', err);
     }
     notify('Gagal memperbarui data pasar');
-  }, [notify]);
+  }, [notify, user]);
 
   // Fetch live market data bundle & complete 976 emitens catalog
   const [bundleLoaded, setBundleLoaded] = useState<boolean>(false);
@@ -277,8 +390,11 @@ export default function App() {
   }, []);
 
   // On-demand live fetch via Invezgo API when user selects a stock that doesn't have full 1-year OHLC yet
+  // Khusus Pro Trader / Admin: Akun Starter TIDAK memicu live fetch ke Invezgo API
   useEffect(() => {
     if (!bundleLoaded) return;
+    const isPro = isUserProOrAdmin(user);
+    if (!isPro) return;
     const targetTicker = route === 'stock' ? selectedStockTicker : activeInstrument;
     if (!targetTicker) return;
     const existing = marketBundle[targetTicker];
@@ -286,7 +402,7 @@ export default function App() {
       refreshSingleInstrument(targetTicker);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bundleLoaded, route, selectedStockTicker, activeInstrument]);
+  }, [bundleLoaded, route, selectedStockTicker, activeInstrument, user]);
 
   // Listen to hashchange
   useEffect(() => {
@@ -310,7 +426,7 @@ export default function App() {
       document.title = `${selectedStockTicker} — PintarSaham Intelligence`;
     } else if (route === 'watchlist') {
       document.title = 'Watchlist — PintarSaham Intelligence';
-    } else if (route === 'chat' || route === 'compare') {
+    } else if (route === 'chat') {
       document.title = 'Chat AI — PintarSaham Intelligence';
     } else if (route === 'admin') {
       document.title = 'Admin Console — PintarSaham Intelligence';
@@ -388,11 +504,12 @@ export default function App() {
       window.location.hash = `#stock/${targetTicker}`;
     } else if (newRoute === 'watchlist') {
       window.location.hash = '#watchlist';
-    } else if (newRoute === 'chat' || newRoute === 'compare') {
+    } else if (newRoute === 'chat') {
       window.location.hash = '#chat';
     } else if (newRoute === 'admin') {
-      if (user?.role !== 'admin') {
-        notify('Akses Admin terbatas: Silakan masuk sebagai akun Super Admin.');
+      const isAdmin = user?.role === 'admin' || user?.role === 'super admin';
+      if (!isAdmin) {
+        notify('Akses Admin terbatas: Silakan masuk sebagai akun Admin atau Super Admin.');
         setLoginModalOpen(true);
         return;
       }
@@ -404,8 +521,9 @@ export default function App() {
 
   // Guard admin route on logout or direct access
   useEffect(() => {
-    if (route === 'admin' && user?.role !== 'admin') {
-      notify('Akses Admin memerlukan kredensial Super Admin.');
+    const isAdmin = user?.role === 'admin' || user?.role === 'super admin';
+    if (route === 'admin' && !isAdmin) {
+      notify('Akses Admin memerlukan kredensial Admin atau Super Admin.');
       window.location.hash = '#home';
     }
   }, [route, user, notify]);
@@ -468,125 +586,155 @@ export default function App() {
 
   return (
     <div className="app-root">
-      {/* 1. Header */}
-      <Header
-        route={route}
-        currentTicker={selectedStockTicker}
-        watchlistCount={favorites.size}
-        onNavigate={handleNavigate}
-        stocks={stocks}
-        onOpenDrawer={(type) => setDrawerPayload({ type })}
-        theme={theme}
-        onToggleTheme={toggleTheme}
-        onOpenCompare={() => handleOpenCompare()}
-        user={user}
-        onOpenLogin={() => setLoginModalOpen(true)}
-        onLogout={handleLogout}
-      />
-
-      {/* 2. Main Views */}
-      <main id="app" className="main">
-        {route === 'admin' && (
-          <AdminView
-            currentUser={user}
-            stocks={stocks}
+      {!user ? (
+        <>
+          {/* Welcome & Login 1-Page Experience for Non-Logged-in Visitors */}
+          <WelcomeLoginView
+            onLoginSuccess={handleLoginSuccess}
             onNotify={notify}
-            onNavigateHome={() => handleNavigate('home')}
+            theme={theme}
+            onToggleTheme={toggleTheme}
+            onOpenContactAdmin={() => setContactModalOpen(true)}
           />
-        )}
 
-        {(route === 'chat' || route === 'compare') && (
-          <ChatView
+          <ContactAdminModal
+            isOpen={contactModalOpen}
+            onClose={() => setContactModalOpen(false)}
+            user={null}
+            featureTitle="Aktivasi Akun & Kuota Token"
+          />
+        </>
+      ) : (
+        <>
+          {/* 1. Header */}
+          <Header
+            route={route}
+            currentTicker={selectedStockTicker}
+            watchlistCount={favorites.size}
+            onNavigate={handleNavigate}
             stocks={stocks}
-            onSelectStock={(sym) => handleNavigate('stock', sym)}
+            onOpenDrawer={(type) => setDrawerPayload({ type })}
+            theme={theme}
+            onToggleTheme={toggleTheme}
+            user={user}
+            onOpenLogin={() => setLoginModalOpen(true)}
+            onLogout={handleLogout}
+            proMonthlyTokens={proMonthlyTokens}
+          />
+
+          {/* 2. Main Views */}
+          <main id="app" className={`main ${route === 'chat' ? 'chat-page-main' : ''}`}>
+            {route === 'admin' && (
+              <AdminView
+                currentUser={user}
+                stocks={stocks}
+                onNotify={notify}
+                onNavigateHome={() => handleNavigate('home')}
+                onUpdateProTokens={(val) => setProMonthlyTokens(val)}
+              />
+            )}
+
+            {route === 'chat' && (
+              <ChatView
+                stocks={stocks}
+                onSelectStock={(sym) => handleNavigate('stock', sym)}
+                onNotify={notify}
+                onNavigateHome={() => handleNavigate('home')}
+                currentUser={user}
+                onUpdateTokens={handleUpdateTokens}
+                proMonthlyTokens={proMonthlyTokens}
+              />
+            )}
+
+            {route === 'home' && (
+              <HomeView
+                indexData={indexData}
+                stocks={stocks}
+                events={corporateEvents}
+                favorites={favorites}
+                activeInstrument={activeInstrument}
+                marketCache={marketBundle}
+                onRefreshInstrument={(t) => refreshSingleInstrument(t, true)}
+                onRefreshAll={refreshAllMarket}
+                onSelectInstrument={(sym) => setActiveInstrument(sym)}
+                onSelectStockDetail={(sym) => handleNavigate('stock', sym)}
+                onToggleFavorite={handleToggleFavorite}
+                onOpenDrawer={(type, payload) => setDrawerPayload({ type, ...payload })}
+                onOpenNewsDrawer={(newsItem) => setDrawerPayload({ type: 'news', newsItem })}
+                onOpenEventDrawer={(eventItem) => setDrawerPayload({ type: 'event', eventItem })}
+                onOpenMethod={() => setDrawerPayload({ type: 'method' })}
+                onOpenAbout={() => setDrawerPayload({ type: 'about' })}
+                onNotify={notify}
+                currentUser={user}
+              />
+            )}
+
+            {route === 'watchlist' && (
+              <WatchlistView
+                stocks={stocks}
+                favorites={favorites}
+                onToggleFavorite={handleToggleFavorite}
+                onSelectStock={(sym) => handleNavigate('stock', sym)}
+                onOpenMethod={() => setDrawerPayload({ type: 'method' })}
+                onOpenAbout={() => setDrawerPayload({ type: 'about' })}
+                onNavigateHome={() => handleNavigate('home')}
+              />
+            )}
+
+            {route === 'stock' && (
+              <StockDetailView
+                stock={currentStock}
+                stocks={stocks}
+                onSelectStock={(sym) => handleNavigate('stock', sym)}
+                favorites={favorites}
+                marketCache={marketBundle}
+                onRefreshInstrument={(t) => refreshSingleInstrument(t, true)}
+                onToggleFavorite={handleToggleFavorite}
+                onOpenDrawer={(type, payload) => setDrawerPayload({ type, ...payload })}
+                onOpenNewsDrawer={(newsItem) => setDrawerPayload({ type: 'news', newsItem })}
+                onOpenMethod={() => setDrawerPayload({ type: 'method' })}
+                onOpenAbout={() => setDrawerPayload({ type: 'about' })}
+                onNavigateHome={() => handleNavigate('home')}
+                onNotify={notify}
+                currentUser={user}
+                onUpdateTokens={handleUpdateTokens}
+                proMonthlyTokens={proMonthlyTokens}
+              />
+            )}
+          </main>
+
+          {/* 4. Mobile Bottom Navigation Bar */}
+          <MobileBottomNav
+            route={route}
+            watchlistCount={favorites.size}
+            onNavigate={handleNavigate}
+            onOpenDrawer={(type) => setDrawerPayload({ type })}
+          />
+
+          {/* 5. Login Modal (if opened within session) */}
+          <LoginModal
+            isOpen={loginModalOpen}
+            onClose={() => setLoginModalOpen(false)}
+            onLoginSuccess={handleLoginSuccess}
             onNotify={notify}
-            onNavigateHome={() => handleNavigate('home')}
           />
-        )}
 
-        {route === 'home' && (
-          <HomeView
-            indexData={indexData}
-            stocks={stocks}
-            events={corporateEvents}
-            favorites={favorites}
-            activeInstrument={activeInstrument}
-            marketCache={marketBundle}
-            onRefreshInstrument={(t) => refreshSingleInstrument(t, true)}
-            onRefreshAll={refreshAllMarket}
-            onSelectInstrument={(sym) => setActiveInstrument(sym)}
-            onSelectStockDetail={(sym) => handleNavigate('stock', sym)}
-            onToggleFavorite={handleToggleFavorite}
-            onOpenDrawer={(type, payload) => setDrawerPayload({ type, ...payload })}
-            onOpenNewsDrawer={(newsItem) => setDrawerPayload({ type: 'news', newsItem })}
-            onOpenEventDrawer={(eventItem) => setDrawerPayload({ type: 'event', eventItem })}
+          {/* 6. Slide-in Drawer Modal */}
+          <DrawerModal
+            payload={drawerPayload}
+            onClose={() => setDrawerPayload(null)}
+            onNavigateToStock={(ticker) => handleNavigate('stock', ticker)}
             onOpenMethod={() => setDrawerPayload({ type: 'method' })}
-            onOpenAbout={() => setDrawerPayload({ type: 'about' })}
-            onNotify={notify}
+            onOpenWatchlist={() => handleNavigate('watchlist')}
           />
-        )}
 
-        {route === 'watchlist' && (
-          <WatchlistView
-            stocks={stocks}
-            favorites={favorites}
-            onToggleFavorite={handleToggleFavorite}
-            onSelectStock={(sym) => handleNavigate('stock', sym)}
-            onOpenMethod={() => setDrawerPayload({ type: 'method' })}
-            onOpenAbout={() => setDrawerPayload({ type: 'about' })}
-            onNavigateHome={() => handleNavigate('home')}
-          />
-        )}
+          {/* 7. AI Assistant Chatbot (Draggable, Pojok Kiri Bawah) */}
+          <AIChatWidget currentUser={user} onUpdateTokens={handleUpdateTokens} proMonthlyTokens={proMonthlyTokens} />
+        </>
+      )}
 
-        {route === 'stock' && (
-          <StockDetailView
-            stock={currentStock}
-            stocks={stocks}
-            onSelectStock={(sym) => handleNavigate('stock', sym)}
-            favorites={favorites}
-            marketCache={marketBundle}
-            onRefreshInstrument={(t) => refreshSingleInstrument(t, true)}
-            onToggleFavorite={handleToggleFavorite}
-            onOpenDrawer={(type, payload) => setDrawerPayload({ type, ...payload })}
-            onOpenNewsDrawer={(newsItem) => setDrawerPayload({ type: 'news', newsItem })}
-            onOpenMethod={() => setDrawerPayload({ type: 'method' })}
-            onOpenAbout={() => setDrawerPayload({ type: 'about' })}
-            onNavigateHome={() => handleNavigate('home')}
-            onNotify={notify}
-          />
-        )}
-      </main>
-
-      {/* 4. Mobile Bottom Navigation Bar */}
-      <MobileBottomNav
-        route={route}
-        watchlistCount={favorites.size}
-        onNavigate={handleNavigate}
-        onOpenDrawer={(type) => setDrawerPayload({ type })}
-      />
-
-      {/* 5. Login & Register Modal */}
-      <LoginModal
-        isOpen={loginModalOpen}
-        onClose={() => setLoginModalOpen(false)}
-        onLoginSuccess={handleLoginSuccess}
-        onNotify={notify}
-      />
-
-      {/* 7. Slide-in Drawer Modal */}
-      <DrawerModal
-        payload={drawerPayload}
-        onClose={() => setDrawerPayload(null)}
-        onNavigateToStock={(ticker) => handleNavigate('stock', ticker)}
-        onOpenMethod={() => setDrawerPayload({ type: 'method' })}
-        onOpenWatchlist={() => handleNavigate('watchlist')}
-      />
-
-      {/* 5. Toast Notifications */}
+      {/* Toast Notifications (Always rendered) */}
       <Toast message={toastMessage} />
-
-      {/* 6. AI Assistant Chatbot (Draggable, Pojok Kiri Bawah) */}
-      <AIChatWidget />
     </div>
   );
 }

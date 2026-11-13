@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { UserProfile, StockItem } from '../types';
+import React, { useState, useEffect, useMemo } from 'react';
+import { UserProfile, StockItem, UserRole, UserTier } from '../types';
 import { Icon } from './Icon';
 
 interface InvezgoUsageData {
@@ -27,16 +27,19 @@ interface AdminViewProps {
   stocks: StockItem[];
   onNotify: (msg: string) => void;
   onNavigateHome: () => void;
+  onUpdateProTokens?: (val: number) => void;
 }
 
 interface UserRecord {
   id: string;
   name: string;
   email: string;
-  role: 'admin' | 'user';
-  tier: 'free' | 'pro' | 'institutional';
+  role: UserRole;
+  tier: UserTier;
   status: 'active' | 'suspended';
   lastLogin: string;
+  monthlyTokens: number;
+  additionalTokens: number;
 }
 
 export const AdminView: React.FC<AdminViewProps> = ({
@@ -44,10 +47,98 @@ export const AdminView: React.FC<AdminViewProps> = ({
   stocks,
   onNotify,
   onNavigateHome,
+  onUpdateProTokens,
 }) => {
-  const [activeTab, setActiveTab] = useState<'stats' | 'invezgo' | 'users' | 'database' | 'logs'>('stats');
+  const [activeTab, setActiveTab] = useState<'stats' | 'invezgo' | 'users' | 'database' | 'logs' | 'settings'>('stats');
 
-  // Invezgo API Usage Live State
+  // ── Contact & System Settings State ──
+  const [settingsWa, setSettingsWa] = useState('6281234567890');
+  const [settingsWaDisplay, setSettingsWaDisplay] = useState('+62 812-3456-7890');
+  const [settingsEmail, setSettingsEmail] = useState('admin@pintarsaham.id');
+  const [settingsTemplate, setSettingsTemplate] = useState('Halo Admin PintarSaham, saya ingin menambah token / upgrade akun ke Pro Trader.\nNama: {name}\nEmail: {email}\nFitur: {feature}');
+  const [settingsProTokens, setSettingsProTokens] = useState<number>(30);
+  const [savingSettings, setSavingSettings] = useState(false);
+  const [loadingSettings, setLoadingSettings] = useState(false);
+  const [resettingTokens, setResettingTokens] = useState(false);
+
+  const fetchSettings = async () => {
+    setLoadingSettings(true);
+    try {
+      const res = await fetch('/api/admin/settings');
+      if (res.ok) {
+        const d = await res.json();
+        if (d.whatsapp) setSettingsWa(d.whatsapp);
+        if (d.whatsappDisplay) setSettingsWaDisplay(d.whatsappDisplay);
+        if (d.email) setSettingsEmail(d.email);
+        if (d.waMessageTemplate) setSettingsTemplate(d.waMessageTemplate);
+        if (d.proMonthlyTokens !== undefined) {
+          const val = Number(d.proMonthlyTokens);
+          setSettingsProTokens(val);
+          onUpdateProTokens?.(val);
+        }
+      }
+    } catch (e) {
+      console.warn('Fetch settings error:', e);
+    } finally {
+      setLoadingSettings(false);
+    }
+  };
+
+  const handleSaveSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingSettings(true);
+    try {
+      const res = await fetch('/api/admin/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          whatsapp: settingsWa.trim(),
+          whatsappDisplay: settingsWaDisplay.trim(),
+          email: settingsEmail.trim(),
+          waMessageTemplate: settingsTemplate.trim(),
+          proMonthlyTokens: Number(settingsProTokens),
+        }),
+      });
+      if (res.ok) {
+        onNotify('Pengaturan kontak admin dan jatah token bulanan berhasil disimpan!');
+        onUpdateProTokens?.(Number(settingsProTokens));
+        fetchUsers();
+      } else {
+        onNotify('Gagal menyimpan pengaturan kontak admin');
+      }
+    } catch {
+      onNotify('Koneksi gagal saat menyimpan pengaturan');
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
+  const handleResetMonthlyTokens = async () => {
+    if (!window.confirm(`Apakah Anda yakin ingin mereset kuota token bulanan untuk seluruh pengguna ke ${settingsProTokens} token? Kuota tambahan pengguna tidak akan terhapus.`)) {
+      return;
+    }
+    setResettingTokens(true);
+    try {
+      const res = await fetch('/api/admin/reset-monthly-tokens', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        onNotify(data.message || 'Jatah bulanan seluruh pengguna berhasil di-reset!');
+        onUpdateProTokens?.(Number(settingsProTokens));
+        fetchUsers();
+      } else {
+        onNotify(data.error || 'Gagal mereset jatah bulanan pengguna');
+      }
+    } catch {
+      onNotify('Kesalahan koneksi saat mereset jatah token');
+    } finally {
+      setResettingTokens(false);
+    }
+  };
+
+  // ── Invezgo API Usage Live State ──
   const [invezgoQuota, setInvezgoQuota] = useState<InvezgoUsageData | null>(null);
   const [invezgoLogs, setInvezgoLogs] = useState<InvezgoLogItem[]>([]);
   const [loadingUsage, setLoadingUsage] = useState<boolean>(false);
@@ -72,113 +163,209 @@ export const AdminView: React.FC<AdminViewProps> = ({
     }
   };
 
-  useEffect(() => {
-    fetchInvezgoUsage();
-  }, []);
+  // ── Live Users Management State ──
+  const [userList, setUserList] = useState<UserRecord[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState<boolean>(false);
+  const [userSearch, setUserSearch] = useState('');
+  const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
 
-  // Dummy user database
-  const [userList, setUserList] = useState<UserRecord[]>([
-    {
-      id: 'usr_1',
-      name: 'Super Administrator',
-      email: 'admin@pintarsaham.id',
-      role: 'admin',
-      tier: 'institutional',
-      status: 'active',
-      lastLogin: 'Hari ini, 19:04 WIB',
-    },
-    {
-      id: 'usr_2',
-      name: 'Bisma Yoga',
-      email: 'bismayoga432@gmail.com',
-      role: 'user',
-      tier: 'pro',
-      status: 'active',
-      lastLogin: 'Hari ini, 18:49 WIB',
-    },
-    {
-      id: 'usr_3',
-      name: 'Investor Demo',
-      email: 'investor@idx.co.id',
-      role: 'user',
-      tier: 'pro',
-      status: 'active',
-      lastLogin: 'Kemarin, 21:15 WIB',
-    },
-    {
-      id: 'usr_4',
-      name: 'Rian Pratama',
-      email: 'rian.pratama@gmail.com',
-      role: 'user',
-      tier: 'free',
-      status: 'active',
-      lastLogin: '22 Okt 2026',
-    },
-    {
-      id: 'usr_5',
-      name: 'Sekuritas Mandiri Partner',
-      email: 'research@mandirisek.co.id',
-      role: 'user',
-      tier: 'institutional',
-      status: 'active',
-      lastLogin: '21 Okt 2026',
-    },
-  ]);
+  // Top-Up Token Modal State
+  const [selectedUserForToken, setSelectedUserForToken] = useState<UserRecord | null>(null);
+  const [tokenAddAmount, setTokenAddAmount] = useState<number>(10);
+  const [savingTokenAdd, setSavingTokenAdd] = useState(false);
 
-  const [seeding, setSeeding] = useState(false);
-  const [purging, setPurging] = useState(false);
-
-  // New user form modal state
+  // Add User Modal State
   const [showAddUser, setShowAddUser] = useState(false);
   const [newUserName, setNewUserName] = useState('');
   const [newUserEmail, setNewUserEmail] = useState('');
-  const [newUserTier, setNewUserTier] = useState<'free' | 'pro' | 'institutional'>('pro');
+  const [newUserRole, setNewUserRole] = useState<UserRole>('user');
+  const [newUserTier, setNewUserTier] = useState<UserTier>('starter');
+  const [savingNewUser, setSavingNewUser] = useState(false);
 
-  const handleToggleTier = (id: string) => {
-    setUserList((prev) =>
-      prev.map((u) => {
-        if (u.id === id) {
-          const nextTier = u.tier === 'free' ? 'pro' : u.tier === 'pro' ? 'institutional' : 'free';
-          onNotify(`Paket user ${u.name} diubah menjadi ${nextTier.toUpperCase()}`);
-          return { ...u, tier: nextTier };
+  // Database tools state
+  const [seeding, setSeeding] = useState(false);
+  const [purging, setPurging] = useState(false);
+
+  const fetchUsers = async () => {
+    setLoadingUsers(true);
+    try {
+      const res = await fetch('/api/admin/users');
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setUserList(data);
         }
-        return u;
-      })
-    );
+      }
+    } catch (e) {
+      console.error('Error fetching users:', e);
+    } finally {
+      setLoadingUsers(false);
+    }
   };
 
-  const handleToggleStatus = (id: string) => {
-    setUserList((prev) =>
-      prev.map((u) => {
-        if (u.id === id) {
-          const nextStatus = u.status === 'active' ? 'suspended' : 'active';
-          onNotify(`Status user ${u.name} diubah menjadi ${nextStatus.toUpperCase()}`);
-          return { ...u, status: nextStatus };
+  useEffect(() => {
+    fetchUsers();
+    fetchInvezgoUsage();
+    fetchSettings();
+  }, []);
+
+  // Update User Role directly via dropdown
+  const handleRoleChange = async (userId: string, newRole: UserRole) => {
+    setUpdatingUserId(userId);
+    try {
+      const res = await fetch('/api/admin/update-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: userId, role: newRole }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.user) {
+          setUserList((prev) => prev.map((u) => (u.id === userId ? { ...u, role: data.user.role } : u)));
+          onNotify(`Role pengguna ${data.user.name} diperbarui menjadi ${newRole.toUpperCase()}`);
         }
-        return u;
-      })
-    );
+      } else {
+        onNotify('Gagal mengubah role pengguna');
+      }
+    } catch {
+      onNotify('Kesalahan koneksi saat mengubah role pengguna');
+    } finally {
+      setUpdatingUserId(null);
+    }
   };
 
-  const handleAddUser = (e: React.FormEvent) => {
+  // Update User Tier directly via dropdown
+  const handleTierChange = async (userId: string, newTier: UserTier) => {
+    setUpdatingUserId(userId);
+    try {
+      const res = await fetch('/api/admin/update-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: userId, tier: newTier }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.user) {
+          setUserList((prev) =>
+            prev.map((u) =>
+              u.id === userId
+                ? {
+                    ...u,
+                    tier: data.user.tier,
+                    monthlyTokens: data.user.monthlyTokens,
+                  }
+                : u
+            )
+          );
+          onNotify(`Paket user ${data.user.name} diubah menjadi ${newTier.toUpperCase()}`);
+        }
+      } else {
+        onNotify('Gagal mengubah paket pengguna');
+      }
+    } catch {
+      onNotify('Kesalahan koneksi saat mengubah paket pengguna');
+    } finally {
+      setUpdatingUserId(null);
+    }
+  };
+
+  // Toggle user active / suspended
+  const handleToggleStatus = async (user: UserRecord) => {
+    const nextStatus = user.status === 'active' ? 'suspended' : 'active';
+    setUpdatingUserId(user.id);
+    try {
+      const res = await fetch('/api/admin/update-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: user.id, status: nextStatus }),
+      });
+      if (res.ok) {
+        setUserList((prev) =>
+          prev.map((u) => (u.id === user.id ? { ...u, status: nextStatus } : u))
+        );
+        onNotify(`Status user ${user.name} diubah menjadi ${nextStatus.toUpperCase()}`);
+      }
+    } catch {
+      onNotify('Gagal mengubah status pengguna');
+    } finally {
+      setUpdatingUserId(null);
+    }
+  };
+
+  // Confirm Add Token for a specific user
+  const handleConfirmAddToken = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUserForToken || tokenAddAmount <= 0) return;
+
+    setSavingTokenAdd(true);
+    try {
+      const res = await fetch('/api/admin/update-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: selectedUserForToken.id,
+          add_tokens: tokenAddAmount,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.user) {
+          setUserList((prev) =>
+            prev.map((u) => (u.id === selectedUserForToken.id ? data.user : u))
+          );
+          onNotify(`Berhasil menambahkan ${tokenAddAmount} token tambahan untuk ${selectedUserForToken.name}!`);
+          setSelectedUserForToken(null);
+          setTokenAddAmount(10);
+        }
+      } else {
+        onNotify('Gagal menambahkan token ke pengguna');
+      }
+    } catch {
+      onNotify('Kesalahan koneksi saat menambahkan token');
+    } finally {
+      setSavingTokenAdd(false);
+    }
+  };
+
+  // Add new user
+  const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newUserName.trim() || !newUserEmail.trim()) return;
 
-    const created: UserRecord = {
-      id: 'usr_' + Date.now().toString(36),
-      name: newUserName.trim(),
-      email: newUserEmail.trim(),
-      role: 'user',
-      tier: newUserTier,
-      status: 'active',
-      lastLogin: 'Baru didaftarkan',
-    };
-
-    setUserList((prev) => [created, ...prev]);
-    setShowAddUser(false);
-    setNewUserName('');
-    setNewUserEmail('');
-    onNotify(`User baru ${created.name} berhasil ditambahkan!`);
+    setSavingNewUser(true);
+    try {
+      const res = await fetch('/api/admin/create-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newUserName.trim(),
+          email: newUserEmail.trim(),
+          role: newUserRole,
+          tier: newUserTier,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.user) {
+          setUserList((prev) => [data.user, ...prev]);
+        } else {
+          fetchUsers();
+        }
+        setShowAddUser(false);
+        setNewUserName('');
+        setNewUserEmail('');
+        setNewUserRole('user');
+        setNewUserTier('starter');
+        onNotify(`Pengguna baru ${newUserName} berhasil didaftarkan!`);
+      } else {
+        const err = await res.json();
+        onNotify(`Gagal menambahkan pengguna: ${err.error || 'Terjadi kesalahan'}`);
+      }
+    } catch {
+      onNotify('Koneksi gagal saat menambahkan pengguna');
+    } finally {
+      setSavingNewUser(false);
+    }
   };
 
   const handleTriggerSeed = async () => {
@@ -197,6 +384,19 @@ export const AdminView: React.FC<AdminViewProps> = ({
       onNotify('Pembersihan cache SQLite berhasil! 0 byte file kadaluarsa dibersihkan.');
     }, 900);
   };
+
+  // Filtered Users
+  const filteredUsers = useMemo(() => {
+    if (!userSearch.trim()) return userList;
+    const q = userSearch.toLowerCase();
+    return userList.filter(
+      (u) =>
+        u.name.toLowerCase().includes(q) ||
+        u.email.toLowerCase().includes(q) ||
+        u.role.toLowerCase().includes(q) ||
+        u.tier.toLowerCase().includes(q)
+    );
+  }, [userList, userSearch]);
 
   return (
     <div className="admin-view-root" style={{ padding: '10px 0 40px' }}>
@@ -222,7 +422,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
             Pusat Kontrol &amp; Manajemen Sistem
           </h1>
           <p className="hero-subtitle">
-            Kelola pengguna, pantau telemetri request API, optimasi SQLite DB, dan kendalikan integrasi data pasar.
+            Kelola pengguna, pantau telemetri request API, alokasikan token, dan atur integrasi kontak admin.
           </p>
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -268,7 +468,10 @@ export const AdminView: React.FC<AdminViewProps> = ({
         <button
           type="button"
           className={`btn ${activeTab === 'users' ? 'primary' : ''}`}
-          onClick={() => setActiveTab('users')}
+          onClick={() => {
+            setActiveTab('users');
+            fetchUsers();
+          }}
           style={{ borderRadius: '8px', fontSize: '12px' }}
         >
           <Icon name="star" cls="sm" /> Manajemen Pengguna ({userList.length})
@@ -288,6 +491,17 @@ export const AdminView: React.FC<AdminViewProps> = ({
           style={{ borderRadius: '8px', fontSize: '12px' }}
         >
           <Icon name="file" cls="sm" /> Log API &amp; Aktivitas
+        </button>
+        <button
+          type="button"
+          className={`btn ${activeTab === 'settings' ? 'primary' : ''}`}
+          onClick={() => {
+            setActiveTab('settings');
+            fetchSettings();
+          }}
+          style={{ borderRadius: '8px', fontSize: '12px' }}
+        >
+          <Icon name="sparkles" cls="sm" /> Kontak Admin &amp; Aturan Token
         </button>
       </div>
 
@@ -312,19 +526,21 @@ export const AdminView: React.FC<AdminViewProps> = ({
             <div className="card" style={{ padding: '18px 20px' }}>
               <div style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 600 }}>SQLITE DB SIZE</div>
               <div style={{ fontSize: '28px', fontWeight: 700, margin: '6px 0 2px' }}>3.2 MB</div>
-              <span className="small positive">45 Emiten Pre-seeded (0 Req)</span>
+              <span className="small positive">Pre-seeded &amp; Caching Aktif</span>
             </div>
 
             <div className="card" style={{ padding: '18px 20px' }}>
-              <div style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 600 }}>PENGGUNA AKTIF</div>
+              <div style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 600 }}>TOTAL PENGGUNA TERDAFTAR</div>
               <div style={{ fontSize: '28px', fontWeight: 700, margin: '6px 0 2px' }}>{userList.length}</div>
-              <span className="small positive">1 Super Admin · 3 Pro</span>
+              <span className="small positive">
+                {userList.filter((u) => u.tier === 'pro' || u.tier === 'institutional').length} Akun Berbayar
+              </span>
             </div>
 
             <div className="card" style={{ padding: '18px 20px' }}>
-              <div style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 600 }}>GEMINI AI STATUS</div>
+              <div style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 600 }}>AI ENGINE STATUS</div>
               <div style={{ fontSize: '28px', fontWeight: 700, margin: '6px 0 2px', color: 'var(--green)' }}>Active</div>
-              <span className="small muted">API Key Valid (Flash Model)</span>
+              <span className="small muted">Gemini 2.5 Flash Production</span>
             </div>
           </div>
 
@@ -355,10 +571,9 @@ export const AdminView: React.FC<AdminViewProps> = ({
         </div>
       )}
 
-      {/* ── TAB INVEZGO: USAGE & TOKEN LIVE ── */}
+      {/* ── TAB 2: INVEZGO USAGE LIVE ── */}
       {activeTab === 'invezgo' && (
         <div>
-          {/* Header Bar */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <div>
               <h2 style={{ fontSize: '18px', fontWeight: 800 }}>Invezgo API Token &amp; Usage Monitor</h2>
@@ -375,7 +590,6 @@ export const AdminView: React.FC<AdminViewProps> = ({
             </button>
           </div>
 
-          {/* Quota Cards */}
           <div
             style={{
               display: 'grid',
@@ -450,7 +664,6 @@ export const AdminView: React.FC<AdminViewProps> = ({
             </div>
           </div>
 
-          {/* Logs Table */}
           <div className="card">
             <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--line)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
@@ -514,17 +727,62 @@ export const AdminView: React.FC<AdminViewProps> = ({
         </div>
       )}
 
-      {/* ── TAB 2: MANAJEMEN PENGGUNA ── */}
+      {/* ── TAB 3: LIVE USER MANAGEMENT ── */}
       {activeTab === 'users' && (
         <div className="card">
-          <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--line)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div
+            style={{
+              padding: '16px 20px',
+              borderBottom: '1px solid var(--line)',
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '12px',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
             <div>
-              <h3 style={{ fontSize: '15px', fontWeight: 700 }}>Daftar Akun Pengguna</h3>
-              <p className="small muted" style={{ marginTop: '2px' }}>Kelola izin akses, role administrator, dan tingkatan paket (Tier).</p>
+              <h3 style={{ fontSize: '16px', fontWeight: 700 }}>Manajemen Akun Pengguna</h3>
+              <p className="small muted" style={{ marginTop: '2px' }}>
+                Atur role (User, Admin, Super Admin), paket tier, jatah token bulanan, dan top-up token tambahan langsung ke SQLite.
+              </p>
             </div>
-            <button className="btn primary small-btn" onClick={() => setShowAddUser(true)}>
-              + Tambah Pengguna Baru
-            </button>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <input
+                type="text"
+                className="select"
+                placeholder="Cari nama atau email..."
+                value={userSearch}
+                onChange={(e) => setUserSearch(e.target.value)}
+                style={{ width: '200px', fontSize: '12px', padding: '6px 10px' }}
+              />
+              <button
+                type="button"
+                className="btn small-btn"
+                onClick={fetchUsers}
+                disabled={loadingUsers}
+                title="Muat ulang daftar pengguna dari SQLite"
+              >
+                <Icon name="refresh" cls="sm" /> {loadingUsers ? 'Memuat...' : 'Segarkan'}
+              </button>
+              <button
+                type="button"
+                className="btn small-btn"
+                onClick={handleResetMonthlyTokens}
+                disabled={resettingTokens}
+                title="Reset jatah token bulanan seluruh pengguna Pro ke nilai acuan"
+                style={{ borderColor: '#f59e0b', color: '#b45309' }}
+              >
+                <Icon name="refresh" cls="sm" /> {resettingTokens ? 'Mereset...' : 'Reset Jatah Bulanan'}
+              </button>
+              <button
+                type="button"
+                className="btn primary small-btn"
+                onClick={() => setShowAddUser(true)}
+              >
+                + Tambah Pengguna
+              </button>
+            </div>
           </div>
 
           <div className="table-scroll">
@@ -532,91 +790,217 @@ export const AdminView: React.FC<AdminViewProps> = ({
               <thead>
                 <tr>
                   <th>Pengguna</th>
-                  <th>Role</th>
+                  <th>Role (Izin Akses)</th>
                   <th>Paket (Tier)</th>
+                  <th>Sisa Kuota Token</th>
                   <th>Status</th>
                   <th>Login Terakhir</th>
                   <th style={{ textAlign: 'right' }}>Aksi</th>
                 </tr>
               </thead>
               <tbody>
-                {userList.map((u) => (
-                  <tr key={u.id}>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div
-                          style={{
-                            width: '32px',
-                            height: '32px',
-                            borderRadius: '50%',
-                            background: u.role === 'admin' ? 'linear-gradient(135deg, #0e3465, #1a62bf)' : 'var(--soft)',
-                            color: u.role === 'admin' ? '#fff' : 'var(--ink)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '11px',
-                            fontWeight: 700,
-                            border: '1px solid var(--line)',
-                          }}
-                        >
-                          {u.name.slice(0, 2).toUpperCase()}
-                        </div>
-                        <div>
-                          <strong>{u.name}</strong>
-                          <div className="small muted">{u.email}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td>
-                      <span className={`pill ${u.role === 'admin' ? 'blue' : 'outline'}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                        {u.role === 'admin' ? (
-                          <>
-                            <Icon name="crown" cls="sm" style={{ color: '#eab308' }} /> Admin
-                          </>
-                        ) : (
-                          'User'
-                        )}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={`pill ${u.tier === 'institutional' ? 'green' : u.tier === 'pro' ? 'blue' : 'outline'}`}>
-                        {u.tier.toUpperCase()}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={`pill ${u.status === 'active' ? 'green' : 'red'}`}>
-                        <i className="dot"></i> {u.status === 'active' ? 'Aktif' : 'Suspended'}
-                      </span>
-                    </td>
-                    <td className="small muted">{u.lastLogin}</td>
-                    <td style={{ textAlign: 'right' }}>
-                      <div style={{ display: 'inline-flex', gap: '6px' }}>
-                        <button
-                          className="btn small-btn"
-                          onClick={() => handleToggleTier(u.id)}
-                          style={{ fontSize: '10px', padding: '3px 7px' }}
-                          title="Ganti Tier paket (Free -> Pro -> Institutional)"
-                        >
-                          Ganti Tier
-                        </button>
-                        <button
-                          className={`btn small-btn ${u.status === 'active' ? '' : 'primary'}`}
-                          onClick={() => handleToggleStatus(u.id)}
-                          style={{ fontSize: '10px', padding: '3px 7px' }}
-                        >
-                          {u.status === 'active' ? 'Suspend' : 'Aktifkan'}
-                        </button>
-                      </div>
+                {loadingUsers && userList.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} style={{ textAlign: 'center', padding: '30px' }} className="muted">
+                      Memuat data akun pengguna dari database SQLite...
                     </td>
                   </tr>
-                ))}
+                ) : filteredUsers.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} style={{ textAlign: 'center', padding: '30px' }} className="muted">
+                      {userSearch ? 'Tidak ada pengguna yang cocok dengan pencarian.' : 'Belum ada data pengguna.'}
+                    </td>
+                  </tr>
+                ) : (
+                  filteredUsers.map((u) => {
+                    const isSelf = currentUser && (currentUser.id === u.id || currentUser.email === u.email);
+                    const isBusy = updatingUserId === u.id;
+                    const monthly = u.monthlyTokens ?? 0;
+                    const additional = u.additionalTokens ?? 0;
+                    const totalTokens = monthly + additional;
+
+                    return (
+                      <tr key={u.id} style={{ opacity: isBusy ? 0.6 : 1 }}>
+                        {/* 1. Pengguna info */}
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <div
+                              style={{
+                                width: '34px',
+                                height: '34px',
+                                borderRadius: '50%',
+                                background:
+                                  u.role === 'super admin'
+                                    ? 'linear-gradient(135deg, #7c3aed, #4f46e5)'
+                                    : u.role === 'admin'
+                                    ? 'linear-gradient(135deg, #0284c7, #0e3465)'
+                                    : 'var(--soft)',
+                                color: u.role === 'user' ? 'var(--ink)' : '#fff',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '11px',
+                                fontWeight: 700,
+                                border: '1px solid var(--line)',
+                                flexShrink: 0,
+                              }}
+                            >
+                              {u.name ? u.name.slice(0, 2).toUpperCase() : 'US'}
+                            </div>
+                            <div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <strong>{u.name}</strong>
+                                {isSelf && (
+                                  <span className="pill blue" style={{ fontSize: '9px', padding: '1px 5px' }}>
+                                    Anda
+                                  </span>
+                                )}
+                              </div>
+                              <div className="small muted" style={{ fontSize: '11.5px' }}>{u.email}</div>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* 2. Interactive Role Dropdown */}
+                        <td>
+                          <select
+                            className="select"
+                            value={u.role || 'user'}
+                            onChange={(e) => handleRoleChange(u.id, e.target.value as UserRole)}
+                            disabled={isBusy}
+                            style={{
+                              fontSize: '11.5px',
+                              fontWeight: 600,
+                              padding: '4px 8px',
+                              borderRadius: '6px',
+                              borderColor:
+                                u.role === 'super admin'
+                                  ? '#7c3aed'
+                                  : u.role === 'admin'
+                                  ? 'var(--blue)'
+                                  : 'var(--line)',
+                              background:
+                                u.role === 'super admin'
+                                  ? 'rgba(124, 58, 237, 0.08)'
+                                  : u.role === 'admin'
+                                  ? 'rgba(2, 132, 199, 0.08)'
+                                  : 'transparent',
+                              color:
+                                u.role === 'super admin'
+                                  ? '#7c3aed'
+                                  : u.role === 'admin'
+                                  ? 'var(--blue)'
+                                  : 'inherit',
+                            }}
+                          >
+                            <option value="user">User (Standar)</option>
+                            <option value="admin">Admin</option>
+                            <option value="super admin">Super Admin</option>
+                          </select>
+                        </td>
+
+                        {/* 3. Interactive Tier Dropdown */}
+                        <td>
+                          <select
+                            className="select"
+                            value={u.tier === 'free' ? 'starter' : u.tier || 'starter'}
+                            onChange={(e) => handleTierChange(u.id, e.target.value as UserTier)}
+                            disabled={isBusy}
+                            style={{
+                              fontSize: '11.5px',
+                              fontWeight: 600,
+                              padding: '4px 8px',
+                              borderRadius: '6px',
+                            }}
+                          >
+                            <option value="starter">Free Starter (0 Token)</option>
+                            <option value="pro">Pro Trader ({settingsProTokens} Token/bln)</option>
+                            <option value="institutional">Institutional (100 Token/bln)</option>
+                          </select>
+                        </td>
+
+                        {/* 4. Kuota Token Breakdown */}
+                        <td>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span
+                                className={`pill ${monthly > 0 ? 'blue' : 'gray'}`}
+                                style={{ fontSize: '11px', fontWeight: 700 }}
+                                title="Sisa kuota token bulanan dari batas jatah paket"
+                              >
+                                {monthly} / {u.tier === 'pro' ? settingsProTokens : (u.tier === 'institutional' ? 100 : 0)} Bulanan
+                              </span>
+                              {additional > 0 && (
+                                <span
+                                  className="pill green"
+                                  style={{ fontSize: '11px', fontWeight: 700 }}
+                                  title="Token tambahan dari top-up Admin (tidak hangus bulanan)"
+                                >
+                                  +{additional} Tambahan
+                                </span>
+                              )}
+                            </div>
+                            <div className="small muted" style={{ fontSize: '10.5px' }}>
+                              Total Kuota: <strong>{totalTokens}</strong> Token
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* 5. Status */}
+                        <td>
+                          <button
+                            type="button"
+                            className="btn small-btn"
+                            onClick={() => handleToggleStatus(u)}
+                            disabled={isBusy}
+                            style={{
+                              fontSize: '11px',
+                              padding: '3px 8px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                            }}
+                          >
+                            <span
+                              className={`pill ${u.status === 'active' ? 'green' : 'red'}`}
+                              style={{ margin: 0, padding: '2px 6px' }}
+                            >
+                              <i className="dot"></i> {u.status === 'active' ? 'Aktif' : 'Suspended'}
+                            </span>
+                          </button>
+                        </td>
+
+                        {/* 6. Login Terakhir */}
+                        <td className="small muted" style={{ fontSize: '11px' }}>
+                          {u.lastLogin || '—'}
+                        </td>
+
+                        {/* 7. Aksi */}
+                        <td style={{ textAlign: 'right' }}>
+                          <button
+                            type="button"
+                            className="btn primary small-btn"
+                            onClick={() => {
+                              setSelectedUserForToken(u);
+                              setTokenAddAmount(10);
+                            }}
+                            style={{ fontSize: '11px', padding: '4px 10px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                            title="Tambahkan sejumlah token khusus ke pengguna ini"
+                          >
+                            <Icon name="sparkles" cls="sm" /> + Token
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>
         </div>
       )}
 
-      {/* ── TAB 3: SQLITE DATABASE & CACHE ── */}
+      {/* ── TAB 4: SQLITE DATABASE & CACHE ── */}
       {activeTab === 'database' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '18px' }}>
           <div className="card" style={{ padding: '22px' }}>
@@ -657,7 +1041,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
         </div>
       )}
 
-      {/* ── TAB 4: LOG AKTIVITAS ── */}
+      {/* ── TAB 5: LOG AKTIVITAS ── */}
       {activeTab === 'logs' && (
         <div className="card">
           <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--line)' }}>
@@ -676,35 +1060,431 @@ export const AdminView: React.FC<AdminViewProps> = ({
               </thead>
               <tbody>
                 <tr>
-                  <td className="small muted">19:04:12 WIB</td>
+                  <td className="small muted">01:45:12 WIB</td>
                   <td><code>GET /api/stock?ticker=BBCA</code></td>
                   <td><span className="pill green">200 OK</span></td>
                   <td className="small">12 ms</td>
-                  <td className="small muted">SQLite DB Cache Hit (0 API Req)</td>
+                  <td className="small muted">SQLite DB Cache Hit (0 Invezgo Req)</td>
                 </tr>
                 <tr>
-                  <td className="small muted">19:02:45 WIB</td>
-                  <td><code>POST /api/ai-analysis (BBCA)</code></td>
+                  <td className="small muted">01:42:05 WIB</td>
+                  <td><code>POST /api/ai-chat</code></td>
                   <td><span className="pill green">200 OK</span></td>
-                  <td className="small">1420 ms</td>
-                  <td className="small muted">Gemini 2.5 Flash Response</td>
+                  <td className="small">1120 ms</td>
+                  <td className="small muted">Gemini 2.5 Flash (-1 Token Berhasil)</td>
                 </tr>
                 <tr>
-                  <td className="small muted">18:59:18 WIB</td>
-                  <td><code>GET /api/news?ticker=IHSG</code></td>
+                  <td className="small muted">01:38:40 WIB</td>
+                  <td><code>GET /api/user/profile</code></td>
                   <td><span className="pill green">200 OK</span></td>
-                  <td className="small">8 ms</td>
-                  <td className="small muted">Invezgo News Memory Cache</td>
+                  <td className="small">9 ms</td>
+                  <td className="small muted">SQLite User Profile &amp; Token Sync</td>
                 </tr>
                 <tr>
-                  <td className="small muted">18:55:02 WIB</td>
-                  <td><code>GET /api/company-detail?ticker=BBRI</code></td>
+                  <td className="small muted">01:35:18 WIB</td>
+                  <td><code>GET /api/settings/contact</code></td>
                   <td><span className="pill green">200 OK</span></td>
-                  <td className="small">15 ms</td>
-                  <td className="small muted">SQLite DB Financials 5 Kuartal</td>
+                  <td className="small">6 ms</td>
+                  <td className="small muted">System Settings DB Query</td>
                 </tr>
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* ── TAB 6: PENGATURAN KONTAK & ATURAN TOKEN ── */}
+      {activeTab === 'settings' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
+          {/* Card 1: Form Pengaturan Kontak Admin */}
+          <div className="card" style={{ padding: '24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+              <div
+                style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '10px',
+                  background: 'rgba(2, 132, 199, 0.1)',
+                  color: 'var(--blue)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Icon name="sparkles" cls="sm" />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '17px', fontWeight: 700, margin: 0 }}>
+                  Pengaturan Kontak Administrator
+                </h3>
+                <p className="small muted" style={{ margin: '2px 0 0 0' }}>
+                  Atur nomor WhatsApp dan email resmi yang muncul pada popup "Hubungi Admin via WhatsApp", "Salin No. WhatsApp", dan "Salin Email Admin".
+                </p>
+              </div>
+            </div>
+
+            <form onSubmit={handleSaveSettings} style={{ marginTop: '20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginBottom: '16px' }}>
+                <div>
+                  <label className="small muted" style={{ display: 'block', marginBottom: '6px', fontWeight: 650 }}>
+                    NOMOR WHATSAPP (ANGKA DENGAN KODE NEGARA)
+                  </label>
+                  <input
+                    type="text"
+                    className="select"
+                    value={settingsWa}
+                    onChange={(e) => setSettingsWa(e.target.value)}
+                    placeholder="Contoh: 6281234567890"
+                    style={{ width: '100%', fontSize: '13px' }}
+                    required
+                  />
+                  <span className="small muted" style={{ fontSize: '10.5px', marginTop: '4px', display: 'block' }}>
+                    Digunakan untuk link <code>https://wa.me/[nomor]</code>. Jangan sertakan tanda + atau spasi.
+                  </span>
+                </div>
+
+                <div>
+                  <label className="small muted" style={{ display: 'block', marginBottom: '6px', fontWeight: 650 }}>
+                    TAMPILAN FORMAT NOMOR WHATSAPP
+                  </label>
+                  <input
+                    type="text"
+                    className="select"
+                    value={settingsWaDisplay}
+                    onChange={(e) => setSettingsWaDisplay(e.target.value)}
+                    placeholder="Contoh: +62 812-3456-7890"
+                    style={{ width: '100%', fontSize: '13px' }}
+                    required
+                  />
+                  <span className="small muted" style={{ fontSize: '10.5px', marginTop: '4px', display: 'block' }}>
+                    Teks nomor yang disalin saat pengguna menekan tombol "Salin No. WhatsApp".
+                  </span>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '16px' }}>
+                <label className="small muted" style={{ display: 'block', marginBottom: '6px', fontWeight: 650 }}>
+                  ALAMAT EMAIL RESMI ADMINISTRATOR
+                </label>
+                <input
+                  type="email"
+                  className="select"
+                  value={settingsEmail}
+                  onChange={(e) => setSettingsEmail(e.target.value)}
+                  placeholder="admin@pintarsaham.id"
+                  style={{ width: '100%', maxWidth: '600px', fontSize: '13px' }}
+                  required
+                />
+                <span className="small muted" style={{ fontSize: '10.5px', marginTop: '4px', display: 'block' }}>
+                  Alamat email yang disalin saat pengguna menekan tombol "Salin Email Admin".
+                </span>
+              </div>
+
+              <div style={{ marginBottom: '16px' }}>
+                <label className="small muted" style={{ display: 'block', marginBottom: '6px', fontWeight: 650 }}>
+                  JATAH TOKEN BULANAN PRO TRADER (PER BULAN)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="1000"
+                  className="select"
+                  value={settingsProTokens}
+                  onChange={(e) => setSettingsProTokens(Math.max(0, parseInt(e.target.value) || 0))}
+                  style={{ width: '100%', maxWidth: '280px', fontSize: '13.5px', fontWeight: 700 }}
+                  required
+                />
+                <span className="small muted" style={{ fontSize: '10.5px', marginTop: '4px', display: 'block' }}>
+                  Jatah kuota token bulanan standar untuk seluruh pengguna Pro Trader. Seluruh teks dan notifikasi sistem di aplikasi otomatis menyesuaikan nilai ini.
+                </span>
+              </div>
+
+              <div style={{ marginBottom: '20px' }}>
+                <label className="small muted" style={{ display: 'block', marginBottom: '6px', fontWeight: 650 }}>
+                  TEMPLATE PESAN OTOMATIS WHATSAPP
+                </label>
+                <textarea
+                  className="select"
+                  rows={3}
+                  value={settingsTemplate}
+                  onChange={(e) => setSettingsTemplate(e.target.value)}
+                  placeholder="Halo Admin PintarSaham, saya ingin menambah token / upgrade akun ke Pro Trader.\nNama: {name}\nEmail: {email}\nFitur: {feature}"
+                  style={{ width: '100%', maxWidth: '720px', fontSize: '12px', lineHeight: 1.5, padding: '10px 12px' }}
+                />
+                <span className="small muted" style={{ fontSize: '10.5px', marginTop: '4px', display: 'block' }}>
+                  Gunakan placeholder <code>{'{name}'}</code>, <code>{'{email}'}</code>, dan <code>{'{feature}'}</code> yang otomatis diisi oleh sistem.
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <button
+                  type="submit"
+                  className="btn primary"
+                  disabled={savingSettings}
+                  style={{ padding: '8px 20px', fontSize: '12.5px', fontWeight: 650 }}
+                >
+                  <Icon name="check" cls="sm" /> {savingSettings ? 'Menyimpan...' : 'Simpan Pengaturan & Jatah Token'}
+                </button>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={fetchSettings}
+                  disabled={loadingSettings}
+                  style={{ fontSize: '12px' }}
+                >
+                  <Icon name="refresh" cls="sm" /> Muat Ulang
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* Card 1.5: Reset Kuota Bulanan Semua Pengguna */}
+          <div className="card" style={{ padding: '22px 24px', background: 'rgba(234, 179, 8, 0.05)', border: '1px solid rgba(234, 179, 8, 0.3)', borderRadius: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px' }}>
+              <div>
+                <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: 'var(--ink)' }}>
+                  Reset Jatah Token Bulanan Seluruh Pengguna
+                </h4>
+                <p className="small muted" style={{ margin: '4px 0 0 0', fontSize: '12px' }}>
+                  Kembalikan kuota token bulanan semua pengguna Pro Trader ke angka resmi ({settingsProTokens} token/bulan). Token tambahan (hasil top-up) tetap aman dan tidak akan hilang.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="btn primary"
+                disabled={resettingTokens}
+                onClick={handleResetMonthlyTokens}
+                style={{ background: '#d97706', borderColor: '#d97706', padding: '9px 18px', fontSize: '12.5px', fontWeight: 700 }}
+              >
+                <Icon name="refresh" cls="sm" /> {resettingTokens ? 'Mereset Token...' : 'Reset Jatah Bulanan Semua Akun'}
+              </button>
+            </div>
+          </div>
+
+          {/* Card 2: Aturan & Mekanisme Pengurangan Token Sistem */}
+          <div className="card" style={{ padding: '24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+              <div
+                style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '10px',
+                  background: 'rgba(16, 185, 129, 0.1)',
+                  color: '#10b981',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Icon name="zap" cls="sm" />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '17px', fontWeight: 700, margin: 0 }}>
+                  Aturan &amp; Mekanisme Pemotongan Token Sistem
+                </h3>
+                <p className="small muted" style={{ margin: '2px 0 0 0' }}>
+                  Daftar aktivitas pengguna yang secara otomatis memotong kuota token di database SQLite.
+                </p>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '14px', marginTop: '16px' }}>
+              <div style={{ background: 'var(--soft, #f8fafc)', border: '1px solid var(--line)', borderRadius: '12px', padding: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <span style={{ fontWeight: 700, fontSize: '13px', color: 'var(--ink)' }}>Chatbot Asisten PintarSaham AI</span>
+                  <span className="pill blue" style={{ fontSize: '11px', fontWeight: 700 }}>-1 Token / Pesan</span>
+                </div>
+                <p className="small muted" style={{ fontSize: '11.5px', lineHeight: 1.5, margin: 0 }}>
+                  Setiap pertanyaan yang dikirimkan user di halaman Chat AI atau widget popup akan memproses analisis model dan memotong 1 token.
+                </p>
+              </div>
+
+              <div style={{ background: 'var(--soft, #f8fafc)', border: '1px solid var(--line)', borderRadius: '12px', padding: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <span style={{ fontWeight: 700, fontSize: '13px', color: 'var(--ink)' }}>Analisis Fundamental &amp; Pasar AI</span>
+                  <span className="pill blue" style={{ fontSize: '11px', fontWeight: 700 }}>-1 Token / Analisis</span>
+                </div>
+                <p className="small muted" style={{ fontSize: '11.5px', lineHeight: 1.5, margin: 0 }}>
+                  Dipotong saat pengguna menekan tombol "Generate Analisis AI" atau "Ulang Analisis" pada grafik emiten saham.
+                </p>
+              </div>
+
+              <div style={{ background: 'var(--soft, #f8fafc)', border: '1px solid var(--line)', borderRadius: '12px', padding: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <span style={{ fontWeight: 700, fontSize: '13px', color: 'var(--ink)' }}>Perbarui Data Live Emiten</span>
+                  <span className="pill amber" style={{ fontSize: '11px', fontWeight: 700 }}>-1 Token / Refresh</span>
+                </div>
+                <p className="small muted" style={{ fontSize: '11.5px', lineHeight: 1.5, margin: 0 }}>
+                  Dipotong saat pengguna Pro menekan tombol "Perbarui" data bursa live untuk mengambil kuotasi real-time terkini dari server BEI.
+                </p>
+              </div>
+            </div>
+
+            {/* Priority breakdown */}
+            <div
+              style={{
+                marginTop: '18px',
+                padding: '14px 16px',
+                background: 'rgba(2, 132, 199, 0.05)',
+                border: '1px solid rgba(2, 132, 199, 0.2)',
+                borderRadius: '10px',
+                fontSize: '12px',
+                lineHeight: 1.6,
+                color: 'var(--ink)',
+              }}
+            >
+              <div style={{ fontWeight: 700, marginBottom: '4px', color: 'var(--navy)' }}>
+                Urutan Prioritas Pengurangan Token:
+              </div>
+              <ol style={{ margin: 0, paddingLeft: '18px' }}>
+                <li><strong>Token Bulanan (Monthly Tokens)</strong> dipotong terlebih dahulu (jatah {settingsProTokens} token/bulan untuk Pro Trader).</li>
+                <li>Jika Token Bulanan habis (0), sistem secara otomatis memotong <strong>Token Tambahan (Additional Tokens)</strong> yang telah ditambahkan oleh Admin.</li>
+                <li>Jika seluruh kuota token habis (0), aktivitas akan dibatasi dan sistem secara otomatis memunculkan modal <strong>Tambah Token &amp; Upgrade</strong> untuk menghubungi Admin.</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── TOP-UP TOKEN MODAL ── */}
+      {selectedUserForToken && (
+        <div
+          className="modal-layer open"
+          style={{ zIndex: 170 }}
+          onClick={() => setSelectedUserForToken(null)}
+        >
+          <div
+            className="card"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '92%',
+              maxWidth: '460px',
+              margin: 'auto',
+              padding: '24px',
+              borderRadius: '16px',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' }}>
+              <div>
+                <h3 style={{ fontSize: '18px', fontWeight: 700, margin: 0 }}>Top-Up Token Pengguna</h3>
+                <p className="small muted" style={{ margin: '4px 0 0 0' }}>
+                  Tambahkan token khusus untuk pengguna terpilih di luar kuota bulanan.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="btn small-btn"
+                onClick={() => setSelectedUserForToken(null)}
+                style={{ padding: '4px 8px', borderRadius: '50%' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Target user info */}
+            <div
+              style={{
+                background: 'var(--soft)',
+                border: '1px solid var(--line)',
+                borderRadius: '10px',
+                padding: '12px 14px',
+                marginBottom: '16px',
+              }}
+            >
+              <div style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase' }}>
+                Akun Penerima
+              </div>
+              <div style={{ fontWeight: 700, fontSize: '14px', marginTop: '2px' }}>
+                {selectedUserForToken.name}
+              </div>
+              <div className="small muted" style={{ fontSize: '12px' }}>
+                {selectedUserForToken.email}
+              </div>
+              <div style={{ display: 'flex', gap: '8px', marginTop: '8px', fontSize: '11.5px' }}>
+                <span>Bulanan: <strong>{selectedUserForToken.monthlyTokens ?? 0}</strong></span>
+                <span>•</span>
+                <span>Tambahan: <strong>{selectedUserForToken.additionalTokens ?? 0}</strong></span>
+                <span>•</span>
+                <span>Total Sekarang: <strong>{(selectedUserForToken.monthlyTokens ?? 0) + (selectedUserForToken.additionalTokens ?? 0)}</strong></span>
+              </div>
+            </div>
+
+            <form onSubmit={handleConfirmAddToken}>
+              <div style={{ marginBottom: '14px' }}>
+                <label className="small muted" style={{ display: 'block', marginBottom: '6px', fontWeight: 650 }}>
+                  JUMLAH TOKEN YANG INGIN DITAMBAHKAN
+                </label>
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                  {[5, 10, 20, 50, 100].map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      className={`btn small-btn ${tokenAddAmount === preset ? 'primary' : ''}`}
+                      onClick={() => setTokenAddAmount(preset)}
+                      style={{ flex: 1, padding: '6px 0', fontSize: '12px', fontWeight: 600 }}
+                    >
+                      +{preset}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  type="number"
+                  min="1"
+                  max="1000"
+                  className="select"
+                  value={tokenAddAmount}
+                  onChange={(e) => setTokenAddAmount(Math.max(1, parseInt(e.target.value) || 0))}
+                  style={{ width: '100%', fontSize: '14px', fontWeight: 700 }}
+                  required
+                />
+              </div>
+
+              {/* Live Preview Box */}
+              <div
+                style={{
+                  background: 'rgba(16, 185, 129, 0.08)',
+                  border: '1px solid rgba(16, 185, 129, 0.25)',
+                  borderRadius: '10px',
+                  padding: '12px 14px',
+                  marginBottom: '18px',
+                  fontSize: '12px',
+                  lineHeight: 1.5,
+                  color: 'var(--ink)',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                  <span>Token Tambahan Baru:</span>
+                  <strong>+{(selectedUserForToken.additionalTokens ?? 0) + tokenAddAmount} Token</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#059669', fontWeight: 700 }}>
+                  <span>Total Keseluruhan Pengguna:</span>
+                  <span>{(selectedUserForToken.monthlyTokens ?? 0) + (selectedUserForToken.additionalTokens ?? 0) + tokenAddAmount} Token</span>
+                </div>
+                <div className="small muted" style={{ fontSize: '10.5px', marginTop: '6px' }}>
+                  Pencatatan token tambahan dipisah dari kuota bulanan dan tidak akan di-reset pada awal bulan.
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() => setSelectedUserForToken(null)}
+                  disabled={savingTokenAdd}
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="btn primary"
+                  disabled={savingTokenAdd}
+                  style={{ minWidth: '130px', justifyContent: 'center' }}
+                >
+                  <Icon name="check" cls="sm" /> {savingTokenAdd ? 'Menyimpan...' : 'Tambahkan Token'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
@@ -715,7 +1495,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
           <div
             className="card"
             onClick={(e) => e.stopPropagation()}
-            style={{ width: '92%', maxWidth: '400px', margin: 'auto', padding: '24px', borderRadius: '16px' }}
+            style={{ width: '92%', maxWidth: '420px', margin: 'auto', padding: '24px', borderRadius: '16px' }}
           >
             <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '14px' }}>Tambah Pengguna Baru</h3>
             <form onSubmit={handleAddUser}>
@@ -724,7 +1504,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                 <input
                   type="text"
                   className="select"
-                  placeholder="Nama pengguna"
+                  placeholder="Nama lengkap pengguna"
                   value={newUserName}
                   onChange={(e) => setNewUserName(e.target.value)}
                   style={{ width: '100%' }}
@@ -736,29 +1516,46 @@ export const AdminView: React.FC<AdminViewProps> = ({
                 <input
                   type="email"
                   className="select"
-                  placeholder="email@perusahaan.com"
+                  placeholder="email@pengguna.com"
                   value={newUserEmail}
                   onChange={(e) => setNewUserEmail(e.target.value)}
                   style={{ width: '100%' }}
                   required
                 />
               </div>
+              <div style={{ marginBottom: '12px' }}>
+                <label className="small muted" style={{ display: 'block', marginBottom: '4px', fontWeight: 600 }}>ROLE PENGGUNA</label>
+                <select
+                  className="select"
+                  value={newUserRole}
+                  onChange={(e) => setNewUserRole(e.target.value as UserRole)}
+                  style={{ width: '100%' }}
+                >
+                  <option value="user">User (Pengguna Biasa)</option>
+                  <option value="admin">Admin</option>
+                  <option value="super admin">Super Admin</option>
+                </select>
+              </div>
               <div style={{ marginBottom: '18px' }}>
                 <label className="small muted" style={{ display: 'block', marginBottom: '4px', fontWeight: 600 }}>PAKET (TIER)</label>
                 <select
                   className="select"
                   value={newUserTier}
-                  onChange={(e) => setNewUserTier(e.target.value as any)}
+                  onChange={(e) => setNewUserTier(e.target.value as UserTier)}
                   style={{ width: '100%' }}
                 >
-                  <option value="free">Free Starter</option>
-                  <option value="pro">Pro Trader</option>
-                  <option value="institutional">Institutional</option>
+                  <option value="starter">Free Starter (0 Token)</option>
+                  <option value="pro">Pro Trader ({settingsProTokens} Token/bln)</option>
+                  <option value="institutional">Institutional (100 Token/bln)</option>
                 </select>
               </div>
               <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                <button type="button" className="btn" onClick={() => setShowAddUser(false)}>Batal</button>
-                <button type="submit" className="btn primary">Simpan Pengguna</button>
+                <button type="button" className="btn" onClick={() => setShowAddUser(false)} disabled={savingNewUser}>
+                  Batal
+                </button>
+                <button type="submit" className="btn primary" disabled={savingNewUser}>
+                  {savingNewUser ? 'Menyimpan...' : 'Simpan Pengguna'}
+                </button>
               </div>
             </form>
           </div>

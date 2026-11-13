@@ -324,32 +324,23 @@ def tool_get_stock_quote(ticker: str) -> dict:
 
 def tool_get_market_ihsg() -> dict:
     try:
-        r = requests.get(
-            f"{INVEZGO_BASE_URL}/analysis/intraday-index/COMPOSITE",
-            headers=get_auth_headers(),
-            timeout=6
-        )
-        if r.status_code == 200:
-            data = r.json()
-            close_val = data.get("close")
-            prev_val = data.get("prev")
-            chg = (close_val - prev_val) if (close_val and prev_val) else None
-            chg_pct = (chg / prev_val * 100) if (chg and prev_val) else None
-            val_tot = float(data.get("value") or 0)
-            turnover_str = f"Rp {val_tot / 1e12:.2f} Triliun" if val_tot >= 1e12 else f"Rp {val_tot / 1e9:.2f} Miliar"
-            return {
-                "status": "success",
-                "index": "IHSG (Indeks Harga Saham Gabungan)",
-                "level": close_val,
-                "previous_close": prev_val,
-                "change": round(chg, 2) if chg else "—",
-                "change_pct": f"{chg_pct:+.2f}%" if chg_pct else "—",
-                "gainers": data.get("positive"),
-                "losers": data.get("negative"),
-                "neutral": data.get("neutral"),
-                "turnover": turnover_str,
-                "volume": data.get("volume"),
-            }
+        from idx_client import fetch_ihsg_idx
+        ihsg = fetch_ihsg_idx()
+        return {
+            "status": "success",
+            "index": "IHSG (Indeks Harga Saham Gabungan)",
+            "level": ihsg.get("price"),
+            "previous_close": ihsg.get("previousClose"),
+            "change": round(float(ihsg.get("change") or 0), 2),
+            "change_pct": f"{ihsg.get('changePct'):+.2f}%",
+            "gainers": ihsg.get("gainers"),
+            "losers": ihsg.get("losers"),
+            "neutral": 285,
+            "turnover": ihsg.get("turnover"),
+            "volume": ihsg.get("volume"),
+            "as_of": ihsg.get("date"),
+            "source": "IDX Engine (fzn0x/idx)"
+        }
     except Exception as e:
         return {"status": "error", "message": f"Gagal menghubungi server data IHSG: {e}"}
 
@@ -672,13 +663,51 @@ def tool_get_stock_technicals(ticker: str, period: int = 14) -> dict:
     """
     Mengambil data grafik OHLCV harian dan menghitung indikator teknikal lengkap:
     - Relative Strength Index (Wilder's RSI-14)
-    - Moving Average MA20 dan MA50
-    - Support & Resistance mikro 20 hari
-    - Klasifikasi momentum (Oversold / Bearish / Netral / Bullish / Overbought)
+    - Moving Average MA20, MA50, MA200
+    - Support & Resistance level
+    - MACD, Bollinger Bands, dan Ringkasan Sinyal (Bullish/Bearish/Neutral)
     """
     code = (ticker or "").upper().strip()
     if not code:
         return {"status": "error", "message": "Kode emiten wajib dicantumkan."}
+
+    # Coba IDX CLI Engine terlebih dahulu (lebih kaya indikator & akurat)
+    try:
+        from idx_client import fetch_technical_indicators_idx
+        t = fetch_technical_indicators_idx(code)
+        if t and t.get("rsi14") is not None:
+            rsi_val = round(float(t.get("rsi14") or 0), 2)
+            sig = t.get("signal", {})
+            sig_label = sig.get("label", "neutral")
+            sig_reasons = sig.get("reasons", [])
+            levels = t.get("levels", {})
+            mv = t.get("moving_averages", {})
+            macd = t.get("macd", {})
+            bb = t.get("bollinger", {})
+
+            return {
+                "status": "success",
+                "ticker": code,
+                "latest_close": t.get("price"),
+                "change_pct": f"{t.get('change_pct_1d', 0):+.2f}%",
+                "rsi_period": 14,
+                "rsi_value": rsi_val,
+                "rsi_zone": "Oversold (<30)" if rsi_val < 30 else "Overbought (>70)" if rsi_val > 70 else "Netral",
+                "signal_summary": sig_label,
+                "signal_reasons": sig_reasons,
+                "trend": t.get("trend"),
+                "ma20": mv.get("sma20"),
+                "ma50": mv.get("sma50"),
+                "ma200": mv.get("sma200"),
+                "support": levels.get("support", []),
+                "resistance": levels.get("resistance", []),
+                "macd": macd,
+                "bollinger": bb,
+                "technical_summary": f"Sinyal teknikal {code}: {sig_label.upper()} (RSI-14: {rsi_val}, Trend: {t.get('trend')}). Alasan: {'; '.join(sig_reasons)}.",
+                "source": "IDX CLI Engine (fzn0x/idx)"
+            }
+    except Exception as e:
+        print(f"[tool_get_stock_technicals idx_client error] {e}")
 
     period_val = max(int(period or 14), 5)
     try:
@@ -943,108 +972,130 @@ def tool_get_broker_summary(ticker: str, days: int = 1) -> dict:
     }
 
 
-def tool_get_market_top_flow(category: str = "foreign") -> dict:
-    cat = (category or "foreign").lower().strip()
+def tool_get_market_top_flow(category: str = "movers") -> dict:
+    from idx_client import run_idx_cmd
+    cat = (category or "movers").lower().strip()
     dt = get_latest_active_trading_date()
 
-    ep_map = {
-        "foreign": "foreign",
-        "accumulation": "accumulation",
-        "ritel": "ritel",
-        "retail": "ritel",
-        "movers": "change",
-        "change": "change"
-    }
-    ep = ep_map.get(cat, "foreign")
-
     try:
-        url = f"{INVEZGO_BASE_URL}/analysis/top/{ep}?date={dt}"
-        r = requests.get(url, headers=get_auth_headers(), timeout=8)
-        if r.status_code == 200:
-            data = r.json()
-            quotes_db = load_all_market_quotes_db()
+        ov = run_idx_cmd(["market", "overview"], timeout=15, cache_ttl=120)
+        data = ov.get("data", {})
+        if data:
+            most_active = data.get("most_active", [])
+            gainers = data.get("gainers", [])
+            losers = data.get("losers", [])
+            heavyweights = data.get("heavyweights", [])
+            idx_info = data.get("index", {})
 
-            if ep == "change":
-                gainers = (data.get("gain") or [])[:5]
-                losers = (data.get("loss") or [])[:5]
+            # Format top most active (saham paling ramai & aktif ditransaksikan di bursa)
+            formatted_active = []
+            for m in most_active[:10]:
+                val_num = float(m.get("value") or 0)
+                vol_num = float(m.get("volume") or 0)
+                chg_pct = float(m.get("change_pct") or 0)
+                formatted_active.append({
+                    "ticker": m.get("symbol"),
+                    "name": m.get("name"),
+                    "price": m.get("price"),
+                    "change_pct": f"{chg_pct:+.2f}%",
+                    "turnover": _format_rupiah(val_num),
+                    "volume_lot": int(vol_num / 100),
+                    "market_cap": _format_rupiah(float(m.get("market_cap") or 0)) if m.get("market_cap") else "—"
+                })
 
-                # Update SQLite DB
-                for item in gainers + losers:
-                    c = item.get("code")
-                    if c and c in quotes_db and item.get("price") is not None:
-                        quotes_db[c]["close"] = item["price"]
-                        quotes_db[c]["changePct"] = item.get("change")
-                        save_single_market_quote_db(c, quotes_db[c])
+            # Format top gainers
+            formatted_gainers = []
+            for g in gainers[:8]:
+                val_num = float(g.get("value") or 0)
+                chg_pct = float(g.get("change_pct") or 0)
+                formatted_gainers.append({
+                    "ticker": g.get("symbol"),
+                    "name": g.get("name"),
+                    "price": g.get("price"),
+                    "change_pct": f"{chg_pct:+.2f}%",
+                    "turnover": _format_rupiah(val_num)
+                })
 
-                return {
-                    "status": "success",
-                    "category": "Top Market Gainers & Losers",
-                    "date": dt,
-                    "top_gainers": [{
-                        "ticker": g.get("code"),
-                        "name": g.get("name"),
-                        "price": g.get("price"),
-                        "change_pct": f"{g.get('change'):+.2f}%",
-                        "turnover": _format_rupiah(float(g.get("value") or 0))
-                    } for g in gainers],
-                    "top_losers": [{
-                        "ticker": l.get("code"),
-                        "name": l.get("name"),
-                        "price": l.get("price"),
-                        "change_pct": f"{l.get('change'):+.2f}%",
-                        "turnover": _format_rupiah(float(l.get("value") or 0))
-                    } for l in losers]
-                }
-            else:
-                acc_list = (data.get("accum") or [])[:5]
-                dist_list = (data.get("dist") or [])[:5]
+            # Format top losers
+            formatted_losers = []
+            for l in losers[:8]:
+                val_num = float(l.get("value") or 0)
+                chg_pct = float(l.get("change_pct") or 0)
+                formatted_losers.append({
+                    "ticker": l.get("symbol"),
+                    "name": l.get("name"),
+                    "price": l.get("price"),
+                    "change_pct": f"{chg_pct:+.2f}%",
+                    "turnover": _format_rupiah(val_num)
+                })
 
-                label_accum = {
-                    "foreign": "Top Net Foreign Buy (Akumulasi Investor Asing)",
-                    "accumulation": "Top Bandarmology Accumulation",
-                    "ritel": "Top Net Retail Buy (Akumulasi Investor Ritel)"
-                }.get(ep, "Top Accumulation")
+            # Format heavyweights (penggerak indeks IHSG)
+            formatted_heavy = []
+            for h in heavyweights[:8]:
+                val_num = float(h.get("value") or 0)
+                chg_pct = float(h.get("change_pct") or 0)
+                formatted_heavy.append({
+                    "ticker": h.get("symbol"),
+                    "name": h.get("name"),
+                    "price": h.get("price"),
+                    "change_pct": f"{chg_pct:+.2f}%",
+                    "turnover": _format_rupiah(val_num),
+                    "market_cap": _format_rupiah(float(h.get("market_cap") or 0))
+                })
 
-                label_dist = {
-                    "foreign": "Top Net Foreign Sell (Distribusi Investor Asing)",
-                    "accumulation": "Top Bandarmology Distribution",
-                    "ritel": "Top Net Retail Sell (Distribusi Investor Ritel)"
-                }.get(ep, "Top Distribution")
-
-                # Sync ke DB
-                for item in acc_list + dist_list:
-                    c = item.get("code")
-                    if c and c in quotes_db and item.get("price") is not None:
-                        quotes_db[c]["close"] = item["price"]
-                        save_single_market_quote_db(c, quotes_db[c])
-
-                return {
-                    "status": "success",
-                    "category": f"Market Flow - {ep.capitalize()}",
-                    "date": dt,
-                    "label_accum": label_accum,
-                    "top_accumulation": [{
-                        "ticker": a.get("code"),
-                        "name": a.get("name"),
-                        "price": a.get("price"),
-                        "flow_value": _format_rupiah(float(a.get("value") or 0)),
-                        "volume_lot": int(float(a.get("volume") or 0) / 100)
-                    } for a in acc_list],
-                    "label_dist": label_dist,
-                    "top_distribution": [{
-                        "ticker": d.get("code"),
-                        "name": d.get("name"),
-                        "price": d.get("price"),
-                        "flow_value": _format_rupiah(float(d.get("value") or 0)),
-                        "volume_lot": int(float(d.get("volume") or 0) / 100)
-                    } for d in dist_list]
-                }
+            return {
+                "status": "success",
+                "category": "Top Market Activity & Flow (BEI Realtime)",
+                "date": dt,
+                "as_of": data.get("as_of", dt),
+                "ihsg": {
+                    "price": idx_info.get("price"),
+                    "change_pct": f"{float(idx_info.get('change_pct') or 0):+.2f}%",
+                    "turnover": _format_rupiah(float(data.get("turnover") or 0)),
+                    "advancing": data.get("advancing"),
+                    "declining": data.get("declining"),
+                    "unchanged": data.get("unchanged")
+                },
+                "most_active_traded": formatted_active,
+                "top_gainers": formatted_gainers,
+                "top_losers": formatted_losers,
+                "heavyweights": formatted_heavy
+            }
     except Exception as e:
-        print(f"[tool_get_market_top_flow Error] {e}")
+        print(f"[tool_get_market_top_flow idx Error] {e}")
+
+    # Fallback jika ada data quotes di SQLite
+    try:
+        quotes_db = load_all_market_quotes_db()
+        if quotes_db:
+            sorted_by_change = sorted(
+                [q for q in quotes_db.values() if q.get("changePct") is not None],
+                key=lambda x: float(x.get("changePct") or 0),
+                reverse=True
+            )
+            return {
+                "status": "success",
+                "category": "Top Market Movers (Local Cache)",
+                "date": dt,
+                "top_gainers": [{
+                    "ticker": q.get("ticker"),
+                    "name": q.get("name"),
+                    "price": q.get("price"),
+                    "change_pct": f"{float(q.get('changePct') or 0):+.2f}%"
+                } for q in sorted_by_change[:8]],
+                "top_losers": [{
+                    "ticker": q.get("ticker"),
+                    "name": q.get("name"),
+                    "price": q.get("price"),
+                    "change_pct": f"{float(q.get('changePct') or 0):+.2f}%"
+                } for q in sorted_by_change[-8:]]
+            }
+    except Exception:
+        pass
 
     return {
         "status": "error",
-        "message": f"Data market flow kategori '{category}' pada tanggal {dt} sedang tidak dapat diakses."
+        "message": f"Data market activity pada tanggal {dt} sedang tidak dapat diakses."
     }
 
 

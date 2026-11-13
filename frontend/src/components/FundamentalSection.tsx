@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { StockItem } from '../types';
+import { StockItem, UserProfile } from '../types';
 import { Icon } from './Icon';
 import { StockLogo } from './StockLogo';
-import { fmt, rp, pct, fairValue, mos, dividendYield, exportStocksToCSV, getOHLCData } from '../utils';
+import { fmt, rp, pct, fairValue, mos, dividendYield, exportStocksToCSV, getOHLCData, isUserProOrAdmin } from '../utils';
 
 interface FundamentalSectionProps {
   stocks: StockItem[];
@@ -12,6 +12,9 @@ interface FundamentalSectionProps {
   onOpenMethod: () => void;
   onRefreshAll?: () => Promise<void>;
   onlySaved?: boolean;
+  currentUser?: UserProfile | null;
+  onNotify?: (msg: string) => void;
+  onOpenContact?: (feature: string) => void;
 }
 
 export const FundamentalSection: React.FC<FundamentalSectionProps> = ({
@@ -22,7 +25,12 @@ export const FundamentalSection: React.FC<FundamentalSectionProps> = ({
   onOpenMethod,
   onRefreshAll,
   onlySaved = false,
+  currentUser,
+  onNotify,
+  onOpenContact,
 }) => {
+  const isPro = isUserProOrAdmin(currentUser);
+  const isStarter = !isPro;
   const [sector, setSector] = useState<string>('all');
   const [minMos, setMinMos] = useState<number>(0);
   const [sortBy, setSortBy] = useState<string>('mos');
@@ -164,11 +172,20 @@ export const FundamentalSection: React.FC<FundamentalSectionProps> = ({
 
           <button
             className="btn small-btn"
-            onClick={() => exportStocksToCSV(list, onlySaved ? 'Watchlist_PintarSaham.csv' : 'Valuasi_MOS_PintarSaham.csv')}
-            title="Download data emiten dan valuasi MOS dalam format CSV"
+            onClick={() => {
+              if (isStarter) {
+                onNotify?.('Fitur ekspor data valuasi ke CSV eksklusif untuk Pro Trader.');
+                onOpenContact?.('Ekspor CSV Valuasi');
+                return;
+              }
+              exportStocksToCSV(list, onlySaved ? 'Watchlist_PintarSaham.csv' : 'Valuasi_MOS_PintarSaham.csv');
+            }}
+            title={isStarter ? 'Terkunci untuk akun Starter (Khusus Pro Trader)' : 'Download data emiten dan valuasi MOS dalam format CSV'}
             style={{ padding: '6px 10px', fontSize: '11px' }}
           >
-            <Icon name="download" cls="sm" /> Export CSV
+            {isStarter ? <Icon name="lock" cls="sm" style={{ color: '#d97706' }} /> : <Icon name="download" cls="sm" />}{' '}
+            Export CSV
+            {isStarter && <span className="pill amber" style={{ fontSize: '9px', padding: '1px 5px', marginLeft: '4px' }}>PRO</span>}
           </button>
 
           {!onlySaved && onRefreshAll && (
@@ -176,6 +193,11 @@ export const FundamentalSection: React.FC<FundamentalSectionProps> = ({
               className="btn small-btn"
               disabled={refreshing}
               onClick={async () => {
+                if (isStarter) {
+                  onNotify?.('Pembaruan data live seluruh emiten eksklusif untuk Pro Trader.');
+                  onOpenContact?.('Pembaruan Data Pasar');
+                  return;
+                }
                 setRefreshing(true);
                 try {
                   await onRefreshAll();
@@ -184,10 +206,11 @@ export const FundamentalSection: React.FC<FundamentalSectionProps> = ({
                 }
               }}
               style={{ padding: '6px 10px', fontSize: '11px' }}
-              title="Perbarui seluruh data fundamental & MOS dari Invezgo API"
+              title={isStarter ? 'Terkunci untuk akun Starter (Khusus Pro Trader)' : 'Perbarui seluruh data fundamental & MOS dari Invezgo API'}
             >
-              <Icon name="refresh" cls="sm" />{' '}
+              {isStarter ? <Icon name="lock" cls="sm" style={{ color: '#d97706' }} /> : <Icon name="refresh" cls="sm" />}{' '}
               {refreshing ? 'Memperbarui...' : 'Perbarui MOS'}
+              {isStarter && <span className="pill amber" style={{ fontSize: '9px', padding: '1px 5px', marginLeft: '4px' }}>PRO</span>}
             </button>
           )}
         </div>

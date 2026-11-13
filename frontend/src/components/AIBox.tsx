@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { StockItem, IndexItem, AIAnalysisResult } from '../types';
-import { ChartCalculatedData, fmt, movingAverage, rsi } from '../utils';
+import { StockItem, IndexItem, AIAnalysisResult, UserProfile } from '../types';
+import { ChartCalculatedData, fmt, movingAverage, rsi, isUserProOrAdmin } from '../utils';
 import { Icon } from './Icon';
 
 interface AIBoxProps {
@@ -10,9 +10,24 @@ interface AIBoxProps {
   period: string;
   onOpenDrawer: (type: string, payload?: any) => void;
   onNotify: (msg: string) => void;
+  currentUser?: UserProfile | null;
+  onUpdateTokens?: (tokens: { monthly?: number; additional?: number; total?: number }) => void;
 }
 
 const aiCache: Record<string, AIAnalysisResult> = {};
+const activeAiPending = new Set<string>();
+type AiListener = (ticker: string) => void;
+const aiListeners = new Set<AiListener>();
+
+function notifyAiListeners(ticker: string) {
+  aiListeners.forEach((cb) => {
+    try {
+      cb(ticker);
+    } catch (e) {
+      console.error(e);
+    }
+  });
+}
 
 export const AIBox: React.FC<AIBoxProps> = ({
   stockOrIndex,
@@ -21,19 +36,35 @@ export const AIBox: React.FC<AIBoxProps> = ({
   period,
   onOpenDrawer,
   onNotify,
+  currentUser,
+  onUpdateTokens,
 }) => {
+  const isPro = isUserProOrAdmin(currentUser);
+  const isStarter = !isPro;
   const ticker = stockOrIndex.ticker;
-  const [analyzing, setAnalyzing] = useState<boolean>(false);
+  const [analyzing, setAnalyzing] = useState<boolean>(activeAiPending.has(ticker));
   const [viewMode, setViewMode] = useState<'ringkas' | 'lengkap'>('ringkas');
+  const [languageMode, setLanguageMode] = useState<'pro' | 'santai'>('santai');
   const [analysis, setAnalysis] = useState<AIAnalysisResult | null>(
     aiCache[ticker] || null
   );
 
-  // Reset / sinkronkan state analisis setiap kali pengguna beralih emiten
+  // Reset / sinkronkan state analisis setiap kali pengguna beralih emiten atau remount/tab switch
   useEffect(() => {
     setAnalysis(aiCache[ticker] || null);
-    setAnalyzing(false);
+    setAnalyzing(activeAiPending.has(ticker));
     setViewMode('ringkas');
+
+    const listener = (updatedTicker: string) => {
+      if (updatedTicker === ticker) {
+        setAnalyzing(activeAiPending.has(ticker));
+        setAnalysis(aiCache[ticker] || null);
+      }
+    };
+    aiListeners.add(listener);
+    return () => {
+      aiListeners.delete(listener);
+    };
   }, [ticker]);
 
   const ma20 = movingAverage(chartCalc.full, 20, chartCalc.full.length - 1);
@@ -50,10 +81,24 @@ export const AIBox: React.FC<AIBoxProps> = ({
     .sort((a, b) => a.value - b.value);
   const S = support[0];
   const R = res[0];
+  const S2 = support[1] || (S ? { value: Math.round(S.value * 0.98) } : undefined);
+  const R2 = res[1] || (R ? { value: Math.round(R.value * 1.02) } : undefined);
+  const pivotVal = Math.round(
+    (stockOrIndex.price + (S ? S.value : stockOrIndex.price) + (R ? R.value : stockOrIndex.price)) / 3
+  );
+  const pivot = { value: pivotVal };
   const val = (x?: { value: number }) => (x ? fmt(x.value, 0) : '—');
 
   const generateAIAnalysis = async (force: boolean = false) => {
+    if (isStarter) {
+      onNotify('Fitur Analisis AI eksklusif untuk investor Pro Trader (0 Token tersisa).');
+      return;
+    }
+    if (activeAiPending.has(ticker)) return;
+    activeAiPending.add(ticker);
     setAnalyzing(true);
+    notifyAiListeners(ticker);
+
     const techData = {
       ticker,
       price: fmt(stockOrIndex.price, isStock ? 0 : 2),
@@ -76,16 +121,30 @@ export const AIBox: React.FC<AIBoxProps> = ({
           ticker,
           technical: techData,
           force,
+          user_id: currentUser?.id,
+          email: currentUser?.email,
         }),
       });
 
-      if (!res.ok) throw new Error('HTTP ' + res.status);
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null);
+        throw new Error(errJson?.error || ('HTTP ' + res.status));
+      }
       const data = await res.json();
       if (data.error) throw new Error(data.error);
 
+      if (data.remaining_tokens) {
+        onUpdateTokens?.(data.remaining_tokens);
+      }
+
       aiCache[ticker] = data;
       setAnalysis(data);
-      onNotify(`Analisis cerdas untuk ${ticker} berhasil disiapkan!`);
+      const remTotal = data.remaining_tokens ? (data.remaining_tokens.total ?? (data.remaining_tokens.monthly + data.remaining_tokens.additional)) : null;
+      onNotify(
+        remTotal !== null
+          ? `Analisis cerdas untuk ${ticker} berhasil disiapkan! (1 Token digunakan, sisa: ${remTotal} Token)`
+          : `Analisis cerdas untuk ${ticker} berhasil disiapkan!`
+      );
     } catch (err: any) {
       console.warn('[AI Analysis] Error or fallback:', err);
       // Fallback local rule generation
@@ -112,27 +171,36 @@ export const AIBox: React.FC<AIBoxProps> = ({
       setAnalysis(fallbackResult);
       onNotify(`Ringkasan teknikal & pasar ${ticker} berhasil disiapkan.`);
     } finally {
+      activeAiPending.delete(ticker);
       setAnalyzing(false);
+      notifyAiListeners(ticker);
     }
   };
 
-  // 1. Loading state
+  // 1. Loading state (OpenAI-inspired clean style)
   if (analyzing) {
     return (
       <div id="ai-summary">
         <div
           className="ai-box"
-          style={{ borderLeft: '4px solid var(--blue)', background: '#fbfdff' }}
+          style={{
+            border: '1px solid var(--line)',
+            background: 'var(--bg-card, #ffffff)',
+            borderRadius: '12px',
+            boxShadow: '0 2px 10px rgba(0,0,0,0.02)',
+            padding: '20px 22px',
+          }}
         >
           <div className="ai-top">
             <span className="ai-title">
-              <Icon name="sparkles" cls="sm" /> Ringkasan AI Terpadu · {ticker}
+              <Icon name="sparkles" cls="sm" /> Analisis Cerdas Pasar · {ticker}
             </span>
-            <span className="pill blue">
-              <span className="dot"></span>Memproses AI...
+            <span className="pill outline" style={{ fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+              <span className="dot" style={{ background: 'var(--blue)', animation: 'pulse-bg 1s infinite' }}></span>
+              Memproses Analisis AI...
             </span>
           </div>
-          <div style={{ padding: '16px 0', textAlign: 'center' }}>
+          <div style={{ padding: '20px 0', textAlign: 'center' }}>
             <div
               style={{
                 display: 'inline-flex',
@@ -148,7 +216,6 @@ export const AIBox: React.FC<AIBoxProps> = ({
                 style={{
                   width: '20px',
                   height: '20px',
-                  animation: 'spin 1s linear infinite',
                 }}
                 viewBox="0 0 24 24"
                 fill="none"
@@ -157,10 +224,10 @@ export const AIBox: React.FC<AIBoxProps> = ({
               >
                 <path d="M21 12a9 9 0 1 1-6.219-8.56" />
               </svg>
-              Sistem sedang menganalisis teknikal chart ({ticker}) &amp; sentimen pasar terkini...
+              Sistem sedang menganalisis teknikal chart ({ticker}) &amp; sentimen berita resmi BEI...
             </div>
-            <p className="small muted" style={{ marginTop: '6px' }}>
-              Memadukan MA20, MA50, RSI 14, Support/Resistance, serta sentimen makro dan berita terkini.
+            <p className="small muted" style={{ marginTop: '8px', fontSize: '12px' }}>
+              Memadukan MA20, MA50, RSI 14, Support/Resistance, serta berita terkini.
             </p>
           </div>
         </div>
@@ -177,28 +244,58 @@ export const AIBox: React.FC<AIBoxProps> = ({
 
     return (
       <div id="ai-summary">
-        <div className="ai-box" style={{ borderLeft: `4px solid var(--${biasColor})` }}>
-          <div className="ai-top">
+        {/* OpenAI-inspired Clean Minimalist Card (No Heavy Colored Borders) */}
+        <div
+          className="ai-box"
+          style={{
+            border: '1px solid var(--line)',
+            background: 'var(--bg-card, #ffffff)',
+            borderRadius: '12px',
+            padding: '18px 20px',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.03)',
+          }}
+        >
+          <div className="ai-top" style={{ marginBottom: '14px' }}>
             <div className="flex gap-8 wrap">
-              <span className="ai-title">
-                <Icon name="sparkles" cls="sm" /> Ringkasan AI · {ticker}
+              <span className="ai-title" style={{ fontSize: '13.5px', fontWeight: 750, color: 'var(--ink)' }}>
+                <Icon name="sparkles" cls="sm" style={{ color: 'var(--blue)' }} /> Analisis PintarSaham AI · {ticker}
               </span>
-              <span className={`pill ${biasColor}`}>
-                <i className="dot"></i>
+              <span className="pill outline" style={{ fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                <i className="dot" style={{ background: bias === 'positif' ? '#10b981' : bias === 'negatif' ? '#ef4444' : '#0284c7' }}></i>
                 {sentiment}
               </span>
-              <span className="pill outline" style={{ fontSize: '9px' }}>
-                Analisis Pasar Terpadu
-              </span>
             </div>
-            <div className="flex gap-6">
-              {isStock && (
+
+            <div className="flex gap-6 wrap">
+              {/* Language Mode Toggle: Non-Finance Simple vs Professional Technical */}
+              <div className="segmented" style={{ padding: '2px', background: 'var(--soft)', borderRadius: '6px' }}>
+                <button
+                  type="button"
+                  className={languageMode === 'santai' ? 'active' : ''}
+                  onClick={() => setLanguageMode('santai')}
+                  style={{ fontSize: '10.5px', padding: '4px 10px', fontWeight: languageMode === 'santai' ? 700 : 500 }}
+                  title="Bahasa santai & mudah dipahami untuk orang non-finance / pemula"
+                >
+                  Bahasa Santai (Pemula)
+                </button>
+                <button
+                  type="button"
+                  className={languageMode === 'pro' ? 'active' : ''}
+                  onClick={() => setLanguageMode('pro')}
+                  style={{ fontSize: '10.5px', padding: '4px 10px', fontWeight: languageMode === 'pro' ? 700 : 500 }}
+                  title="Analisis teknikal, rasio fundamental & trading plan"
+                >
+                  Analisis Profesional
+                </button>
+              </div>
+
+              {isStock && languageMode === 'pro' && (
                 <div className="segmented" style={{ padding: '2px', background: 'var(--soft)', borderRadius: '6px' }}>
                   <button
                     type="button"
                     className={viewMode === 'ringkas' ? 'active' : ''}
                     onClick={() => setViewMode('ringkas')}
-                    style={{ fontSize: '10px', padding: '3px 8px' }}
+                    style={{ fontSize: '10px', padding: '4px 8px' }}
                   >
                     Taktis
                   </button>
@@ -206,41 +303,65 @@ export const AIBox: React.FC<AIBoxProps> = ({
                     type="button"
                     className={viewMode === 'lengkap' ? 'active' : ''}
                     onClick={() => setViewMode('lengkap')}
-                    style={{ fontSize: '10px', padding: '3px 8px' }}
+                    style={{ fontSize: '10px', padding: '4px 8px' }}
                   >
                     Mendalam
                   </button>
                 </div>
               )}
+
               <button
                 className="btn small-btn"
                 onClick={() => generateAIAnalysis(true)}
                 title="Analisis ulang dengan berita & teknikal paling mutakhir"
-                style={{ fontSize: '10px', padding: '3px 8px' }}
+                style={{ fontSize: '10px', padding: '4px 9px' }}
               >
                 <Icon name="refresh" cls="sm" /> Ulang
               </button>
               <button
                 className="link-btn"
-                onClick={() => onOpenDrawer('technical')}
-                style={{ fontSize: '10px', marginLeft: '4px' }}
+                onClick={() => onOpenDrawer('technical', { stock: stockOrIndex, chartCalc, ticker })}
+                style={{ fontSize: '11px', marginLeft: '4px' }}
+                title="Buka rincian data teknikal chart"
               >
-                Teknikal <Icon name="arrow-up-right" cls="sm" />
+                Dasar teknikal <Icon name="arrow-up-right" cls="sm" />
               </button>
             </div>
           </div>
 
-          <p
-            className="ai-text"
-            style={{
-              fontSize: '12.5px',
-              lineHeight: 1.8,
-              color: 'var(--ink)',
-              marginBottom: '14px',
-            }}
-          >
-            {analysis.executive_summary}
-          </p>
+          {/* Simple Language Card for Non-Finance Users */}
+          {languageMode === 'santai' ? (
+            <div
+              style={{
+                background: 'var(--soft, #f8fafc)',
+                border: '1px solid var(--line, #e2e8f0)',
+                borderRadius: '8px',
+                padding: '14px 16px',
+                marginBottom: '14px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--navy)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Panduan Bahasa Awam (Mudah Dipahami Non-Finance):
+                </span>
+              </div>
+              <p style={{ margin: 0, fontSize: '12.5px', lineHeight: 1.75, color: 'var(--ink)' }}>
+                {analysis.simple_summary || analysis.executive_summary}
+              </p>
+            </div>
+          ) : (
+            <p
+              className="ai-text"
+              style={{
+                fontSize: '12.5px',
+                lineHeight: 1.8,
+                color: 'var(--ink)',
+                marginBottom: '14px',
+              }}
+            >
+              {analysis.executive_summary}
+            </p>
+          )}
 
           {/* Status Kelayakan Pasar Khusus IHSG (Jika Indeks) */}
           {(ticker === 'IHSG' || analysis.is_index) && (
@@ -251,21 +372,10 @@ export const AIBox: React.FC<AIBoxProps> = ({
                 justifyContent: 'space-between',
                 flexWrap: 'wrap',
                 gap: '12px',
-                background:
-                  analysis.market_status?.includes('Layak')
-                    ? 'rgba(6, 190, 114, 0.08)'
-                    : analysis.market_status?.includes('Waspada') || analysis.market_status?.includes('Wait')
-                    ? 'rgba(217, 119, 6, 0.08)'
-                    : 'rgba(220, 38, 38, 0.08)',
-                border: `1.5px solid ${
-                  analysis.market_status?.includes('Layak')
-                    ? '#059669'
-                    : analysis.market_status?.includes('Waspada') || analysis.market_status?.includes('Wait')
-                    ? '#d97706'
-                    : '#dc2626'
-                }`,
-                borderRadius: '10px',
-                padding: '10px 16px',
+                background: 'var(--soft, #f8fafc)',
+                border: '1px solid var(--line, #e2e8f0)',
+                borderRadius: '8px',
+                padding: '10px 14px',
                 marginBottom: '14px',
               }}
             >
@@ -277,8 +387,8 @@ export const AIBox: React.FC<AIBoxProps> = ({
               </div>
               <div
                 style={{
-                  fontSize: '13px',
-                  fontWeight: 800,
+                  fontSize: '12.5px',
+                  fontWeight: 750,
                   color:
                     analysis.market_status?.includes('Layak')
                       ? '#059669'
@@ -302,7 +412,7 @@ export const AIBox: React.FC<AIBoxProps> = ({
             </div>
           )}
 
-          {/* Mode 1: Ringkasan Trading Plan Taktis (Hanya untuk Emiten Saham) */}
+          {/* Mode 1: Support & Resisten Kunci Teknikal (Hanya untuk Emiten Saham) */}
           {isStock && viewMode === 'ringkas' ? (
             <div style={{ marginBottom: '14px' }}>
               <div
@@ -315,46 +425,46 @@ export const AIBox: React.FC<AIBoxProps> = ({
               >
                 <div style={{ background: 'var(--soft)', border: '1px solid var(--line)', borderRadius: '8px', padding: '8px 10px' }}>
                   <span style={{ fontSize: '9px', color: 'var(--muted)', display: 'block', textTransform: 'uppercase', fontWeight: 600 }}>
-                    Area Beli (Entry)
+                    Support 1 (S1)
                   </span>
-                  <strong style={{ fontSize: '12px', color: 'var(--ink)' }}>
-                    {analysis.trading_plan?.entry_zone || `Rp${val(S)} - Rp${fmt(stockOrIndex.price, isStock ? 0 : 2)}`}
+                  <strong style={{ fontSize: '13px', color: '#16a34a' }}>
+                    Rp{val(S)}
                   </strong>
                 </div>
 
                 <div style={{ background: 'var(--soft)', border: '1px solid var(--line)', borderRadius: '8px', padding: '8px 10px' }}>
                   <span style={{ fontSize: '9px', color: 'var(--muted)', display: 'block', textTransform: 'uppercase', fontWeight: 600 }}>
-                    Target 1 (TP1)
+                    Support 2 (S2)
                   </span>
-                  <strong style={{ fontSize: '12px', color: 'var(--green)' }}>
-                    {analysis.trading_plan?.target_price_1 || `Rp${val(R)}`}
+                  <strong style={{ fontSize: '13px', color: '#0d9488' }}>
+                    Rp{val(S2)}
                   </strong>
                 </div>
 
                 <div style={{ background: 'var(--soft)', border: '1px solid var(--line)', borderRadius: '8px', padding: '8px 10px' }}>
                   <span style={{ fontSize: '9px', color: 'var(--muted)', display: 'block', textTransform: 'uppercase', fontWeight: 600 }}>
-                    Target 2 (TP2)
+                    Resisten 1 (R1)
                   </span>
-                  <strong style={{ fontSize: '12px', color: 'var(--blue)' }}>
-                    {analysis.trading_plan?.target_price_2 || 'Trailing Breakout'}
+                  <strong style={{ fontSize: '13px', color: '#dc2626' }}>
+                    Rp{val(R)}
                   </strong>
                 </div>
 
                 <div style={{ background: 'var(--soft)', border: '1px solid var(--line)', borderRadius: '8px', padding: '8px 10px' }}>
                   <span style={{ fontSize: '9px', color: 'var(--muted)', display: 'block', textTransform: 'uppercase', fontWeight: 600 }}>
-                    Stop Loss (SL)
+                    Resisten 2 (R2)
                   </span>
-                  <strong style={{ fontSize: '12px', color: 'var(--red)' }}>
-                    {analysis.trading_plan?.stop_loss || `Bawah Rp${val(S)}`}
+                  <strong style={{ fontSize: '13px', color: '#b91c1c' }}>
+                    Rp{val(R2)}
                   </strong>
                 </div>
 
                 <div style={{ background: 'var(--soft)', border: '1px solid var(--line)', borderRadius: '8px', padding: '8px 10px' }}>
                   <span style={{ fontSize: '9px', color: 'var(--muted)', display: 'block', textTransform: 'uppercase', fontWeight: 600 }}>
-                    Risk / Reward
+                    Pivot Konsolidasi
                   </span>
-                  <strong style={{ fontSize: '12px', color: 'var(--navy)' }}>
-                    {analysis.trading_plan?.risk_reward_ratio || '1 : 2.5'}
+                  <strong style={{ fontSize: '13px', color: 'var(--navy, #0e3465)' }}>
+                    Rp{val(pivot)}
                   </strong>
                 </div>
               </div>
@@ -436,25 +546,26 @@ export const AIBox: React.FC<AIBoxProps> = ({
             </div>
           )}
 
+          {/* Actionable Plan Linked to Recent News Catalysts */}
           {analysis.actionable_plan && (
             <div
               style={{
-                background: '#f0f7ff',
-                border: '1px solid #cce3fd',
+                background: 'var(--soft, #f8fafc)',
+                border: '1px solid var(--line, #e2e8f0)',
                 borderRadius: '8px',
-                padding: '9px 12px',
-                marginBottom: '12px',
-                fontSize: '11.5px',
-                color: '#1e4273',
+                padding: '12px 14px',
+                marginBottom: '14px',
+                fontSize: '12px',
                 lineHeight: 1.65,
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: '8px',
               }}
             >
-              <Icon name="target" cls="sm" style={{ color: 'var(--blue)', marginTop: '2px', flexShrink: 0 }} />
-              <div>
-                <strong>{ticker === 'IHSG' ? 'Strategi Investasi Pasar:' : 'Rencana Aksi / Rekomendasi:'}</strong>{' '}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                <Icon name="target" cls="sm" style={{ color: 'var(--blue)', flexShrink: 0 }} />
+                <span style={{ fontWeight: 700, fontSize: '11px', color: 'var(--ink)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  {ticker === 'IHSG' ? 'Strategi Investasi Pasar Terkini:' : 'Rencana Aksi & Rekomendasi Terkait Berita:'}
+                </span>
+              </div>
+              <div style={{ color: 'var(--ink)' }}>
                 {analysis.actionable_plan}
               </div>
             </div>
@@ -576,8 +687,9 @@ export const AIBox: React.FC<AIBoxProps> = ({
           </button>
           <button
             className="link-btn"
-            onClick={() => onOpenDrawer('technical')}
+            onClick={() => onOpenDrawer('technical', { stock: stockOrIndex, chartCalc, ticker })}
             style={{ fontSize: '11px' }}
+            title="Buka rincian data teknikal chart"
           >
             Dasar teknikal <Icon name="arrow-up-right" cls="sm" />
           </button>

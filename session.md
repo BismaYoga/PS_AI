@@ -315,10 +315,10 @@ Sistem ini menggunakan arsitektur **terpisah (decoupled)**:
 
 ## 📋 Catatan Teknis untuk Menjalankan Dashboard
 1. **Cara 1: Akses Langsung Web Browser (Server Aktif)**
-   - Dashboard saat ini telah berjalan persisten melalui service `ps_ai.service` di port `8080`.
-   - **URL Dashboard Utama (React 19)**: [http://202.10.47.34:8080/](http://202.10.47.34:8080/)
-   - **URL Admin Console**: [http://202.10.47.34:8080/admin.html](http://202.10.47.34:8080/admin.html)
-   - **URL Versi Legacy**: [http://202.10.47.34:8080/legacy/PintarSaham_Dashboard_Interaktif.html](http://202.10.47.34:8080/legacy/PintarSaham_Dashboard_Interaktif.html)
+   - Dashboard saat ini telah berjalan persisten melalui service `ps_ai.service` di port `8080` dan Nginx reverse proxy.
+   - **URL Dashboard Utama (Nginx Domain)**: [http://pintarsaham.202.10.47.34.nip.io/](http://pintarsaham.202.10.47.34.nip.io/)
+   - **URL Dashboard Utama (Direct Port 8080)**: [http://202.10.47.34.nip.io:8080/](http://202.10.47.34.nip.io:8080/)
+   - **URL Admin Console**: [http://pintarsaham.202.10.47.34.nip.io/admin.html](http://pintarsaham.202.10.47.34.nip.io/admin.html)
    - Status service dapat dicek kapan saja dengan: `systemctl status ps_ai`
 2. **Cara 2: Mode Development Frontend (Vite)**
    - Masuk ke direktori frontend dan jalankan: `cd frontend && npm run dev`

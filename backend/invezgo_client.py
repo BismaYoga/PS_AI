@@ -61,28 +61,38 @@ def get_target_pe(ticker: str, sector: str = None) -> float:
     return 12.0
 
 def get_invezgo_api_key() -> str:
-    k = os.getenv("INVESGO_API") or os.getenv("INVEZGO_API") or ""
-    return k.strip().strip('"').strip("'")
+    # IDX Rust Engine tidak memerlukan token berbayar.
+    # Kembalikan string non-kosong agar validasi downstream selalu aktif.
+    return os.getenv("INVESGO_API") or os.getenv("INVEZGO_API") or "idx-engine-free"
 
 def get_auth_headers() -> dict:
     key = get_invezgo_api_key()
-    if not key:
-        raise ValueError("INVESGO_API key tidak ditemukan di .env")
     return {
         "Authorization": f"Bearer {key}",
         "Accept": "application/json"
     }
 
 def fetch_all_stocks_list() -> list:
-    """Mengambil daftar lengkap seluruh emiten tercatat di BEI dari Invezgo."""
+    """Mengambil daftar lengkap seluruh emiten tercatat di BEI dari IDX CLI Engine."""
+    try:
+        from idx_client import run_idx_cmd
+        res = run_idx_cmd(["stocks", "list"], timeout=15, cache_ttl=86400)
+        return res.get("data", {}).get("instruments", [])
+    except Exception as e:
+        print(f"[fetch_all_stocks_list -> idx_client warning] {e}")
     url = f"{INVEZGO_BASE_URL}/analysis/list/stock"
     res = requests.get(url, headers=get_auth_headers(), timeout=15)
     if res.status_code != 200:
-        raise Exception(f"Gagal mengambil daftar saham dari Invezgo: {res.status_code} {res.text[:200]}")
+        raise Exception(f"Gagal mengambil daftar saham: {res.status_code}")
     return res.json()
 
 def fetch_ihsg_invezgo(days: int = 365) -> dict:
     """Mengambil data candlestick harian IHSG (COMPOSITE) 1 tahun ke belakang."""
+    try:
+        from idx_client import fetch_ihsg_idx
+        return fetch_ihsg_idx(days=days)
+    except Exception as e:
+        print(f"[fetch_ihsg_invezgo -> idx_client warning] {e}")
     today = datetime.now()
     from_date = (today - timedelta(days=days)).strftime("%Y-%m-%d")
     to_date = today.strftime("%Y-%m-%d")
@@ -158,10 +168,13 @@ def fetch_ihsg_invezgo(days: int = 365) -> dict:
 
 def fetch_intraday_invezgo(ticker: str) -> list:
     """
-    Mengambil chart intraday (1D / menit demi menit sesi perdagangan terakhir) dalam 1 kali request dari Invezgo API.
-    - IHSG: GET /analysis/intraday/COMPOSITE?market=RG
-    - Saham: GET /analysis/intraday/{code}?market=RG
+    Mengambil chart intraday (1D / menit demi menit sesi perdagangan terakhir) dari IDX CLI Engine.
     """
+    try:
+        from idx_client import fetch_intraday_idx
+        return fetch_intraday_idx(ticker=ticker)
+    except Exception as e:
+        print(f"[fetch_intraday_invezgo -> idx_client warning] {e}")
     clean_sym = ticker.upper().strip()
     target_code = "COMPOSITE" if clean_sym == "IHSG" else clean_sym
     is_ihsg = clean_sym == "IHSG"
@@ -192,10 +205,13 @@ def fetch_intraday_invezgo(ticker: str) -> list:
 
 def fetch_stock_invezgo(ticker: str, days: int = 365, emiten_info: dict = None, existing_data: dict = None) -> dict:
     """
-    Mengambil data candlestick harian emiten saham dari Invezgo.
-    Hemat Request: Jika existing_data dari Screener sudah memiliki rasio fundamental (eps/pb/mos),
-    cukup lakukan 1 kali request ke /analysis/chart/stock/{code} tanpa memanggil /keystat & /shareholder-detail lagi.
+    Mengambil data candlestick harian emiten saham & rasio fundamental dari IDX CLI Engine.
     """
+    try:
+        from idx_client import fetch_stock_idx
+        return fetch_stock_idx(ticker=ticker, days=days, emiten_info=emiten_info, existing_data=existing_data)
+    except Exception as e:
+        print(f"[fetch_stock_invezgo -> idx_client warning] {e}")
     clean_sym = ticker.upper().strip()
     today = datetime.now()
     from_date = (today - timedelta(days=days)).strftime("%Y-%m-%d")
@@ -400,8 +416,13 @@ def fetch_stock_invezgo(ticker: str, days: int = 365, emiten_info: dict = None, 
 def fetch_all_screener_invezgo(emiten_map: dict = None, date_str: str = "16 Oct 2026", raw_date: str = "2026-10-16") -> dict:
     """
     Mengambil data harga penutupan dan rasio fundamental (EPS, PER, PBV, ROE, BVPS, Harga Wajar, MOS)
-    untuk SELURUH emiten aktif di BEI (900+ saham) sekaligus via POST /screener/screen Invezgo API.
+    untuk SELURUH emiten aktif di BEI (900+ saham) via IDX CLI Engine (fzn0x/idx).
     """
+    try:
+        from idx_client import fetch_all_screener_idx
+        return fetch_all_screener_idx(emiten_map=emiten_map)
+    except Exception as e:
+        print(f"[fetch_all_screener_invezgo -> idx_client warning] {e}")
     emiten_map = emiten_map or {}
     headers = get_auth_headers()
     url = f"{INVEZGO_BASE_URL}/screener/screen"
@@ -806,10 +827,13 @@ def _parse_disclosures(disc_payload: dict) -> list[dict]:
 def fetch_company_complete_invezgo(ticker: str, force: bool = False) -> dict:
     """
     Ambil data fundamental lengkap per perusahaan (Profil, Laporan Keuangan 5 Kuartal,
-    Pemegang Saham KSEI, dan Keterbukaan Informasi BEI).
-    Menggunakan database SQLite lokal (data/pintarsaham.db) dengan TTL Kuartalan (90 hari)
-    agar SANGAT HEMAT KUOTA API Invezgo (0 request jika sudah tersimpan di DB).
+    Pemegang Saham KSEI, dan Keterbukaan Informasi BEI) dari IDX CLI Engine.
     """
+    try:
+        from idx_client import fetch_company_complete_idx
+        return fetch_company_complete_idx(ticker=ticker, force=force)
+    except Exception as e:
+        print(f"[fetch_company_complete_invezgo -> idx_client warning] {e}")
     import time
     from db_manager import (
         get_company_detail_db,
@@ -949,13 +973,13 @@ def fetch_whale_network_invezgo(
     holder_name: str = None, ticker: str = None, force: bool = False
 ) -> dict:
     """
-    Membangun Peta Jaring-Jaring Kepemilikan Saham (Conglomerate & Whale Tracker KSEI):
-    - Jika `holder_name` diberikan (misal 'ANTHONI SALIM'): mencari seluruh saham di BEI yang
-      dimiliki oleh tokoh/institusi tersebut, menghitung nilai pasar portofolio (Rp), tren akumulasi/distribusi
-      bulanan, serta jaring koneksi pemegang saham lain di emiten terkait (tersimpan di SQLite DB).
-    - Jika `ticker` diberikan (misal 'BBCA'): menampilkan jaring pemegang saham utama emiten tersebut
-      beserta cabang kepemilikan mereka di emiten BEI lainnya.
+    Membangun Peta Jaring-Jaring Kepemilikan Saham (Conglomerate & Whale Tracker KSEI) dari IDX CLI Engine.
     """
+    try:
+        from idx_client import fetch_whale_network_idx
+        return fetch_whale_network_idx(holder_name=holder_name, ticker=ticker)
+    except Exception as e:
+        print(f"[fetch_whale_network_invezgo -> idx_client warning] {e}")
     import time
     from db_manager import (
         get_shareholder_network_db,

@@ -364,9 +364,16 @@ def _score_market_relevance(item: dict, key: str) -> int:
 
 def fetch_invezgo_news(ticker: str, limit: int = 50) -> list[dict]:
     """
-    Mengambil berita real-time pasar & emiten langsung dari Invezgo API dalam 1 kali request maksimal (limit=100).
-    Hanya memanggil endpoint kedua jika hasil request pertama kosong (0 berita).
+    Mengambil berita real-time pasar & emiten langsung via IDX CLI Engine (Kontan & CNBC Indonesia).
     """
+    try:
+        from idx_client import fetch_news_idx
+        idx_items = fetch_news_idx(ticker, limit=limit)
+        if idx_items:
+            return idx_items
+    except Exception as e:
+        print(f"[fetch_invezgo_news -> idx_client warning] {e}")
+
     import requests
     try:
         from invezgo_client import get_auth_headers, INVEZGO_BASE_URL, get_invezgo_api_key
@@ -513,7 +520,7 @@ _news_cache: dict[str, tuple[float, list]] = {}
 CACHE_TTL = 10 * 60  # 10 menit
 
 def get_news(ticker: str, force_refresh: bool = False) -> list[dict]:
-    """Mengambil seluruh berita relevan dalam 1 request untuk ticker/IHSG dari Invezgo API."""
+    """Mengambil seluruh berita bursa & pasar modal terkini langsung dari Kontan via idx_client (fzn0x/idx)."""
     import time
     key = ticker.upper().strip()
     now = time.time()
@@ -521,10 +528,19 @@ def get_news(ticker: str, force_refresh: bool = False) -> list[dict]:
     if not force_refresh and key in _news_cache:
         ts, cached_data = _news_cache[key]
         if (now - ts) < CACHE_TTL:
-            print(f"[get_news] Menggunakan cache 10m untuk {key} ({len(cached_data)} berita)")
             return cached_data
 
-    print(f"[get_news] Mengambil paket berita maksimal (1 request limit=100) dari Invezgo API untuk {key}...")
+    # Prioritaskan Kontan via IDX Engine (fzn0x/idx)
+    try:
+        from idx_client import fetch_news_idx
+        idx_news = fetch_news_idx(key, limit=30)
+        if idx_news and len(idx_news) > 0:
+            print(f"[get_news] Menggunakan berita Kontan via idx untuk {key} ({len(idx_news)} artikel)")
+            _news_cache[key] = (now, idx_news)
+            return idx_news
+    except Exception as e:
+        print(f"[get_news] idx news error for {key}: {e}")
+
     invezgo_items = fetch_invezgo_news(key, limit=50)
     if invezgo_items:
         _news_cache[key] = (now, invezgo_items)

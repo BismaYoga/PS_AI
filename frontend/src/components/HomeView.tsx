@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StockItem, IndexItem, CorporateEvent, Timeframe, ChartType, NewsItem } from '../types';
+import { StockItem, IndexItem, CorporateEvent, Timeframe, ChartType, NewsItem, UserProfile } from '../types';
 import { Icon } from './Icon';
 import { MainChart } from './MainChart';
 import { AIBox } from './AIBox';
@@ -7,7 +7,8 @@ import { NewsSection } from './NewsSection';
 import { FundamentalSection } from './FundamentalSection';
 import { CorporateEventsSection } from './CorporateEventsSection';
 import { Footer } from './Footer';
-import { chartData, fmt, rp, pct, ChartCalculatedData } from '../utils';
+import { ContactAdminModal } from './ContactAdminModal';
+import { chartData, fmt, rp, pct, ChartCalculatedData, isUserProOrAdmin } from '../utils';
 
 interface HomeViewProps {
   indexData: IndexItem;
@@ -27,6 +28,7 @@ interface HomeViewProps {
   onOpenMethod: () => void;
   onOpenAbout: () => void;
   onNotify: (msg: string) => void;
+  currentUser?: UserProfile | null;
 }
 
 export const HomeView: React.FC<HomeViewProps> = ({
@@ -47,7 +49,12 @@ export const HomeView: React.FC<HomeViewProps> = ({
   onOpenMethod,
   onOpenAbout,
   onNotify,
+  currentUser,
 }) => {
+  const isPro = isUserProOrAdmin(currentUser);
+  const isStarter = !isPro;
+  const [contactAdminOpen, setContactAdminOpen] = useState(false);
+  const [contactFeatureTitle, setContactFeatureTitle] = useState('');
   const [period, setPeriod] = useState<Timeframe>('3M');
   const [chartType, setChartType] = useState<ChartType>('line');
   const [showMA, setShowMA] = useState<boolean>(true);
@@ -100,7 +107,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
               {onRefreshInstrument && (
                 <button
                   onClick={async () => {
-                    onNotify('Memperbarui data IHSG...');
+                    onNotify('Memperbarui data IHSG langsung dari bursa...');
                     const ok = await onRefreshInstrument('IHSG');
                     onNotify(
                       ok
@@ -110,7 +117,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                   }}
                   className="btn small-btn"
                   style={{ padding: '3px 10px', fontSize: '11px', marginLeft: '8px', gap: '4px' }}
-                  title="Perbarui data IHSG"
+                  title="Perbarui data IHSG live"
                 >
                   <Icon name="refresh" cls="sm" /> Refresh Data
                 </button>
@@ -252,6 +259,12 @@ export const HomeView: React.FC<HomeViewProps> = ({
       <NewsSection
         activeTicker={activeInstrument}
         onOpenNewsDrawer={onOpenNewsDrawer}
+        currentUser={currentUser}
+        onNotify={onNotify}
+        onOpenContact={(feature) => {
+          setContactFeatureTitle(feature);
+          setContactAdminOpen(true);
+        }}
       />
 
       {/* Fundamental Table Section */}
@@ -263,6 +276,12 @@ export const HomeView: React.FC<HomeViewProps> = ({
         onOpenMethod={onOpenMethod}
         onRefreshAll={onRefreshAll}
         onlySaved={false}
+        currentUser={currentUser}
+        onNotify={onNotify}
+        onOpenContact={(feature) => {
+          setContactFeatureTitle(feature);
+          setContactAdminOpen(true);
+        }}
       />
 
       {/* Corporate Events Section */}
@@ -274,6 +293,13 @@ export const HomeView: React.FC<HomeViewProps> = ({
       />
 
       <Footer onOpenMethod={onOpenMethod} onOpenAbout={onOpenAbout} />
+
+      <ContactAdminModal
+        isOpen={contactAdminOpen}
+        onClose={() => setContactAdminOpen(false)}
+        user={currentUser || null}
+        featureTitle={contactFeatureTitle}
+      />
     </>
   );
 };

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { getStockLogoUrl } from '../utils';
-import { TV_LOGOS } from '../constants';
 
 interface StockLogoProps {
   ticker: string;
@@ -19,25 +18,34 @@ export const StockLogo: React.FC<StockLogoProps> = ({
   const displayMark = mark || cleanTicker.slice(0, 3);
   const [imgSrc, setImgSrc] = useState<string | null>(() => getStockLogoUrl(cleanTicker));
   const [fallbackStep, setFallbackStep] = useState<number>(0);
-  const [loaded, setLoaded] = useState<boolean>(false);
 
   useEffect(() => {
     setImgSrc(getStockLogoUrl(cleanTicker));
     setFallbackStep(0);
-    setLoaded(false);
   }, [cleanTicker]);
 
   const handleError = () => {
+    // Multi-tier fallback cascade:
+    // Step 0: /logos/{clean}.webp failed -> try /logos/{clean}.png
+    // Step 1: /logos/{clean}.png failed -> try /logo-emiten/{clean}.svg
+    // Step 2: /logo-emiten/{clean}.svg failed -> try invezgo icon
+    // Step 3: invezgo icon failed -> try stockbit CDN
+    // Step 4: All failed -> set null (show monogram text)
     if (fallbackStep === 0) {
       setFallbackStep(1);
-      // Fallback 1: Jika Stockbit CDN belum memiliki logo emiten ini, coba Invezgo icon
-      if (!imgSrc?.includes('storage.invezgo.com')) {
-        setImgSrc(`https://storage.invezgo.com/icon/${cleanTicker}.png`);
-        return;
-      }
+      setImgSrc(`/logos/${cleanTicker}.png`);
+    } else if (fallbackStep === 1) {
+      setFallbackStep(2);
+      setImgSrc(`/logo-emiten/${cleanTicker}.svg`);
+    } else if (fallbackStep === 2) {
+      setFallbackStep(3);
+      setImgSrc(`https://storage.invezgo.com/icon/${cleanTicker}.png`);
+    } else if (fallbackStep === 3) {
+      setFallbackStep(4);
+      setImgSrc(`https://assets.stockbit.com/logos/companies/${cleanTicker}.png`);
+    } else {
+      setImgSrc(null);
     }
-    // Fallback terakhir: Sembunyikan gambar dan tampilkan teks inisial monogram
-    setImgSrc(null);
   };
 
   return (
@@ -53,9 +61,8 @@ export const StockLogo: React.FC<StockLogoProps> = ({
           src={imgSrc}
           alt={cleanTicker}
           className="stock-logo-img"
+          style={{ opacity: 1 }}
           loading="lazy"
-          style={{ opacity: loaded ? 1 : 0, transition: 'opacity 0.2s' }}
-          onLoad={() => setLoaded(true)}
           onError={handleError}
         />
       )}

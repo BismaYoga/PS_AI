@@ -3,6 +3,7 @@ import { StockItem, Route, UserProfile } from '../types';
 import { Icon } from './Icon';
 import { StockLogo } from './StockLogo';
 import { rp, pct } from '../utils';
+import { ContactAdminModal } from './ContactAdminModal';
 
 interface HeaderProps {
   route: Route;
@@ -13,10 +14,10 @@ interface HeaderProps {
   onOpenDrawer: (type: string, payload?: any) => void;
   theme?: 'light' | 'dark';
   onToggleTheme?: () => void;
-  onOpenCompare?: () => void;
   user?: UserProfile | null;
   onOpenLogin?: () => void;
   onLogout?: () => void;
+  proMonthlyTokens?: number;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -28,14 +29,15 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenDrawer,
   theme = 'light',
   onToggleTheme,
-  onOpenCompare,
   user,
   onOpenLogin,
   onLogout,
+  proMonthlyTokens = 30,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const [contactModalOpen, setContactModalOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [recentSearches, setRecentSearches] = useState<string[]>(() => {
@@ -393,10 +395,24 @@ export const Header: React.FC<HeaderProps> = ({
                   cursor: 'pointer',
                   fontSize: '11px',
                   fontWeight: 700,
+                  overflow: 'hidden',
+                  padding: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                 }}
                 title={`Akun: ${user.name} (${user.tier.toUpperCase()})`}
               >
-                {user.avatar || user.name.slice(0, 2).toUpperCase()}
+                {user.avatar && (user.avatar.startsWith('http') || user.avatar.startsWith('data:')) ? (
+                  <img
+                    src={user.avatar}
+                    alt={user.name}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  user.avatar || user.name.slice(0, 2).toUpperCase()
+                )}
               </button>
 
               {userDropdownOpen && (
@@ -416,24 +432,113 @@ export const Header: React.FC<HeaderProps> = ({
                     color: 'var(--ink, #172738)',
                   }}
                 >
-                  <div style={{ paddingBottom: '10px', borderBottom: '1px solid var(--line)', marginBottom: '8px' }}>
-                    <div style={{ fontWeight: 700, fontSize: '13px' }}>{user.name}</div>
-                    <div style={{ fontSize: '10px', color: 'var(--muted)' }}>{user.email}</div>
-                    <span
-                      className={`pill ${user.tier === 'institutional' ? 'green' : 'blue'}`}
-                      style={{ fontSize: '9px', marginTop: '4px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                    >
-                      {user.role === 'admin' ? (
-                        <>
-                          <Icon name="crown" cls="sm" /> SUPER ADMIN
-                        </>
+                  <div style={{ paddingBottom: '10px', borderBottom: '1px solid var(--line)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '50%',
+                      overflow: 'hidden',
+                      flexShrink: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background: 'var(--soft, #f1f5f9)',
+                      border: '1px solid var(--line)',
+                      fontWeight: 700,
+                      fontSize: '12px'
+                    }}>
+                      {user.avatar && (user.avatar.startsWith('http') || user.avatar.startsWith('data:')) ? (
+                        <img
+                          src={user.avatar}
+                          alt={user.name}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          referrerPolicy="no-referrer"
+                        />
                       ) : (
-                        <>
-                          <Icon name="star" cls="sm" /> {user.tier.toUpperCase()} INVESTOR
-                        </>
+                        user.avatar || user.name.slice(0, 2).toUpperCase()
                       )}
-                    </span>
+                    </div>
+                    <div style={{ overflow: 'hidden' }}>
+                      <div style={{ fontWeight: 700, fontSize: '13px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.name}</div>
+                      <div style={{ fontSize: '10px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.email}</div>
+                      <span
+                        className={`pill ${user.role === 'super admin' ? 'amber' : user.role === 'admin' ? 'blue' : (user.tier === 'institutional' ? 'green' : 'outline')}`}
+                        style={{ fontSize: '9px', marginTop: '4px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                      >
+                        {user.role === 'super admin' ? (
+                          <>
+                            <Icon name="crown" cls="sm" style={{ color: '#d97706' }} /> SUPER ADMIN
+                          </>
+                        ) : user.role === 'admin' ? (
+                          <>
+                            <Icon name="crown" cls="sm" /> ADMIN
+                          </>
+                        ) : (
+                          <>
+                            <Icon name="star" cls="sm" /> {user.tier ? user.tier.toUpperCase() : 'STARTER'}
+                          </>
+                        )}
+                      </span>
+                    </div>
                   </div>
+
+                  {/* Token Balance Box */}
+                  {(() => {
+                    const monthlyMax = user.tier === 'pro' ? proMonthlyTokens : (user.tier === 'institutional' ? 100 : 0);
+                    const monthlyVal = user.monthlyTokens !== undefined ? user.monthlyTokens : monthlyMax;
+                    const addVal = user.additionalTokens || 0;
+                    const totalTokens = monthlyVal + addVal;
+
+                    return (
+                      <div
+                        style={{
+                          background: 'var(--soft, #f8fafc)',
+                          border: '1px solid var(--line)',
+                          borderRadius: '10px',
+                          padding: '10px 12px',
+                          margin: '6px 0 10px 0',
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                          <span className="small muted" style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.04em' }}>
+                            SISA KUOTA TOKEN AI
+                          </span>
+                          <span className={`pill ${totalTokens > 0 ? 'blue' : 'gray'}`} style={{ fontSize: '9px', fontWeight: 800 }}>
+                            {totalTokens} Token
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', marginBottom: '8px' }}>
+                          <span className="small muted">
+                            Bulanan: <strong style={{ color: monthlyVal > 0 ? 'var(--primary)' : 'var(--muted)' }}>{monthlyVal}</strong>/{monthlyMax}
+                          </span>
+                          <span className="small muted">
+                            Tambahan: <strong style={{ color: addVal > 0 ? '#10b981' : 'var(--muted)' }}>+{addVal}</strong>
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          className="btn small-btn"
+                          onClick={() => {
+                            setUserDropdownOpen(false);
+                            setContactModalOpen(true);
+                          }}
+                          style={{
+                            width: '100%',
+                            justifyContent: 'center',
+                            fontSize: '11px',
+                            fontWeight: 650,
+                            background: 'var(--primary)',
+                            color: '#ffffff',
+                            borderColor: 'var(--primary)',
+                            borderRadius: '6px',
+                            padding: '6px 8px',
+                          }}
+                        >
+                          <Icon name="sparkles" cls="sm" /> + Tambah Token
+                        </button>
+                      </div>
+                    );
+                  })()}
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     <button
@@ -480,7 +585,7 @@ export const Header: React.FC<HeaderProps> = ({
                     >
                       <Icon name="sparkles" cls="sm" /> Chat AI
                     </button>
-                    {user.role === 'admin' && (
+                    {(user.role === 'admin' || user.role === 'super admin') && (
                       <button
                         type="button"
                         className="btn small-btn"
@@ -550,6 +655,12 @@ export const Header: React.FC<HeaderProps> = ({
           )}
         </div>
       </div>
+
+      <ContactAdminModal
+        isOpen={contactModalOpen}
+        onClose={() => setContactModalOpen(false)}
+        user={user || null}
+      />
     </header>
   );
 };

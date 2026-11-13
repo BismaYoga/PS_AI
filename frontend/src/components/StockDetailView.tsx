@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { StockItem, Timeframe, ChartType, ValuationState, NewsItem } from '../types';
+import { StockItem, Timeframe, ChartType, ValuationState, NewsItem, UserProfile } from '../types';
 import { Icon } from './Icon';
 import { StockLogo } from './StockLogo';
 import { MainChart } from './MainChart';
 import { AIBox } from './AIBox';
 import { NewsSection } from './NewsSection';
 import { Footer } from './Footer';
+import { LockedFeatureOverlay } from './LockedFeatureOverlay';
+import { ContactAdminModal } from './ContactAdminModal';
 import { FIN_ROWS } from '../constants';
 import {
   fmt,
@@ -16,6 +18,7 @@ import {
   chartData,
   financialData,
   ChartCalculatedData,
+  isUserProOrAdmin,
 } from '../utils';
 
 interface StockDetailViewProps {
@@ -32,6 +35,9 @@ interface StockDetailViewProps {
   onOpenAbout: () => void;
   onNavigateHome: () => void;
   onNotify: (msg: string) => void;
+  currentUser?: UserProfile | null;
+  onUpdateTokens?: (tokens: { monthly?: number; additional?: number; total?: number }) => void;
+  proMonthlyTokens?: number;
 }
 
 export const StockDetailView: React.FC<StockDetailViewProps> = ({
@@ -48,7 +54,14 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
   onOpenAbout,
   onNavigateHome,
   onNotify,
+  currentUser,
+  onUpdateTokens,
+  proMonthlyTokens = 30,
 }) => {
+  const isPro = isUserProOrAdmin(currentUser);
+  const isStarter = !isPro;
+  const [contactAdminOpen, setContactAdminOpen] = useState(false);
+  const [contactFeatureTitle, setContactFeatureTitle] = useState('');
   const [period, setPeriod] = useState<Timeframe>('3M');
   const [chartType, setChartType] = useState<ChartType>('line');
   const [showFib, setShowFib] = useState<boolean>(true);
@@ -57,6 +70,7 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
   const [finTab, setFinTab] = useState<'income' | 'balance' | 'cash'>('income');
   const [finTimeframe, setFinTimeframe] = useState<'quarterly' | 'annual'>('annual');
   const [showYoY, setShowYoY] = useState<boolean>(true);
+  const [hoveredFinIdx, setHoveredFinIdx] = useState<number | null>(null);
   const [docFilter, setDocFilter] = useState<string>('all');
   const [sidebarSearch, setSidebarSearch] = useState<string>('');
   const [sidebarTab, setSidebarTab] = useState<'all' | 'watchlist'>('all');
@@ -74,17 +88,22 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
 
   const [finInsightData, setFinInsightData] = useState<any | null>(null);
   const [loadingInsight, setLoadingInsight] = useState<boolean>(false);
-  const [showAllInsights, setShowAllInsights] = useState<boolean>(false);
 
   const fetchFinancialInsight = async (force = false) => {
+    const currentTicker = stock.ticker;
     setLoadingInsight(true);
+    if (force) {
+      setFinInsightData(null);
+    }
     try {
       const res = await fetch(
-        `/api/financial-insight?ticker=${encodeURIComponent(stock.ticker)}${force ? '&force=1' : ''}`
+        `/api/financial-insight?ticker=${encodeURIComponent(currentTicker)}${force ? '&force=1' : ''}`
       );
       if (res.ok) {
         const data = await res.json();
-        setFinInsightData(data);
+        if (data && (!data.ticker || data.ticker === currentTicker)) {
+          setFinInsightData(data);
+        }
       }
     } catch {
       // fallback
@@ -94,17 +113,23 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
   };
 
   const fetchCompanyDetail = async (force = false) => {
+    const currentTicker = stock.ticker;
     setLoadingDetail(true);
+    if (force) {
+      setCompanyDetail(null);
+    }
     try {
       const res = await fetch(
-        `/api/company-detail?ticker=${encodeURIComponent(stock.ticker)}${force ? '&force=1' : ''}`
+        `/api/company-detail?ticker=${encodeURIComponent(currentTicker)}${force ? '&force=1' : ''}`
       );
       if (res.ok) {
         const data = await res.json();
-        setCompanyDetail(data);
+        if (data && (!data.ticker || data.ticker === currentTicker)) {
+          setCompanyDetail(data);
+        }
         if (force) {
           fetchFinancialInsight(true);
-          onNotify(`Data fundamental & keterbukaan ${stock.ticker} berhasil diperbarui ke DB!`);
+          onNotify(`Data fundamental & keterbukaan ${currentTicker} berhasil diperbarui ke DB!`);
         }
       }
     } catch {
@@ -119,9 +144,13 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
       pe: stock.targetPe || stock.pe || 14,
       pb: stock.pb || 2.0,
     });
+    setCompanyDetail(null);
+    setFinInsightData(null);
     fetchCompanyDetail(false);
-    fetchFinancialInsight(false);
-  }, [stock.ticker]);
+    if (!isStarter) {
+      fetchFinancialInsight(false);
+    }
+  }, [stock.ticker, isStarter]);
 
   const isFav = favorites.has(stock.ticker);
   const hasRealQuarterly =
@@ -768,11 +797,18 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
             <div className="filter-row detail-action-row">
               <button
                 className="btn"
-                onClick={() => fetchCompanyDetail(true)}
+                onClick={async () => {
+                  onNotify(`Memperbarui data pasar & kinerja ${stock.ticker}...`);
+                  if (onRefreshInstrument) {
+                    await onRefreshInstrument(stock.ticker);
+                  }
+                  await fetchCompanyDetail(true);
+                  onNotify(`Data ${stock.ticker} berhasil diperbarui!`);
+                }}
                 disabled={loadingDetail}
                 title="Perbarui data pasar & kinerja emiten terbaru"
               >
-                <Icon name="refresh" cls="sm" />{' '}
+                {loadingDetail ? <Icon name="refresh" cls="sm spin-animation" /> : <Icon name="refresh" cls="sm" />}{' '}
                 {loadingDetail ? 'Memperbarui...' : 'Perbarui Data'}
               </button>
               <button
@@ -1072,6 +1108,12 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
                 Pergerakan harga {stock.ticker} <span className="pill outline">IDR</span>
                 <button
                   onClick={async () => {
+                    if (isStarter) {
+                      onNotify('Pembaruan data live hanya tersedia untuk pengguna Pro Trader.');
+                      setContactFeatureTitle('Pembaruan Data Live Emiten');
+                      setContactAdminOpen(true);
+                      return;
+                    }
                     onNotify(`Memperbarui data ${stock.ticker}...`);
                     if (onRefreshInstrument) {
                       const ok = await onRefreshInstrument(stock.ticker);
@@ -1083,12 +1125,23 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
                       return;
                     }
                     try {
-                      const res = await fetch(`/api/stock?ticker=${encodeURIComponent(stock.ticker)}`);
+                      const res = await fetch(`/api/stock?ticker=${encodeURIComponent(stock.ticker)}&force=1&user_id=${encodeURIComponent(currentUser?.id || '')}&email=${encodeURIComponent(currentUser?.email || '')}`);
                       if (res.ok) {
-                        onNotify(`Data ${stock.ticker} berhasil diperbarui!`);
-                        window.location.reload();
+                        const stockData = await res.json();
+                        if (stockData.remaining_tokens) {
+                          onUpdateTokens?.(stockData.remaining_tokens);
+                        }
+                        onNotify(`Data ${stock.ticker} berhasil diperbarui! (1 Token digunakan)`);
+                        setTimeout(() => window.location.reload(), 600);
                       } else {
-                        onNotify(`Gagal memperbarui ${stock.ticker}`);
+                        const errData = await res.json().catch(() => null);
+                        if (res.status === 403) {
+                          onNotify(errData?.error || 'Kuota token Anda habis. Hubungi admin untuk menambah token.');
+                          setContactFeatureTitle('Perbarui Data Live Emiten');
+                          setContactAdminOpen(true);
+                        } else {
+                          onNotify(`Gagal memperbarui ${stock.ticker}`);
+                        }
                       }
                     } catch {
                       onNotify(`Koneksi server gagal saat memperbarui ${stock.ticker}`);
@@ -1096,9 +1149,9 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
                   }}
                   className="btn small-btn"
                   style={{ padding: '2px 8px', fontSize: '10px', marginLeft: '6px' }}
-                  title="Perbarui data saham"
+                  title={isStarter ? 'Terkunci untuk akun Starter' : 'Perbarui data saham'}
                 >
-                  <Icon name="refresh" cls="sm" /> Perbarui
+                  {isStarter ? <Icon name="lock" cls="sm" style={{ color: '#d97706' }} /> : <Icon name="refresh" cls="sm" />} Perbarui
                 </button>
                 <a
                   href="#home"
@@ -1239,15 +1292,30 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
             </div>
           )}
 
-          <AIBox
-            key={stock.ticker}
-            stockOrIndex={stock}
-            isStock={true}
-            chartCalc={chartCalc}
-            period={period}
-            onOpenDrawer={onOpenDrawer}
-            onNotify={onNotify}
-          />
+          {isStarter ? (
+            <LockedFeatureOverlay
+              isLocked={true}
+              variant="banner"
+              featureName={`Analisis Pasar AI PintarSaham (${stock.ticker})`}
+              description={`Khusus Pro Trader (${proMonthlyTokens} Token AI/bulan): Analisis teknikal cerdas, estimasi fair value, dan rekomendasi aksi emiten.`}
+              onUnlockClick={() => {
+                setContactFeatureTitle('Analisis AI PintarSaham');
+                setContactAdminOpen(true);
+              }}
+            />
+          ) : (
+            <AIBox
+              key={stock.ticker}
+              stockOrIndex={stock}
+              isStock={true}
+              chartCalc={chartCalc}
+              period={period}
+              onOpenDrawer={onOpenDrawer}
+              onNotify={onNotify}
+              currentUser={currentUser}
+              onUpdateTokens={onUpdateTokens}
+            />
+          )}
         </section>
       </div>
 
@@ -1263,36 +1331,162 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
             </p>
           </div>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <button className="btn small-btn" onClick={handleExportCSV}>
-              <Icon name="download" cls="sm" /> Unduh CSV
+            <button
+              className="btn small-btn"
+              onClick={() => {
+                if (isStarter) {
+                  onNotify('Ekspor data laporan keuangan ke CSV hanya tersedia untuk Pro Trader.');
+                  setContactFeatureTitle('Ekspor Data Laporan Keuangan');
+                  setContactAdminOpen(true);
+                  return;
+                }
+                handleExportCSV();
+              }}
+              title={isStarter ? 'Terkunci untuk akun Starter (Khusus Pro Trader)' : 'Unduh data laporan keuangan CSV'}
+            >
+              {isStarter ? <Icon name="lock" cls="sm" style={{ color: '#d97706' }} /> : <Icon name="download" cls="sm" />}{' '}
+              Unduh CSV
+              {isStarter && <span className="pill amber" style={{ fontSize: '9px', padding: '1px 5px', marginLeft: '4px' }}>PRO</span>}
             </button>
           </div>
         </div>
 
-        {/* Smart Financial Summary & Insight Card */}
-        {finInsightData?.insight && (
-          <div className="card" style={{ marginBottom: '18px', padding: '18px 22px', border: '1px solid rgba(2, 132, 199, 0.25)', boxShadow: '0 4px 20px rgba(0,0,0,0.04)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '12px' }}>
+        {/* Smart Financial Summary & Insight Card (Khusus Pro Trader) */}
+        {isPro && (
+          loadingInsight ? (
+            <div
+              className="card"
+              style={{
+                marginBottom: '18px',
+                padding: '20px 22px',
+                border: '1px solid rgba(2, 132, 199, 0.3)',
+                boxShadow: '0 4px 20px rgba(2, 132, 199, 0.05)',
+                background: 'linear-gradient(180deg, rgba(2, 132, 199, 0.03) 0%, rgba(255, 255, 255, 0.95) 100%)',
+              }}
+            >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '14px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                 <Icon name="sparkles" cls="sm" style={{ color: '#0284c7', width: '18px', height: '18px' }} />
                 <span style={{ fontSize: '17px', fontWeight: 800, color: 'var(--text-main, #0f172a)' }}>
-                  Rangkuman & Insight Keuangan
+                  Rangkuman & Insight Keuangan ({stock.ticker})
                 </span>
-                <span style={{
-                  background: 'rgba(2, 132, 199, 0.08)',
-                  color: '#0284c7',
-                  border: '1px solid rgba(2, 132, 199, 0.2)',
-                  padding: '2px 10px',
-                  borderRadius: '12px',
-                  fontSize: '11.5px',
-                  fontWeight: 600,
-                }}>
+                <span
+                  style={{
+                    background: 'rgba(2, 132, 199, 0.08)',
+                    color: '#0284c7',
+                    border: '1px solid rgba(2, 132, 199, 0.2)',
+                    padding: '2px 10px',
+                    borderRadius: '12px',
+                    fontSize: '11.5px',
+                    fontWeight: 600,
+                  }}
+                >
                   {finTimeframe === 'annual' ? 'Basis Data Tahunan (YoY)' : 'Basis Data Kuartalan'}
                 </span>
               </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span
+                  style={{
+                    fontSize: '11.5px',
+                    color: '#0284c7',
+                    fontWeight: 650,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: 'rgba(2, 132, 199, 0.08)',
+                    padding: '4px 10px',
+                    borderRadius: '8px',
+                  }}
+                >
+                  <Icon name="refresh" cls="sm spin-animation" style={{ width: '12px', height: '12px' }} />
+                  Sedang Menganalisis...
+                </span>
+              </div>
+            </div>
+
+            {/* Pulsing Loading Banner */}
+            <div
+              style={{
+                background: 'var(--soft, #f8fafc)',
+                border: '1px solid var(--line, #e2e8f0)',
+                padding: '14px 16px',
+                borderRadius: '8px',
+                marginBottom: '14px',
+                animation: 'pulse-bg 1.8s ease-in-out infinite',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                <Icon name="sparkles" cls="sm" style={{ width: '14px', height: '14px', color: '#0284c7' }} />
+                <span style={{ fontWeight: 700, color: '#0284c7', fontSize: '11.5px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  AI Financial Analyst Sedang Bekerja
+                </span>
+              </div>
+              <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-sub, #475569)', lineHeight: 1.55 }}>
+                Sedang menganalisis laporan keuangan resmi BEI untuk <strong>{stock.ticker}</strong> ({stock.name || 'Emiten'}). Mengevaluasi pertumbuhan laba bersih, solvabilitas neraca, dan kualitas arus kas riil...
+              </p>
+            </div>
+
+            {/* Skeleton Cards Animation */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+                gap: '12px',
+              }}
+            >
+              {[
+                { label: 'Neraca & Solvabilitas', icon: 'building', color: 'var(--text-muted, #64748b)' },
+                { label: 'Kinerja Laba Rugi', icon: 'chart', color: 'var(--text-muted, #64748b)' },
+                { label: 'Realita Arus Kas', icon: 'coins', color: 'var(--text-muted, #64748b)' },
+              ].map((card, i) => (
+                <div
+                  key={i}
+                  style={{
+                    background: 'var(--bg-card, #ffffff)',
+                    border: '1px solid var(--border, #e2e8f0)',
+                    borderRadius: '8px',
+                    padding: '14px',
+                    animation: 'pulse-bg 1.8s ease-in-out infinite',
+                    animationDelay: `${i * 0.25}s`,
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                    <span style={{ fontWeight: 700, fontSize: '12.5px', color: card.color, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                      <Icon name={card.icon} cls="sm" style={{ width: '14px', height: '14px', color: card.color }} />
+                      <span>{card.label}</span>
+                    </span>
+                    <div style={{ width: '55px', height: '16px', background: 'rgba(0,0,0,0.06)', borderRadius: '10px' }}></div>
+                  </div>
+                  <div style={{ width: '88%', height: '11px', background: 'rgba(0,0,0,0.06)', borderRadius: '4px', marginBottom: '8px' }}></div>
+                  <div style={{ width: '70%', height: '11px', background: 'rgba(0,0,0,0.05)', borderRadius: '4px', marginBottom: '8px' }}></div>
+                  <div style={{ width: '50%', height: '11px', background: 'rgba(0,0,0,0.04)', borderRadius: '4px' }}></div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : finInsightData?.insight && (!finInsightData.ticker || finInsightData.ticker === stock.ticker) ? (
+          <div className="card" style={{ marginBottom: '18px', padding: '18px 20px', border: '1px solid var(--line, #e2e8f0)', boxShadow: '0 1px 4px rgba(0,0,0,0.03)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <Icon name="chart" cls="sm" style={{ color: 'var(--text-muted, #64748b)', width: '16px', height: '16px' }} />
+                <span style={{ fontSize: '15px', fontWeight: 750, color: 'var(--text-main, #0f172a)' }}>
+                  Evaluasi Tiga Pilar Keuangan ({stock.ticker})
+                </span>
+                <span style={{
+                  background: 'var(--soft, #f8fafc)',
+                  color: 'var(--text-muted, #475569)',
+                  border: '1px solid var(--line, #e2e8f0)',
+                  padding: '2px 8px',
+                  borderRadius: '6px',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                }}>
+                  {finTimeframe === 'annual' ? 'Data Tahunan (YoY)' : 'Data Kuartalan'}
+                </span>
+              </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '11.5px', color: 'var(--text-muted, #64748b)', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                  <Icon name={finInsightData.cached ? 'zap' : 'sparkles'} cls="sm" style={{ width: '13px', height: '13px', color: '#0284c7' }} />
+                <span style={{ fontSize: '11px', color: 'var(--text-muted, #64748b)', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                  <Icon name="check" cls="sm" style={{ width: '12px', height: '12px', color: 'var(--text-muted, #64748b)' }} />
                   {finInsightData.cached ? 'Terverifikasi' : 'Baru Dianalisis'} ({finInsightData.period_tag?.replace('_', ' · ')})
                 </span>
                 <button
@@ -1303,157 +1497,143 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
                   title="Analisis Ulang Laporan Keuangan"
                 >
                   <Icon name="refresh" cls="sm" style={{ width: '11px', height: '11px' }} />
-                  {loadingInsight ? 'Menganalisis...' : 'Update'}
+                  Update
                 </button>
               </div>
             </div>
 
-            {/* Executive Verdict Banner */}
-            {finInsightData.insight.verdict && (
-              <div style={{
-                background: 'var(--bg-subtle, rgba(2, 132, 199, 0.05))',
-                borderLeft: '4px solid #0284c7',
-                padding: '12px 16px',
-                borderRadius: '4px 8px 8px 4px',
-                marginBottom: '14px',
-                fontSize: '13.5px',
-                lineHeight: '1.6',
-                color: 'var(--text-main, #0f172a)'
-              }}>
-                <div style={{ fontWeight: 700, color: '#0284c7', marginBottom: '3px', fontSize: '11.5px', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                  <Icon name="info" cls="sm" style={{ width: '14px', height: '14px' }} />
-                  <span>Ringkasan Eksekutif</span>
+            {/* Langsung tampil ketiga pilar secara elegan, tanpa bagian 1, tanpa warna-warni AI */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+              gap: '12px'
+            }}>
+              {/* Pilar 1: Neraca & Solvabilitas */}
+              {finInsightData.insight.balance_sheet && (
+                <div style={{
+                  background: 'var(--bg-card, #ffffff)',
+                  border: '1px solid var(--line, #e2e8f0)',
+                  borderRadius: '8px',
+                  padding: '14px',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '6px' }}>
+                    <span style={{ fontWeight: 700, fontSize: '13px', color: 'var(--text-main, #0f172a)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                      <Icon name="building" cls="sm" style={{ width: '15px', height: '15px', color: 'var(--text-muted, #64748b)' }} />
+                      <span>Neraca &amp; Solvabilitas</span>
+                    </span>
+                    <span style={{ background: 'var(--soft, #f8fafc)', border: '1px solid var(--line, #e2e8f0)', color: 'var(--text-sub, #475569)', padding: '2px 8px', borderRadius: '4px', fontSize: '10.5px', fontWeight: 650 }}>
+                      {finInsightData.insight.balance_sheet.badge}
+                    </span>
+                  </div>
+                  <p style={{ fontSize: '12px', color: 'var(--text-sub, #475569)', lineHeight: '1.55', marginBottom: '10px' }}>
+                    {finInsightData.insight.balance_sheet.summary}
+                  </p>
+                  {Array.isArray(finInsightData.insight.balance_sheet.highlights) && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                      {finInsightData.insight.balance_sheet.highlights.map((pt: string, idx: number) => (
+                        <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', fontSize: '11.5px', color: 'var(--text-sub, #64748b)', lineHeight: '1.45' }}>
+                          <span style={{ color: 'var(--text-muted, #94a3b8)', marginTop: '2px', fontSize: '12px' }}>•</span>
+                          <span>{pt}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <p style={{ margin: 0, fontWeight: 500 }}>{finInsightData.insight.verdict}</p>
-              </div>
-            )}
+              )}
 
-            {/* Context-Aware Tab Insight or All Insights Grid */}
-            <div style={{ marginTop: '10px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted, #64748b)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  {showAllInsights ? 'Detail Tiga Pilar Laporan Keuangan' : `Fokus Tab Aktif: ${finTab === 'balance' ? 'Neraca (Balance Sheet)' : finTab === 'cash' ? 'Arus Kas (Cash Flow)' : 'Laba Rugi (Income Statement)'}`}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setShowAllInsights(!showAllInsights)}
-                  style={{ background: 'none', border: 'none', color: '#0284c7', fontSize: '12px', fontWeight: 600, cursor: 'pointer', textDecoration: 'underline' }}
-                >
-                  {showAllInsights ? 'Sembunyikan Pilar Lain' : 'Tampilkan Semua Pilar (3 Laporan)'}
-                </button>
-              </div>
-
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: showAllInsights ? 'repeat(auto-fit, minmax(280px, 1fr))' : '1fr',
-                gap: '12px'
-              }}>
-                {/* 1. Balance Sheet Card */}
-                {(showAllInsights || finTab === 'balance') && finInsightData.insight.balance_sheet && (
-                  <div style={{
-                    background: 'var(--bg-card, #ffffff)',
-                    border: '1px solid var(--border, #e2e8f0)',
-                    borderRadius: '8px',
-                    padding: '14px',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '6px' }}>
-                      <span style={{ fontWeight: 700, fontSize: '13.5px', color: 'var(--text-main, #0f172a)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                        <Icon name="building" cls="sm" style={{ width: '16px', height: '16px', color: '#0284c7' }} />
-                        <span>Neraca & Solvabilitas</span>
-                      </span>
-                      <span style={{ background: 'rgba(2, 132, 199, 0.1)', color: '#0284c7', padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 700 }}>
-                        {finInsightData.insight.balance_sheet.badge}
-                      </span>
-                    </div>
-                    <p style={{ fontSize: '12.5px', color: 'var(--text-sub, #475569)', lineHeight: '1.5', marginBottom: '10px' }}>
-                      {finInsightData.insight.balance_sheet.summary}
-                    </p>
-                    {Array.isArray(finInsightData.insight.balance_sheet.highlights) && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        {finInsightData.insight.balance_sheet.highlights.map((pt: string, idx: number) => (
-                          <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', fontSize: '12px', color: 'var(--text-sub, #64748b)', lineHeight: '1.45' }}>
-                            <Icon name="check" cls="sm" style={{ width: '13px', height: '13px', color: '#0284c7', flexShrink: 0, marginTop: '2px' }} />
-                            <span>{pt}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+              {/* Pilar 2: Kinerja Laba Rugi */}
+              {finInsightData.insight.income_statement && (
+                <div style={{
+                  background: 'var(--bg-card, #ffffff)',
+                  border: '1px solid var(--line, #e2e8f0)',
+                  borderRadius: '8px',
+                  padding: '14px',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '6px' }}>
+                    <span style={{ fontWeight: 700, fontSize: '13px', color: 'var(--text-main, #0f172a)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                      <Icon name="chart" cls="sm" style={{ width: '15px', height: '15px', color: 'var(--text-muted, #64748b)' }} />
+                      <span>Kinerja Laba Rugi</span>
+                    </span>
+                    <span style={{ background: 'var(--soft, #f8fafc)', border: '1px solid var(--line, #e2e8f0)', color: 'var(--text-sub, #475569)', padding: '2px 8px', borderRadius: '4px', fontSize: '10.5px', fontWeight: 650 }}>
+                      {finInsightData.insight.income_statement.badge}
+                    </span>
                   </div>
-                )}
-
-                {/* 2. Income Statement Card */}
-                {(showAllInsights || finTab === 'income') && finInsightData.insight.income_statement && (
-                  <div style={{
-                    background: 'var(--bg-card, #ffffff)',
-                    border: '1px solid var(--border, #e2e8f0)',
-                    borderRadius: '8px',
-                    padding: '14px',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '6px' }}>
-                      <span style={{ fontWeight: 700, fontSize: '13.5px', color: 'var(--text-main, #0f172a)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                        <Icon name="chart" cls="sm" style={{ width: '16px', height: '16px', color: '#10b981' }} />
-                        <span>Kinerja Laba Rugi</span>
-                      </span>
-                      <span style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 700 }}>
-                        {finInsightData.insight.income_statement.badge}
-                      </span>
+                  <p style={{ fontSize: '12px', color: 'var(--text-sub, #475569)', lineHeight: '1.55', marginBottom: '10px' }}>
+                    {finInsightData.insight.income_statement.summary}
+                  </p>
+                  {Array.isArray(finInsightData.insight.income_statement.highlights) && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                      {finInsightData.insight.income_statement.highlights.map((pt: string, idx: number) => (
+                        <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', fontSize: '11.5px', color: 'var(--text-sub, #64748b)', lineHeight: '1.45' }}>
+                          <span style={{ color: 'var(--text-muted, #94a3b8)', marginTop: '2px', fontSize: '12px' }}>•</span>
+                          <span>{pt}</span>
+                        </div>
+                      ))}
                     </div>
-                    <p style={{ fontSize: '12.5px', color: 'var(--text-sub, #475569)', lineHeight: '1.5', marginBottom: '10px' }}>
-                      {finInsightData.insight.income_statement.summary}
-                    </p>
-                    {Array.isArray(finInsightData.insight.income_statement.highlights) && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        {finInsightData.insight.income_statement.highlights.map((pt: string, idx: number) => (
-                          <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', fontSize: '12px', color: 'var(--text-sub, #64748b)', lineHeight: '1.45' }}>
-                            <Icon name="check" cls="sm" style={{ width: '13px', height: '13px', color: '#10b981', flexShrink: 0, marginTop: '2px' }} />
-                            <span>{pt}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
+                  )}
+                </div>
+              )}
 
-                {/* 3. Cash Flow Card */}
-                {(showAllInsights || finTab === 'cash') && finInsightData.insight.cash_flow && (
-                  <div style={{
-                    background: 'var(--bg-card, #ffffff)',
-                    border: '1px solid var(--border, #e2e8f0)',
-                    borderRadius: '8px',
-                    padding: '14px',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '6px' }}>
-                      <span style={{ fontWeight: 700, fontSize: '13.5px', color: 'var(--text-main, #0f172a)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                        <Icon name="coins" cls="sm" style={{ width: '16px', height: '16px', color: '#8b5cf6' }} />
-                        <span>Realita Arus Kas</span>
-                      </span>
-                      <span style={{ background: 'rgba(139, 92, 246, 0.1)', color: '#8b5cf6', padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 700 }}>
-                        {finInsightData.insight.cash_flow.badge}
-                      </span>
-                    </div>
-                    <p style={{ fontSize: '12.5px', color: 'var(--text-sub, #475569)', lineHeight: '1.5', marginBottom: '10px' }}>
-                      {finInsightData.insight.cash_flow.summary}
-                    </p>
-                    {Array.isArray(finInsightData.insight.cash_flow.highlights) && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        {finInsightData.insight.cash_flow.highlights.map((pt: string, idx: number) => (
-                          <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', fontSize: '12px', color: 'var(--text-sub, #64748b)', lineHeight: '1.45' }}>
-                            <Icon name="check" cls="sm" style={{ width: '13px', height: '13px', color: '#8b5cf6', flexShrink: 0, marginTop: '2px' }} />
-                            <span>{pt}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+              {/* Pilar 3: Realita Arus Kas */}
+              {finInsightData.insight.cash_flow && (
+                <div style={{
+                  background: 'var(--bg-card, #ffffff)',
+                  border: '1px solid var(--line, #e2e8f0)',
+                  borderRadius: '8px',
+                  padding: '14px',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '6px' }}>
+                    <span style={{ fontWeight: 700, fontSize: '13px', color: 'var(--text-main, #0f172a)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                      <Icon name="coins" cls="sm" style={{ width: '15px', height: '15px', color: 'var(--text-muted, #64748b)' }} />
+                      <span>Realita Arus Kas</span>
+                    </span>
+                    <span style={{ background: 'var(--soft, #f8fafc)', border: '1px solid var(--line, #e2e8f0)', color: 'var(--text-sub, #475569)', padding: '2px 8px', borderRadius: '4px', fontSize: '10.5px', fontWeight: 650 }}>
+                      {finInsightData.insight.cash_flow.badge}
+                    </span>
                   </div>
-                )}
-              </div>
+                  <p style={{ fontSize: '12px', color: 'var(--text-sub, #475569)', lineHeight: '1.55', marginBottom: '10px' }}>
+                    {finInsightData.insight.cash_flow.summary}
+                  </p>
+                  {Array.isArray(finInsightData.insight.cash_flow.highlights) && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                      {finInsightData.insight.cash_flow.highlights.map((pt: string, idx: number) => (
+                        <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', fontSize: '11.5px', color: 'var(--text-sub, #64748b)', lineHeight: '1.45' }}>
+                          <span style={{ color: 'var(--text-muted, #94a3b8)', marginTop: '2px', fontSize: '12px' }}>•</span>
+                          <span>{pt}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
-        )}
+        ) : (
+          <div className="card" style={{ marginBottom: '18px', padding: '16px 20px', border: '1px solid var(--line, #e2e8f0)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+              <Icon name="chart" cls="sm" style={{ color: 'var(--text-muted, #64748b)' }} />
+              <span style={{ fontSize: '15px', fontWeight: 700 }}>Evaluasi Tiga Pilar Keuangan ({stock.ticker})</span>
+            </div>
+            <p className="small muted" style={{ margin: 0 }}>
+              Evaluasi mendalam tiga pilar: Laba Rugi, Neraca &amp; Solvabilitas, dan Arus Kas riil emiten terverifikasi otomatis.
+            </p>
+          </div>
+        ))}
 
+        <LockedFeatureOverlay
+          isLocked={isStarter}
+          featureName="Laporan Keuangan Historis (Income Statement, Balance Sheet, Cash Flow)"
+          description="Akses penuh seluruh metrik laporan keuangan resmi BEI tahunan dan kuartalan, analisis kualitas laba, dan tren pertumbuhan YoY."
+          badge="DATA KEUANGAN PRO TRADER"
+          onUnlockClick={() => {
+            setContactFeatureTitle('Laporan Keuangan 3 Pilar');
+            setContactAdminOpen(true);
+          }}
+          minHeight="380px"
+        >
         <div className="card">
           <div className="financial-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
             <div
@@ -1617,46 +1797,124 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
                 );
               })()}
 
-              <svg
-                className="fin-chart"
-                viewBox={`0 0 ${Math.max(340, 24 + fin.length * 44)} 108`}
-                role="img"
-                aria-label="Grafik tren periode"
-              >
-                {fin.map((d: any, i: number) => {
-                  const chartW = Math.max(340, 24 + fin.length * 44);
-                  const step = (chartW - 28) / Math.max(1, fin.length);
-                  const x = 14 + i * step;
-                  return (
-                    <g key={i}>
-                      {finKeys.map((k, j) => {
-                        const rawVal = Number(d[k]) || 0;
-                        const hVal = Math.max(2, Math.min(68, (Math.abs(rawVal) / maxFinVal) * 66));
-                        return (
-                          <rect
-                            key={j}
-                            x={x + j * 13}
-                            y={78 - hVal}
-                            width="10"
-                            height={hVal}
-                            rx="2"
-                            fill={rawVal < 0 ? '#d9534f' : j ? '#b8cde8' : '#1a62bf'}
-                          />
-                        );
-                      })}
-                      <text
-                        x={x + 11}
-                        y="96"
-                        textAnchor="middle"
-                        fill="#7b8998"
-                        fontSize="8.5"
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '320px', flex: '1 1 360px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: 'var(--muted)', flexWrap: 'wrap', gap: '6px' }}>
+                  <span style={{ fontWeight: 600 }}>
+                    Grafik Tren Keuangan ({finTimeframe === 'annual' ? 'Tahunan FY' : 'Kuartalan'})
+                  </span>
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ width: '8px', height: '8px', borderRadius: '2px', background: '#1a62bf', display: 'inline-block' }}></span>
+                      {finTab === 'income' ? 'Pendapatan' : finTab === 'balance' ? 'Aset' : 'Arus Kas Ops'}
+                    </span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ width: '8px', height: '8px', borderRadius: '2px', background: '#b8cde8', display: 'inline-block' }}></span>
+                      {finTab === 'income' ? 'Laba Bersih' : finTab === 'balance' ? 'Ekuitas' : 'Laba Bersih'}
+                    </span>
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    padding: '5px 10px',
+                    borderRadius: '5px',
+                    background: hoveredFinIdx !== null ? 'rgba(26, 98, 191, 0.08)' : 'var(--bg-subtle, #f8fafc)',
+                    border: '1px solid ' + (hoveredFinIdx !== null ? 'var(--blue)' : 'var(--line)'),
+                    fontSize: '11px',
+                    transition: 'all 0.15s ease',
+                    minHeight: '26px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  {hoveredFinIdx !== null && fin[hoveredFinIdx] ? (() => {
+                    const hData = fin[hoveredFinIdx];
+                    const y0 = getYoYGrowth(finKeys[0], hoveredFinIdx);
+                    const y1 = getYoYGrowth(finKeys[1], hoveredFinIdx);
+                    const v0 = Number(hData[finKeys[0]]) || 0;
+                    const v1 = Number(hData[finKeys[1]]) || 0;
+                    return (
+                      <>
+                        <strong>Periode: {hData.year}</strong>
+                        <span>
+                          {finTab === 'income' ? 'Pendapatan' : finTab === 'balance' ? 'Aset' : 'CFO'}: <strong>Rp{fmt(v0, 2)}T</strong> {y0 !== null ? `(${y0 > 0 ? '+' : ''}${y0.toFixed(1)}% YoY)` : ''} · {finTab === 'income' ? 'Laba' : finTab === 'balance' ? 'Ekuitas' : 'Laba'}: <strong>Rp{fmt(v1, 2)}T</strong> {y1 !== null ? `(${y1 > 0 ? '+' : ''}${y1.toFixed(1)}% YoY)` : ''}
+                        </span>
+                      </>
+                    );
+                  })() : (
+                    <span className="muted" style={{ fontSize: '10.5px' }}>
+                      Arahkan kursor / hover ke batang diagram di bawah untuk melihat rincian angka &amp; pertumbuhan YoY
+                    </span>
+                  )}
+                </div>
+
+                <svg
+                  className="fin-chart"
+                  viewBox={`0 0 ${Math.max(340, 24 + fin.length * 44)} 108`}
+                  role="img"
+                  aria-label="Grafik tren periode keuangan"
+                  style={{ overflow: 'visible', cursor: 'pointer', width: '100%' }}
+                  onMouseLeave={() => setHoveredFinIdx(null)}
+                >
+                  {fin.map((d: any, i: number) => {
+                    const chartW = Math.max(340, 24 + fin.length * 44);
+                    const step = (chartW - 28) / Math.max(1, fin.length);
+                    const x = 14 + i * step;
+                    const isHovered = hoveredFinIdx === i;
+                    const yoy0 = getYoYGrowth(finKeys[0], i);
+                    const yoy1 = getYoYGrowth(finKeys[1], i);
+
+                    const tooltipText = `Periode: ${d.year}\n` +
+                      `${finTab === 'income' ? 'Pendapatan' : finTab === 'balance' ? 'Total Aset' : 'Arus Kas Operasi'}: Rp${fmt(Number(d[finKeys[0]]) || 0, 2)} Triliun ${yoy0 !== null ? `(${yoy0 > 0 ? '+' : ''}${yoy0.toFixed(1)}% YoY)` : ''}\n` +
+                      `${finTab === 'income' ? 'Laba Bersih' : finTab === 'balance' ? 'Total Ekuitas' : 'Laba Bersih'}: Rp${fmt(Number(d[finKeys[1]]) || 0, 2)} Triliun ${yoy1 !== null ? `(${yoy1 > 0 ? '+' : ''}${yoy1.toFixed(1)}% YoY)` : ''}`;
+
+                    return (
+                      <g
+                        key={i}
+                        onMouseEnter={() => setHoveredFinIdx(i)}
+                        style={{ opacity: hoveredFinIdx === null || isHovered ? 1 : 0.45, transition: 'opacity 0.15s ease' }}
                       >
-                        {d.year}
-                      </text>
-                    </g>
-                  );
-                })}
-              </svg>
+                        <title>{tooltipText}</title>
+                        <rect
+                          x={x - 2}
+                          y={4}
+                          width={28}
+                          height={98}
+                          fill="transparent"
+                        />
+                        {finKeys.map((k, j) => {
+                          const rawVal = Number(d[k]) || 0;
+                          const hVal = Math.max(2, Math.min(68, (Math.abs(rawVal) / maxFinVal) * 66));
+                          return (
+                            <rect
+                              key={j}
+                              x={x + j * 13}
+                              y={78 - hVal}
+                              width="10"
+                              height={hVal}
+                              rx="2"
+                              fill={rawVal < 0 ? '#d9534f' : j ? '#b8cde8' : '#1a62bf'}
+                              stroke={isHovered ? '#0e3465' : 'none'}
+                              strokeWidth={isHovered ? 1 : 0}
+                            />
+                          );
+                        })}
+                        <text
+                          x={x + 11}
+                          y="96"
+                          textAnchor="middle"
+                          fill={isHovered ? 'var(--blue)' : '#7b8998'}
+                          fontWeight={isHovered ? 700 : 400}
+                          fontSize="8.5"
+                        >
+                          {d.year}
+                        </text>
+                      </g>
+                    );
+                  })}
+                </svg>
+              </div>
             </div>
 
             <div className="table-scroll">
@@ -1749,6 +2007,7 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
             </div>
           </div>
         </div>
+        </LockedFeatureOverlay>
       </section>
 
       {/* Valuation Section */}
@@ -1784,10 +2043,20 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
           </div>
         </div>
 
-        <div className="valuation-grid">
-          {renderValuationCard('pe')}
-          {renderValuationCard('pb')}
-        </div>
+        <LockedFeatureOverlay
+          isLocked={isStarter}
+          featureName="Kalkulator Valuasi MOS & Fair Value Interaktif"
+          description="Eksklusif Pro Trader: Simulasi multi-skenario PE/PBV dinamis, estimasi Margin of Safety (MOS), dan proyeksi harga wajar."
+          onUnlockClick={() => {
+            setContactFeatureTitle('Kalkulator Valuasi MOS');
+            setContactAdminOpen(true);
+          }}
+        >
+          <div className="valuation-grid">
+            {renderValuationCard('pe')}
+            {renderValuationCard('pb')}
+          </div>
+        </LockedFeatureOverlay>
 
         <p className="valuation-warning">
           <Icon name="info" cls="sm" />
@@ -1873,11 +2142,24 @@ export const StockDetailView: React.FC<StockDetailViewProps> = ({
         onOpenNewsDrawer={(item) =>
           onOpenNewsDrawer ? onOpenNewsDrawer(item) : onOpenDrawer('news', { newsItem: item })
         }
+        currentUser={currentUser}
+        onNotify={onNotify}
+        onOpenContact={(feature) => {
+          setContactFeatureTitle(feature);
+          setContactAdminOpen(true);
+        }}
       />
         </div> {/* End of .stockbit-main-content */}
       </div> {/* End of .stockbit-layout */}
 
       <Footer onOpenMethod={onOpenMethod} onOpenAbout={onOpenAbout} />
+
+      <ContactAdminModal
+        isOpen={contactAdminOpen}
+        onClose={() => setContactAdminOpen(false)}
+        user={currentUser || null}
+        featureTitle={contactFeatureTitle}
+      />
     </>
   );
 };

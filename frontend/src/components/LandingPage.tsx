@@ -154,7 +154,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               display: 'inline-flex',
             }}
           >
-            <i className="dot" style={{ background: '#10b981' }}></i> PLATFORM RISET SAHAM BEI &amp; GEMINI AI TERPADU
+            <i className="dot" style={{ background: '#10b981' }}></i> PLATFORM RISET SAHAM BEI &amp; AI TERPADU
           </div>
 
           <h1

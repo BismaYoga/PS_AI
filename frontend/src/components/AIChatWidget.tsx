@@ -1,5 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { FormattedMessage } from './FormattedMessage';
+import { UserProfile } from '../types';
+import { Icon } from './Icon';
+import { ContactAdminModal } from './ContactAdminModal';
+import { isUserProOrAdmin } from '../utils';
 
 export interface ApprovalPlan {
   action_type: string;
@@ -14,7 +18,6 @@ export interface ApprovalPlan {
   originalText: string;
   isApproved?: boolean;
 }
-
 
 interface ChatMessage {
   id: string;
@@ -34,7 +37,16 @@ const DEFAULT_QUESTIONS = [
 
 const DEFAULT_POS = { x: 24, y: 24 }; // right: 24px, bottom: 24px
 
-export const AIChatWidget: React.FC = () => {
+interface AIChatWidgetProps {
+  currentUser?: UserProfile | null;
+  onUpdateTokens?: (tokens: { monthly?: number; additional?: number; total?: number }) => void;
+  proMonthlyTokens?: number;
+}
+
+export const AIChatWidget: React.FC<AIChatWidgetProps> = ({ currentUser, onUpdateTokens, proMonthlyTokens = 30 }) => {
+  const isPro = isUserProOrAdmin(currentUser);
+  const isStarter = !isPro;
+  const [contactAdminOpen, setContactAdminOpen] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -158,6 +170,11 @@ export const AIChatWidget: React.FC = () => {
     const q = (textToSend || input).trim();
     if (!q || isLoading) return;
 
+    if (isStarter) {
+      setContactAdminOpen(true);
+      return;
+    }
+
     const userMsg: ChatMessage = {
       id: Date.now().toString(),
       role: 'user',
@@ -228,14 +245,20 @@ export const AIChatWidget: React.FC = () => {
       const res = await fetch('/api/ai-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: apiMessages }),
+        body: JSON.stringify({ messages: apiMessages, user_id: currentUser?.id, email: currentUser?.email }),
       });
 
       if (!res.ok) {
-        throw new Error(`Server returned status ${res.status}`);
+        const errJson = await res.json().catch(() => null);
+        throw new Error(errJson?.error || (res.status === 403
+          ? 'Akun Starter atau kuota token habis (0 Token). Silakan hubungi administrator untuk beralih ke Pro Trader.'
+          : `Server mengembalikan status ${res.status}`));
       }
 
       const data = await res.json();
+      if (data.remaining_tokens) {
+        onUpdateTokens?.(data.remaining_tokens);
+      }
       const botMsg: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: 'model',
@@ -299,14 +322,20 @@ export const AIChatWidget: React.FC = () => {
       const res = await fetch('/api/ai-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: apiMessages }),
+        body: JSON.stringify({ messages: apiMessages, user_id: currentUser?.id, email: currentUser?.email }),
       });
 
       if (!res.ok) {
-        throw new Error(`Server returned status ${res.status}`);
+        const errJson = await res.json().catch(() => null);
+        throw new Error(errJson?.error || (res.status === 403
+          ? 'Akun Starter atau kuota token habis (0 Token). Silakan hubungi administrator untuk beralih ke Pro Trader.'
+          : `Server mengembalikan status ${res.status}`));
       }
 
       const data = await res.json();
+      if (data.remaining_tokens) {
+        onUpdateTokens?.(data.remaining_tokens);
+      }
       const botMsg: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: 'model',
@@ -528,8 +557,6 @@ export const AIChatWidget: React.FC = () => {
                       <FormattedMessage content={m.text} />
                     </>
                   )}
-
-                  <span className="msg-time">{m.time}</span>
                 </div>
               </div>
             ))}
@@ -568,31 +595,58 @@ export const AIChatWidget: React.FC = () => {
           </div>
 
           {/* Footer Input */}
-          <div className="ps-chat-footer">
-            <input
-              type="text"
-              placeholder="Tanya saham BEI (misal: cari saham murah, BBCA, IHSG)..."
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              disabled={isLoading}
-              autoFocus
-            />
-            <button
-              type="button"
-              className="send-btn"
-              onClick={() => handleSend()}
-              disabled={!input.trim() || isLoading}
-              title="Kirim Pesan"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="22" y1="2" x2="11" y2="13"></line>
-                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-              </svg>
-            </button>
+          {isStarter ? (
+            <div style={{ padding: '12px 14px', background: 'rgba(234, 179, 8, 0.08)', borderTop: '1px solid rgba(234, 179, 8, 0.25)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11.5px', color: '#92400e', fontWeight: 600 }}>
+                <Icon name="lock" cls="sm" style={{ color: '#d97706' }} />
+                <span>Fitur AI Assistant Khusus Pro Trader (0 Token)</span>
+              </div>
+              <button
+                type="button"
+                className="btn small-btn primary"
+                onClick={() => setContactAdminOpen(true)}
+                style={{ width: '100%', justifyContent: 'center', fontSize: '11px', padding: '6px 0', borderRadius: '6px' }}
+              >
+                Beralih ke Pro Trader ({proMonthlyTokens} Token/Bulan)
+              </button>
+            </div>
+          ) : (
+            <div className="ps-chat-footer">
+              <input
+                type="text"
+                placeholder="Tanya saham BEI (misal: cari saham murah, BBCA, IHSG)..."
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                disabled={isLoading}
+                autoFocus
+              />
+              <button
+                type="button"
+                className="send-btn"
+                onClick={() => handleSend()}
+                disabled={!input.trim() || isLoading}
+                title="Kirim Pesan"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="22" y1="2" x2="11" y2="13"></line>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+              </button>
+            </div>
+          )}
+          <div style={{ padding: '4px 12px 8px', textAlign: 'center', fontSize: '9.5px', color: 'var(--muted)', lineHeight: '1.4', background: 'var(--soft, #f8fafc)', borderTop: '1px solid var(--line, #e2e8f0)' }}>
+            AI dapat keliru. Selalu gunakan riset mandiri (DYOR). Data dirangkum dari keterbukaan &amp; laporan resmi BEI.
           </div>
         </div>
       )}
+
+      <ContactAdminModal
+        isOpen={contactAdminOpen}
+        onClose={() => setContactAdminOpen(false)}
+        user={currentUser || null}
+        featureTitle="Asisten Pasar Chat AI"
+      />
     </>
   );
 };

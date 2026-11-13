@@ -120,7 +120,7 @@ export const FormattedMessage: React.FC<FormattedMessageProps> = ({ content }) =
       const quoteText = line.replace(/^>\s*/, '').trim();
       elements.push(
         <blockquote key={`quote-${i}`} style={{
-          borderLeft: '3px solid var(--blue)',
+          borderLeft: '3px solid #cbd5e1',
           paddingLeft: '10px',
           margin: '6px 0',
           color: 'var(--muted)',

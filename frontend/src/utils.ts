@@ -1,5 +1,30 @@
-import { StockItem, OHLCPoint, FinancialYearData, Timeframe, ValuationState } from './types';
+import { StockItem, OHLCPoint, FinancialYearData, Timeframe, ValuationState, UserProfile } from './types';
 import { TV_LOGOS } from './constants';
+
+export const isUserProOrAdmin = (user?: UserProfile | null): boolean => {
+  if (!user) return true; // Default auto-granted in instance admin/self-hosted
+  const role = String(user.role || '').toLowerCase().trim();
+  const tier = String(user.tier || '').toLowerCase().trim();
+  const uname = String(user.username || '').toLowerCase().trim();
+  const email = String(user.email || '').toLowerCase().trim();
+
+  if (
+    role === 'admin' ||
+    role === 'super admin' ||
+    role.includes('admin') ||
+    uname === 'admin' ||
+    uname === 'bisma' ||
+    email.startsWith('admin@') ||
+    email.includes('admin') ||
+    email === 'bismayoga432@gmail.com' ||
+    tier === 'pro' ||
+    tier === 'institutional' ||
+    tier.includes('pro')
+  ) {
+    return true;
+  }
+  return false;
+};
 
 export const fmt = (n: number, d: number = 0): string =>
   new Intl.NumberFormat('id-ID', {
@@ -53,12 +78,8 @@ export const getStockLogoUrl = (ticker: string): string => {
   if (clean === 'IHSG' || clean === '^JKSE' || clean === 'COMPOSITE') {
     return '/logo-emiten/IHSG.svg';
   }
-  // 1. Jika logo resmi lokal tersedia (75 emiten utama), gunakan file lokal (instant 0 latency)
-  if (TV_LOGOS[clean]) {
-    return `/logo-emiten/${clean}.svg`;
-  }
-  // 2. Untuk seluruh emiten bursa lainnya, gunakan Stockbit CloudFront CDN yang lengkap & super cepat di Indonesia
-  return `https://assets.stockbit.com/logos/companies/${clean}.png`;
+  // 1. Format WebP lokal terkompresi (standar web modern, super ringan, 0 latency)
+  return `/logos/${clean}.webp`;
 };
 
 // Deterministic Pseudo-Random Number Generator for smooth simulated OHLC

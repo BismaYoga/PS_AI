@@ -164,9 +164,10 @@ Format output HANYA sebuah valid JSON murni tanpa markdown:
   "sentiment": "Kondusif / Bullish / Waspada / Koreksi",
   "sentiment_bias": "positif / negatif / netral",
   "executive_summary": "1 paragraf tegas (3-4 kalimat) yang menyimpulkan apakah iklim pasar IHSG saat ini layak dimasuki investor atau sebaiknya wait and see, dipadukan dari level indeks saat ini dan sentimen berita terkini.",
+  "simple_summary": "1 paragraf bahasa sederhana/santai untuk orang awam & pemula non-finance: jelaskan kondisi pasar saham saat ini sedang aman atau perlu hati-hati dengan gaya bahasa ramah tanpa istilah teknis rumit.",
   "technical_insight": "Ulasan tren teknikal indeks IHSG: posisi terhadap MA20/MA50, RSI 14 ({rsi_val}), serta zona support {support} dan resistance {resistance}.",
   "catalyst_insight": "Ulasan sentimen makro & katalis pasar dari {total_news_count} berita Invezgo terkini: arus modal, kebijakan suku bunga, inflasi, dan sentimen bursa regional.",
-  "actionable_plan": "Strategi investor di pasar saat ini: apakah mulai cicil beli bertahap (DCA) pada sektor defensif, melakukan rebalancing, atau memperbesar porsi kas.",
+  "actionable_plan": "Strategi investor di pasar saat ini yang dikaitkan langsung dengan katalis berita makro terkini (BUKAN kalimat template): apakah mulai cicil beli bertahap (DCA) pada sektor defensif, melakukan rebalancing, atau memperbesar porsi kas.",
   "key_levels": {{
     "support": "{support}",
     "resistance": "{resistance}",
@@ -209,9 +210,10 @@ Format output HANYA sebuah valid JSON murni tanpa markdown wrapper:
   "sentiment": "Bullish / Bearish / Konsolidasi / Koreksi Sehat",
   "sentiment_bias": "positif / negatif / netral",
   "executive_summary": "1 paragraf padat (3-4 kalimat) yang menyatukan kondisi teknikal chart, fundamental emiten, serta kaitan dengan sentimen berita terkini dan pasar makro (MSCI/IHSG) secara jelas.",
+  "simple_summary": "1 paragraf bahasa sederhana dan santai untuk pemula & non-finance (tanpa jargon rumit): jelaskan apakah perusahaan {key} ini sedang sehat/untung, harga sahamnya lagi wajar atau mahal, dan saran mudah buat orang biasa yang mau nabung saham ini.",
   "technical_insight": "Ulasan teknikal mendalam: posisi harga thd MA20/50, momentum RSI 14 ({rsi_val}), serta pengujian area support Rp{support} dan resistance Rp{resistance}.",
   "catalyst_insight": "Ulasan katalis menyeluruh: bagaimana kinerja emiten dan sentimen makro pasar (kebijakan suku bunga, arus dana asing/MSCI) mempengaruhi likuiditas, valuasi, dan prospek saham.",
-  "actionable_plan": "Rencana tindakan taktis bagi investor/trader: area masuk (entry/buy on weakness), level stop loss/proteksi, atau rekomendasi wait-and-see.",
+  "actionable_plan": "Rencana tindakan taktis yang dikaitkan langsung dengan katalis berita terbaru ({total_news_count} berita di atas, JANGAN template): rekomendasi beli bertahap di area support atau wait and see berdasarkan fakta berita dan momentum harga.",
   "trading_plan": {{
     "entry_zone": "Area beli terdekat, misal: Rp{support} - Rp{price}",
     "target_price_1": "Target pertama (TP1) mendekati resistance Rp{resistance}",
@@ -305,9 +307,10 @@ def _fallback_analysis(ticker: str, tech: dict, news_items: list) -> dict:
             "sentiment": sentiment,
             "sentiment_bias": bias,
             "executive_summary": f"Indeks Harga Saham Gabungan (IHSG) saat ini berada di level {price} ({sentiment.lower()}). Secara keseluruhan iklim pasar dinilai '{market_status}'. Di tengah katalis pasar '{news_title}', pergerakan indeks menguji batas support {support} dan resistance {resistance}.",
+            "simple_summary": f"Secara sederhana: Pasar saham (IHSG) saat ini berada di level {price} dengan status '{market_status}'. {'Kondisinya cukup baik untuk mulai menyicil reksa dana atau saham unggulan.' if 'Layak' in market_status else 'Bagi pemula, disarankan berhati-hati dan jangan terburu-buru masuk modal besar karena fluktuasi pasar sedang tinggi.'}",
             "technical_insight": f"Tren teknikal indeks IHSG mencatatkan RSI 14 di {rsi_val:.1f} dengan posisi {'di atas' if above20 else 'di bawah'} MA20 dan {'di atas' if above50 else 'di bawah'} MA50. Waspadai konfirmasi volume pada resistance {resistance}.",
-            "catalyst_insight": "Sentimen makroekonomi domestik dan pergerakan arus modal asing (foreign flow) menjadi penggerak utama likuiditas bursa.",
-            "actionable_plan": f"Strategi pasar: {market_status}. Disarankan disiplin dan akumulasi bertahap pada saham bluechip defensif di area support {support}.",
+            "catalyst_insight": f"Katalis utama: '{news_title}'. Sentimen makroekonomi domestik dan pergerakan arus modal asing menjadi penentu arah bursa.",
+            "actionable_plan": f"Berdasarkan katalis '{news_title}', strategi yang disarankan saat ini: {market_status}. Investor disarankan selektif dan disiplin mengamankan modal dengan akumulasi bertahap di area support {support}.",
             "key_levels": {
                 "support": f"{support}",
                 "resistance": f"{resistance}",
@@ -318,6 +321,19 @@ def _fallback_analysis(ticker: str, tech: dict, news_items: list) -> dict:
             "timestamp": current_time_str
         }
 
+    plan_action = (
+        f"Mempertimbangkan sentimen terkini '{news_title}' dan pengujian batas teknikal, strategi yang disarankan adalah beli bertahap (Buy on Weakness) pada area Rp{support} - Rp{price} dengan target TP1 Rp{resistance}. Jika harga jatuh di bawah Rp{support}, segera batasi risiko (stop loss) untuk menghindari penurunan lebih dalam."
+        if news_items else
+        f"Disarankan strategi 'Buy on Weakness' dekat level support Rp{support} dengan target profit Rp{resistance} serta proteksi modal ketat di bawah support."
+    )
+
+    simple_emiten_desc = (
+        f"Secara sederhana untuk pemula: Saham {ticker} ({emiten_name}) saat ini berada di harga Rp{price}. "
+        f"{'Kondisi harganya sedang dalam tren positif yang cukup kuat.' if above20 and above50 else 'Harganya sedang mengalami koreksi atau jalan di tempat (konsolidasi).' } "
+        f"Kabar pasar terbaru mengulas tentang '{news_title}'. Bagi pemula yang ingin mulai menabung saham ini, "
+        f"langkah yang paling bijak adalah membeli perlahan saat harganya mendekati area Rp{support}, daripada memaksakan beli saat harga sedang naik tinggi."
+    )
+
     return {
         "ticker": ticker,
         "name": emiten_name,
@@ -325,9 +341,10 @@ def _fallback_analysis(ticker: str, tech: dict, news_items: list) -> dict:
         "sentiment": sentiment,
         "sentiment_bias": bias,
         "executive_summary": f"Saham {ticker} saat ini diperdagangkan di Rp{price} dengan kecenderungan {sentiment.lower()}. Di tengah sentimen berita terkini '{news_title}', pergerakan harga menguji level support Rp{support} dan resistance Rp{resistance}.",
+        "simple_summary": simple_emiten_desc,
         "technical_insight": f"RSI 14 berada di {rsi_val:.1f} dengan status harga {'di atas' if above20 else 'di bawah'} MA20 dan {'di atas' if above50 else 'di bawah'} MA50. Perhatikan konfirmasi volume pada penembusan resistance Rp{resistance}.",
-        "catalyst_insight": f"Berita pasar terbaru mencerminkan volatilitas harian. Investor mencermati perkembangan sentimen industri dan arus modal asing.",
-        "actionable_plan": f"Disarankan strategi 'Buy on Weakness' dekat level support Rp{support} dengan batasan risiko ketat jika harga tembus di bawahnya.",
+        "catalyst_insight": f"Katalis utama: '{news_title}'. Berita pasar terbaru ini mencerminkan dinamika operasional emiten dan respons investor jangka pendek.",
+        "actionable_plan": plan_action,
         "trading_plan": {
             "entry_zone": f"Rp{support} - Rp{price}",
             "target_price_1": f"Rp{resistance}",

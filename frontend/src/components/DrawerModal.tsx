@@ -114,7 +114,7 @@ export const DrawerModal: React.FC<DrawerModalProps> = ({
         return (
           <>
             <div className="drawer-top">
-              <span className="drawer-eyebrow">METODOLOGI VALUASI &amp; MOS</span>
+              <span className="drawer-eyebrow">METODOLOGI HARGA WAJAR &amp; MARGIN OF SAFETY</span>
               <button
                 className="icon-btn"
                 id="drawer-close"
@@ -125,58 +125,116 @@ export const DrawerModal: React.FC<DrawerModalProps> = ({
               </button>
             </div>
             <div id="drawer-content">
-              <h2>Data fundamental riil dari Invezgo API</h2>
+              <h2>Metodologi Valuasi Intrinsik &amp; Margin of Safety (MOS)</h2>
               <p>
-                Metodologi penentuan harga wajar (fair value) dan Margin of Safety
-                (MOS) dihitung langsung dari data keuangan riil emiten Bursa Efek
-                Indonesia.
+                Penentuan harga wajar (fair value) dan Margin of Safety (MOS) di PintarSaham
+                dihitung secara sistematis menggunakan formula baku fundamental institusional
+                yang ditarik langsung dari laporan keuangan resmi emiten Bursa Efek Indonesia (Invezgo API).
               </p>
-              <div className="notice">
+
+              <div className="notice" style={{ background: 'var(--bg-subtle, #f0f7ff)', borderColor: 'var(--blue)' }}>
                 <strong>
-                  <Icon name="book" cls="sm" /> Dokumentasi Lengkap Tersedia:
+                  <Icon name="book" cls="sm" /> Dokumentasi Fundamental Lengkap:
                 </strong>
                 <br />
-                Seluruh pembuktian rumus, komponen data, dan studi kasus langkah
-                demi langkah dapat dibaca di file{' '}
-                <code>perhitungan_fundamental_mos.md</code>.
+                Rincian kalkulasi matematis, studi kasus, dan pembuktian empiris tersimpan pada repositori:
+                <code>/root/PS_AI/perhitungan_fundamental_mos.md</code>.
               </div>
-              <h3>1. Pendekatan Kelipatan Laba (PER)</h3>
-              <div className="notice">
-                Harga Wajar = EPS riil (TTM) × Target PER dasar
+
+              <h3>1. Apa itu Harga Wajar (Fair Value)?</h3>
+              <p>
+                Harga wajar adalah estimasi nilai intrinsik riil suatu saham berdasarkan kapasitas fundamental perusahaan
+                dalam mencetak laba bersih dan membukukan kekayaan ekuitas, terlepas dari fluktuasi sentimen jangka pendek di pasar modal.
+                Mengikuti prinsip investasi nilai (Value Investing) Benjamin Graham dan Warren Buffett, membeli saham di bawah harga wajarnya
+                memberikan potensi imbal hasil optimal dengan risiko penurunan yang terkendali.
+              </p>
+
+              <h3>2. Apa itu Target PER (Price to Earnings Ratio)?</h3>
+              <p>
+                <strong>PER (Price to Earnings Ratio)</strong> adalah rasio valuasi pasar yang membandingkan harga per lembar saham dengan laba bersih per lembar (EPS).
+                Secara sederhana, PER menunjukkan berapa rupiah yang rela dibayar investor untuk setiap Rp1 laba bersih yang dihasilkan perusahaan dalam setahun.
+              </p>
+              <p>
+                <strong>Target PER</strong> adalah tolok ukur kelipatan valuasi wajar yang layak disematkan pada suatu emiten. Target PER ditentukan berdasarkan tiga pilar utama:
+              </p>
+              <ul style={{ paddingLeft: '20px', fontSize: '13px', lineHeight: 1.6, marginBottom: '12px' }}>
+                <li>
+                  <strong>Rata-rata Historis (Historical Mean PER):</strong> Rerata valuasi PER saham selama siklus 3 hingga 5 tahun terakhir saat kondisi pasar normal.
+                </li>
+                <li>
+                  <strong>Median Industri &amp; Sektor (Peer Benchmark):</strong> Rata-rata valuasi emiten sejenis di sektor yang sama (misal perbankan tier-1, konsumen primer, energi).
+                </li>
+                <li>
+                  <strong>Ekspektasi Pertumbuhan Laba (PEG Ratio = 1):</strong> Perusahaan dengan pertumbuhan laba (CAGR) 15% per tahun secara wajar dihargai pada kisaran PER 15x.
+                </li>
+              </ul>
+              <p className="small muted">
+                Slider Target PER pada aplikasi memberikan keleluasaan bagi analis dan investor untuk melakukan simulasi (stress test) bila emiten mengalami ekspansi valuasi (re-rating) atau kontraksi kelipatan laba.
+              </p>
+
+              <h3>3. Formula Valuasi Kelipatan Laba (PER Multiplier)</h3>
+              <div className="notice" style={{ fontWeight: 600, fontSize: '13px' }}>
+                Harga Wajar = EPS (TTM) × Target PER
                 <br />
-                MOS (%) = (1 − Harga Sekarang / Harga Wajar) × 100%
+                MOS (%) = ((Harga Wajar − Harga Pasar) / Harga Wajar) × 100%
               </div>
               <p>
-                EPS (Earnings Per Share) ditarik dari laba bersih riil 12 bulan
-                terakhir (Trailing Twelve Months). Target PER mencerminkan
-                rata-rata wajar historis industri yang dapat disesuaikan melalui
-                slider.
+                <strong>EPS TTM (Trailing Twelve Months):</strong> Laba bersih per lembar saham yang diakumulasikan dari 4 kuartal pembukuan berurutan terakhir (Q1+Q2+Q3+Q4) dibagi total saham beredar. Menggunakan data TTM menghilangkan anomali musiman (seasonality) dan mencerminkan kekuatan profitabilitas aktual terkini.
               </p>
-              <h3>2. Pendekatan Nilai Buku (PBV)</h3>
-              <div className="notice">
-                Harga Wajar = BVPS riil × Target PBV dasar
+
+              <h3>4. Konsep Margin of Safety (MOS)</h3>
+              <p>
+                <strong>Margin of Safety (MOS)</strong> adalah persentase diskon harga pasar terhadap nilai wajar intrinsiknya. MOS berfungsi sebagai bantalan pengaman jika analisis laba masa depan meleset atau terjadi gejolak makroekonomi.
+              </p>
+              <ul style={{ paddingLeft: '20px', fontSize: '13px', lineHeight: 1.6, marginBottom: '12px' }}>
+                <li>
+                  <strong>MOS &gt; +20% (Undervalued / Diskon):</strong> Harga saham diperdagangkan jauh di bawah nilai wajarnya, menawarkan proteksi risiko penurunan yang kuat dan ruang apresiasi modal tinggi.
+                </li>
+                <li>
+                  <strong>MOS −10% s.d. +20% (Fair Value):</strong> Harga saham berada di sekitar area nilai wajarnya (konsolidasi wajar).
+                </li>
+                <li>
+                  <strong>MOS &lt; −10% (Overvalued / Premium):</strong> Harga pasar melampaui harga wajar fundamentalnya sehingga profil risiko beli relatif lebih tinggi.
+                </li>
+              </ul>
+
+              <h3>5. Pendekatan Nilai Buku (PBV &amp; BVPS)</h3>
+              <div className="notice" style={{ fontWeight: 600, fontSize: '13px' }}>
+                Harga Wajar PBV = BVPS riil × Target PBV dasar
               </div>
               <p>
-                BVPS (Book Value Per Share) ditarik dari total ekuitas bersih neraca
-                keuangan riil dibagi jumlah saham beredar.
+                <strong>BVPS (Book Value Per Share):</strong> Nilai buku ekuitas bersih per saham (Total Ekuitas dibagi Lembar Saham). Pendekatan PBV sangat relevan untuk emiten institusi finansial (perbankan, asuransi) dan industri berbasis aset fisik berat (properti, pertambangan).
               </p>
-              <h3>3. Rentang Sensitivitas Tiga Skenario</h3>
+
+              <h3>6. Rentang Sensitivitas Tiga Skenario</h3>
               <p>
-                • <strong>Konservatif (Bear)</strong>: Target PER −20% di bawah
-                asumsi dasar.
-                <br />• <strong>Dasar (Base)</strong>: Target PER wajar industri
-                atau posisi slider aktif.
-                <br />• <strong>Optimis (Bull)</strong>: Target PER +20% di atas
-                asumsi dasar.
+                PintarSaham menyajikan matriks valuasi sensitif untuk mengantisipasi ketidakpastian kondisi pasar:
               </p>
+              <ul style={{ paddingLeft: '20px', fontSize: '13px', lineHeight: 1.6 }}>
+                <li>
+                  <strong>Konservatif (Bear Scenario):</strong> Target kelipatan −20% di bawah asumsi dasar (mengantisipasi tekanan perlambatan ekonomi atau koreksi laba).
+                </li>
+                <li>
+                  <strong>Dasar (Base Case):</strong> Target kelipatan standar industri atau posisi slider aktif yang dipilih investor.
+                </li>
+                <li>
+                  <strong>Optimis (Bull Scenario):</strong> Target kelipatan +20% di atas asumsi dasar (mengakomodasi lonjakan pertumbuhan laba dan sentimen pasar bergairah).
+                </li>
+              </ul>
             </div>
           </>
         );
 
       case 'technical': {
-        const c = payload.chartCalc;
-        const s = payload.stock;
-        if (!c || !s) return null;
+        const c = payload.chartCalc || {};
+        const s = payload.stock || { ticker: payload.ticker || 'IHSG' };
+        const ticker = s.ticker || payload.ticker || 'IHSG';
+        const lowVal = c.lowD?.low != null ? fmt(c.lowD.low) : '—';
+        const lowDate = c.lowD?.date ? fmtDate(c.lowD.date) : '';
+        const highVal = c.highD?.high != null ? fmt(c.highD.high) : '—';
+        const highDate = c.highD?.date ? fmtDate(c.highD.date) : '';
+        const levels = Array.isArray(c.levels) ? c.levels : [];
+
         return (
           <>
             <div className="drawer-top">
@@ -193,30 +251,27 @@ export const DrawerModal: React.FC<DrawerModalProps> = ({
             <div id="drawer-content">
               <h2>Indikator teknikal dari data pasar riil BEI.</h2>
               <div className="notice">
-                Data candlestick harian (OHLC) dan pergerakan intraday 1 hari
-                ditarik langsung dari sumber resmi Bursa Efek Indonesia (BEI)
-                dan diverifikasi secara berkala.
+                Data candlestick harian (OHLC) dan pergerakan harga ditarik langsung
+                dari sumber resmi Bursa Efek Indonesia (BEI) dan diverifikasi berkala.
               </div>
               <div className="detail-pair">
                 <span>Instrumen / periode</span>
                 <b>
-                  {s.ticker} / {periodLabel(payload.chartCalc?.period || '3M')}
+                  {ticker} / {periodLabel(payload.chartCalc?.period || '3M')}
                 </b>
               </div>
               <div className="detail-pair">
                 <span>Low periode</span>
                 <b>
-                  {fmt(c.lowD.low)}
-                  <br />
-                  {fmtDate(c.lowD.date)}
+                  {lowVal}
+                  {lowDate && <><br />{lowDate}</>}
                 </b>
               </div>
               <div className="detail-pair">
                 <span>High periode</span>
                 <b>
-                  {fmt(c.highD.high)}
-                  <br />
-                  {fmtDate(c.highD.date)}
+                  {highVal}
+                  {highDate && <><br />{highDate}</>}
                 </b>
               </div>
 
@@ -229,12 +284,19 @@ export const DrawerModal: React.FC<DrawerModalProps> = ({
               <div className="notice">
                 Level = high − rasio retracement × (high − low)
               </div>
-              {c.levels?.map((l: any, i: number) => (
-                <div className="detail-pair" key={i}>
-                  <span>Retracement {fmt(l.ratio * 100, 1)}%</span>
-                  <b>{fmt(l.value)}</b>
+              {levels.length > 0 ? (
+                levels.map((l: any, i: number) => (
+                  <div className="detail-pair" key={i}>
+                    <span>Retracement {fmt(l.ratio * 100, 1)}%</span>
+                    <b>{fmt(l.value)}</b>
+                  </div>
+                ))
+              ) : (
+                <div className="detail-pair">
+                  <span>Retracement</span>
+                  <b>Dihitung otomatis saat grafik aktif</b>
                 </div>
-              ))}
+              )}
               <p>
                 Support dan resistance yang ditampilkan adalah level terdekat di
                 bawah dan di atas harga terakhir. Level 50% adalah referensi
@@ -530,8 +592,8 @@ export const DrawerModal: React.FC<DrawerModalProps> = ({
                         marginTop: '10px',
                         padding: '9px 12px',
                         borderRadius: '8px',
-                        background: 'rgba(255, 255, 255, 0.85)',
-                        borderLeft: '3px solid var(--blue)',
+                        background: 'var(--soft, #f8fafc)',
+                        border: '1px solid var(--line, #e2e8f0)',
                         fontSize: '12px',
                         lineHeight: '1.5',
                         color: 'var(--ink)',
