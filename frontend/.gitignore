@@ -8,9 +8,14 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
-dist
 dist-ssr
 *.local
+
+# Sertakan hasil build utama di dist/ agar siap pakai di cPanel/Hostinger tanpa perlu build ulang,
+# namun abaikan duplikat folder aset besar yang sudah ada di public/
+dist/logos/
+dist/logo-emiten/
+dist/data/
 
 # Editor directories and files
 .vscode/*
